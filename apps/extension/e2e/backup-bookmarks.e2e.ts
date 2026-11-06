@@ -2,7 +2,7 @@ import {readdirSync, readFileSync} from 'node:fs'
 import {join} from 'node:path'
 import {afterAll, describe, expect, it} from 'vitest'
 import {historyUrls, launchChrome, openPopup, type ChromeSession} from './support/chrome'
-import {DIST_CHROMIUM, hasChrome} from './support/env'
+import {hasChrome} from './support/env'
 import {
   addEntry,
   clearAndType,
@@ -15,16 +15,14 @@ import {
   submitUnlock,
   waitText
 } from './support/popup'
-import {cleanupTemp, grantBookmarks, patchedCopy} from './support/temp'
+import {cleanupTemp} from './support/temp'
 
 describe.skipIf(!hasChrome)('backup, passphrase management, bookmarks (Chrome)', () => {
-  // `bookmarks` pre-granted: automation can't accept the real permission prompt.
-  const extension = hasChrome ? patchedCopy(DIST_CHROMIUM, {manifest: grantBookmarks}) : ''
   const sessions: ChromeSession[] = []
   let backupFile = ''
 
   async function start() {
-    const s = await launchChrome({extension})
+    const s = await launchChrome()
     sessions.push(s)
     return s
   }
@@ -110,26 +108,32 @@ describe.skipIf(!hasChrome)('backup, passphrase management, bookmarks (Chrome)',
     await q.close()
   })
 
-  it('finds bookmarks of a newly added site and deletes them on request', async () => {
+  it('tells how much history and how many bookmarks a save deletes, then deletes them', async () => {
     const s = sessions[1]!
     await s.sw.evaluate(async () => {
       await chrome.bookmarks.create({parentId: '1', title: 'A', url: 'https://www.example.org/a'})
       await chrome.bookmarks.create({parentId: '1', title: 'B', url: 'https://blog.example.org/b'})
       await chrome.bookmarks.create({parentId: '1', title: 'Evil', url: 'https://evil-example.org/'})
+      for (const url of ['https://www.example.org/a', 'https://blog.example.org/c', 'https://evil-example.org/x']) {
+        await chrome.history.addUrl({url})
+      }
     })
     const p = await openPopup(s)
     expect(await submitUnlock(p, 'other')).toBe(true)
     await clickText(p, '手动添加')
     await p.type('#url', 'example.org')
     await clickText(p, '保存')
+    await waitText(p, '2 个网页的浏览记录')
+    await waitText(p, '2 个书签')
     await clickText(p, '确认保存')
-    await waitText(p, '删除原书签')
-    await clickText(p, '删除原书签')
-    await waitText(p, '已删除 2 个书签')
+    await waitText(p, '添加当前页')
     const left = await s.sw.evaluate(async () =>
       (await chrome.bookmarks.search({})).flatMap((b) => (b.url ? [b.url] : []))
     )
     expect(left).toEqual(['https://evil-example.org/'])
+    const history = await historyUrls(s)
+    expect(history).toContain('https://evil-example.org/x')
+    expect(history.filter((u) => /\/\/(www\.|blog\.)?example\.org\//.test(u))).toEqual([])
     await p.close()
   })
 

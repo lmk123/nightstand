@@ -39,21 +39,6 @@ describe.skipIf(!hasChrome || !headed)('real action popup (Chrome, headed)', () 
     return session.browser.targets().includes(target)
   }
 
-  it('a permission prompt closes the popup', async () => {
-    s = await launchChrome({headless: false})
-    const {target, page} = await openRealPopup(s)
-    await page.evaluate(() => {
-      const button = document.createElement('button')
-      button.id = 'probe'
-      button.textContent = 'probe'
-      button.onclick = () => void chrome.permissions.request({permissions: ['bookmarks']})
-      document.body.prepend(button)
-    })
-    await page.click('#probe')
-    await sleep(2500)
-    expect(await isOpen(s, target)).toBe(false)
-  })
-
   it('a file chooser does not close the popup', async () => {
     s = await launchChrome({headless: false})
     const {target, page} = await openRealPopup(s)

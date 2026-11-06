@@ -47,7 +47,7 @@
     "message": "保存前请确认"
   },
   "saveNoticeSite": {
-    "message": "确认保存后，会立即删除 $HOST$（含所有子域名）的全部浏览记录，以后每次访问也会自动删除。",
+    "message": "确认保存后，会立即删除 $HOST$（含所有子域名）的：",
     "placeholders": {
       "host": {
         "content": "$1",
@@ -56,10 +56,28 @@
     }
   },
   "saveNoticeExact": {
-    "message": "确认保存后，会立即删除这个网址的全部浏览记录，以后每次访问也会自动删除。"
+    "message": "确认保存后，会立即删除这个网址的："
+  },
+  "saveNoticeHistory": {
+    "message": "$COUNT$ 个网页的浏览记录",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "saveNoticeBookmarks": {
+    "message": "$COUNT$ 个书签",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
   },
   "saveNoticeEffects": {
-    "message": "删除的记录无法恢复，地址栏里来自浏览记录的提示也会随之消失。书签、Cookie、缓存和下载记录不受影响。"
+    "message": "删除后无法恢复，地址栏里来自它们的提示也会随之消失；以后每次访问，浏览记录也会自动删除。Cookie、缓存和下载记录不受影响。"
   },
   "saveNoticeSkip": {
     "message": "不再提示"
@@ -238,45 +256,6 @@
   "resetPassHint": {
     "message": "已用恢复码解锁。请设置一个新的口令，旧口令将失效。"
   },
-  "bookmarkCheckIntro": {
-    "message": "浏览器书签也会出现在地址栏提示里。要检查书签里有没有这个站点吗？需要授予读取书签的权限。"
-  },
-  "bookmarkCheck": {
-    "message": "检查书签"
-  },
-  "bookmarkNone": {
-    "message": "书签里没有这个站点。"
-  },
-  "bookmarkFound": {
-    "message": "书签里有 $COUNT$ 个这个站点的书签，它们仍会出现在地址栏提示里。条目已经收进 Nightstand，可以删除原书签。",
-    "placeholders": {
-      "count": {
-        "content": "$1",
-        "example": "2"
-      }
-    }
-  },
-  "bookmarkRemove": {
-    "message": "删除原书签"
-  },
-  "bookmarkKeep": {
-    "message": "保留"
-  },
-  "bookmarkRemoved": {
-    "message": "已删除 $COUNT$ 个书签。",
-    "placeholders": {
-      "count": {
-        "content": "$1",
-        "example": "2"
-      }
-    }
-  },
-  "dismiss": {
-    "message": "知道了"
-  },
-  "bookmarkSection": {
-    "message": "书签"
-  },
   "decoyFilterPlaceholder": {
     "message": "筛选…"
   },
@@ -323,7 +302,7 @@
     "message": "保存网址"
   },
   "saveNoticeSetting": {
-    "message": "保存前提醒：会立即删除该网站或网址的浏览记录"
+    "message": "保存前提醒：会立即删除该网站或网址的浏览记录和书签"
   },
   "shortcutSection": {
     "message": "快速收起快捷键"
@@ -445,12 +424,6 @@
   },
   "bmImportTitle": {
     "message": "从浏览器书签导入"
-  },
-  "bmImportPermission": {
-    "message": "需要授予读取书签的权限。授权时浏览器可能会关闭这个弹窗；授权后重新打开、解锁，再回到这里即可。"
-  },
-  "bmImportGrant": {
-    "message": "授予书签权限"
   },
   "bmImportEmpty": {
     "message": "书签里没有网页链接。"

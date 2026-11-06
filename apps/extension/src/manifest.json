@@ -31,9 +31,7 @@
     "storage",
     "history",
     "tabs",
-    "alarms"
-  ],
-  "optional_permissions": [
+    "alarms",
     "bookmarks"
   ],
   "commands": {

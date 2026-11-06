@@ -18,8 +18,7 @@ export function cleanupTemp(): void {
 
 /**
  * A throwaway copy of a build whose manifest (and optionally background
- * script) is patched for a test — e.g. `bookmarks` pre-granted, because
- * automation can't accept a permission prompt.
+ * script) is patched for a test.
  */
 export function patchedCopy(
   dist: string,
@@ -42,10 +41,4 @@ export function patchedCopy(
     writeFileSync(file, `${readFileSync(file, 'utf8')}\n;${patch.appendToBackground}\n`)
   }
   return dir
-}
-
-/** Manifest patch: turn the optional `bookmarks` permission into a granted one. */
-export function grantBookmarks(manifest: Record<string, unknown>): void {
-  ;(manifest.permissions as string[]).push('bookmarks')
-  delete manifest.optional_permissions
 }

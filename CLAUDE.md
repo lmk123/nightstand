@@ -48,7 +48,7 @@ Collapse back to one `typescript` once typescript-eslint#10940 ships.
 - **Only Web Crypto.** No third-party crypto libraries.
 - **Offline only.** No backend, accounts, analytics, or any remote request.
 - **One UI surface: the action popup.** No options page, side panel, new-tab override, and never open an extension tab. Every screen (onboarding, decoy, decoy settings, lock screen, vault list, real settings…) is a view inside the popup.
-- **No content scripts, no host permissions.** Permissions: `storage`, `history`, `tabs`, `alarms`; `bookmarks` is optional and requested on use.
+- **No content scripts, no host permissions.** Permissions: `storage`, `history`, `tabs`, `alarms`, `bookmarks` (required, not optional: saving an entry deletes its bookmarks, and Chrome's permission prompt would close the popup mid-save).
 - **The vault key (DEK) lives only in popup memory.** Never write it to any storage (including `storage.session`) and never send it to the background. Closing the popup destroys it — that *is* the lock. No "stay unlocked for N minutes", no timers, no `idle`.
 - **No plaintext on disk.** Never persist edit drafts or other decrypted data to storage.
 - **Onboarding writes nothing until its last step.** Closing the popup mid-onboarding must leave storage empty.
@@ -78,7 +78,7 @@ Collapse back to one `typescript` once typescript-eslint#10940 ships.
 Walk through the relevant items in a real browser for every milestone that touches them. Use test domains such as `example.com` / `example.org`.
 
 1. Add `example.com` (site mode), visit `https://www.example.com/foo`, then: `chrome://history` search "example" → no results; new tab, type `exa` in the address bar → no history suggestion; new-tab "most visited" → not there.
-2. Visit a site and bookmark it *before* adding it, then add it: existing history is cleared and you're prompted to handle the bookmark.
+2. Visit a site and bookmark it *before* adding it, then add it: the save notice gives the number of pages in history and of bookmarks; after confirming, both are gone.
 3. Visit a look-alike such as `evil-example.com`: it must **not** be cleaned.
 4. While locked, visit a protected site: history is still cleaned.
 5. Open the popup while locked: only Quick Links are visible; a wrong passphrase gives no hint at all; the right passphrase + Enter unlocks.
@@ -94,8 +94,7 @@ Also verify, and document under "Known limitations" in the README: whether the C
 Vitest + `puppeteer-core` against the installed Google Chrome and Firefox (override with `CHROME_PATH` / `FIREFOX_PATH`; a suite skips itself when its browser or build is missing). Shared helpers live in `e2e/support/`; all temp profiles, downloads and patched build copies go under the OS temp dir and are removed after each file. What the suite relies on, and why:
 
 - **Chrome**: `puppeteer.launch({pipe: true, enableExtensions: [dist/chromium]})` with a fresh profile. The extension id comes from the service-worker target; `sw.evaluate()` reaches `chrome.*` in the background. The popup UI is driven as a tab at `chrome-extension://<id>/action/index.html` (closing the tab = closing the popup). `--host-resolver-rules=MAP * 127.0.0.1:<port>` plus `e2e/support/server.ts` makes `example.com` & co. real visits that land in history. Panic is fired with `chrome.commands.onCommand.dispatch('panic')`.
-- **Permission prompts can't be accepted by automation.** Tests that need `bookmarks` use `patchedCopy(dist, {manifest: grantBookmarks})`, a temp copy of the build with the permission made required.
-- **The real popup** (`e2e/real-popup.e2e.ts`, `E2E_HEADED=1` only): `chrome.action.openPopup({windowId})` from the service worker after focusing a normal window. It pins the findings the UI is designed around: a `permissions.request` prompt **closes** the popup; a file chooser does **not** (Chrome on macOS); a blob download completes after the popup closes.
+- **The real popup** (`e2e/real-popup.e2e.ts`, `E2E_HEADED=1` only): `chrome.action.openPopup({windowId})` from the service worker after focusing a normal window. It pins the findings the UI is designed around: a file chooser does **not** close the popup (Chrome on macOS); a blob download completes after the popup closes. (A `permissions.request` prompt **does** close it — the reason `bookmarks` is a required permission.)
 - **Firefox**: WebDriver BiDi installs the add-on (`browser.installExtension`) but refuses to navigate to or expose `moz-extension://` pages, so the popup UI can't be driven. `e2e/firefox-history.e2e.ts` checks the background instead: a patched copy seeds the match table, visits go through the test server as an HTTP proxy, and `places.sqlite` (read with the `sqlite3` CLI after closing the browser) shows what history is left. Popup-only Firefox branches (paste-based backup import, private-window wording) still need a manual pass with `pnpm dev:firefox`.
 - UI steps find buttons by their zh_CN label (`clickText`), so renaming copy in `_locales` can break e2e tests — update both.
 

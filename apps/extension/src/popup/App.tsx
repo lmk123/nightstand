@@ -11,11 +11,11 @@ import {
   type StoredVault,
   type VaultEntry
 } from '@nightstand/core'
+import {removeBookmarksFor} from '@/platform/bookmarks'
 import {t} from '@/platform/i18n'
 import {isPopupNotice, sendToBackground} from '@/platform/messages'
 import {loadLinks, loadShelf} from '@/platform/storage'
 import {getActiveTab, isIncognitoAllowed, openUrl} from '@/platform/tabs'
-import {BookmarkCheck} from './components/BookmarkCheck'
 import {IncognitoHelp} from './components/IncognitoHelp'
 import {SettingsLink} from './components/SettingsLink'
 import {useOpenHelp} from './help'
@@ -36,7 +36,7 @@ type View =
   | {name: 'onboarding'}
   | {name: 'locked'}
   | {name: 'decoySettings'}
-  | {name: 'vault'; notice?: 'incognito' | 'unsupportedTab'; added?: VaultEntry}
+  | {name: 'vault'; notice?: 'incognito' | 'unsupportedTab'}
   | {name: 'entry'; editing?: VaultEntry; prefill?: EntryInput}
   | {name: 'settings'}
   | {name: 'resetPassphrase'}
@@ -187,10 +187,6 @@ export default function App() {
               </div>
             ) : view.notice === 'unsupportedTab' ? (
               <p className="bg-accent text-accent-foreground m-2 mb-0 rounded-md p-2 text-xs">{t('currentTabUnsupported')}</p>
-            ) : view.added ? (
-              <div className="p-2 pb-0">
-                <BookmarkCheck key={view.added.id} entry={view.added} onDismiss={() => setView({name: 'vault'})} />
-              </div>
             ) : undefined
           }
           onOpen={openEntry}
@@ -214,7 +210,9 @@ export default function App() {
             if (skipNoticeFromNow) next = updateSettings(next, {skipSaveNotice: true})
             await update(next)
             purgeFor(entry)
-            setView(isNew ? {name: 'vault', added: entry} : {name: 'vault'})
+            // Bookmarks would keep the site in address-bar suggestions.
+            await removeBookmarksFor(entry).catch(console.error)
+            setView({name: 'vault'})
           }}
           onDelete={async (entry) => {
             await update(removeEntry(session.data, entry.id))

@@ -16,8 +16,9 @@ import {Input} from '@/components/ui/input'
 import {Label} from '@/components/ui/label'
 import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group'
 import {Textarea} from '@/components/ui/textarea'
+import {findBookmarksFor} from '@/platform/bookmarks'
+import {countHistoryFor} from '@/platform/history'
 import {t} from '@/platform/i18n'
-import {BookmarkCheck} from '../components/BookmarkCheck'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
 import {HelpLink} from '../help'
@@ -26,9 +27,9 @@ import {HelpLink} from '../help'
  * Short add/edit form. Unsaved changes are simply dropped when the popup
  * closes — drafts are never persisted (that would put plaintext on disk).
  *
- * Saving a new site / URL (or changing an entry's URL or match mode) wipes
- * its existing history right away, so unless the user opted out, "save" first
- * shows a notice that has to be confirmed.
+ * Saving wipes the entry's existing history and deletes its bookmarks right
+ * away, so unless the user opted out, "save" first shows a notice with what
+ * exactly will be deleted, and it has to be confirmed.
  */
 export function EntryForm({
   entries,
@@ -58,8 +59,8 @@ export function EntryForm({
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [busy, setBusy] = useState(false)
-  /** Validated entry waiting for the user to confirm the notice. */
-  const [pending, setPending] = useState<VaultEntry | null>(null)
+  /** Validated entry waiting for the user to confirm the notice, with what saving it deletes. */
+  const [pending, setPending] = useState<{entry: VaultEntry; history: number; bookmarks: number} | null>(null)
   const [dontShowAgain, setDontShowAgain] = useState(false)
 
   async function save(entry: VaultEntry, skipNoticeFromNow: boolean) {
@@ -89,14 +90,25 @@ export function EntryForm({
     }
     const duplicate = findDuplicate(entries, entry, editing?.id)
     if (duplicate) return setError(t('errDuplicate', duplicate.title))
-    // Only a new site / URL triggers a fresh history wipe; editing the title,
-    // tags or note of an existing entry deletes nothing new.
-    const wipesHistory = !editing || entryKey(editing) !== entryKey(entry)
-    if (wipesHistory && !skipNotice) {
-      setDontShowAgain(false)
-      return setPending(entry)
+    if (skipNotice) return save(entry, false)
+    setBusy(true)
+    let history: number
+    let bookmarks: number
+    try {
+      ;[history, bookmarks] = await Promise.all([
+        countHistoryFor(entry),
+        findBookmarksFor(entry).then((found) => found.length)
+      ])
+    } finally {
+      setBusy(false)
     }
-    await save(entry, false)
+    // A new site / URL always gets the notice (it also explains that future
+    // visits are cleaned). Editing only the title, tags or note asks only when
+    // something is there to delete, e.g. a bookmark added since.
+    const newKey = !editing || entryKey(editing) !== entryKey(entry)
+    if (!newKey && history === 0 && bookmarks === 0) return save(entry, false)
+    setDontShowAgain(false)
+    setPending({entry, history, bookmarks})
   }
 
   return (
@@ -140,11 +152,6 @@ export function EntryForm({
           <Field label={t('fieldNote')} htmlFor="note">
             <Textarea id="note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
-          {editing && (
-            <Field label={t('bookmarkSection')}>
-              <BookmarkCheck entry={editing} />
-            </Field>
-          )}
         </fieldset>
         {pending ? (
           <div role="alertdialog" aria-labelledby="save-notice-title" className="bg-accent text-accent-foreground grid gap-2 rounded-md p-3 text-xs leading-relaxed">
@@ -152,10 +159,14 @@ export function EntryForm({
               {t('saveNoticeTitle')}
             </p>
             <p>
-              {pending.matchMode === 'site'
-                ? t('saveNoticeSite', hostOf(pending.url) ?? pending.url)
+              {pending.entry.matchMode === 'site'
+                ? t('saveNoticeSite', hostOf(pending.entry.url) ?? pending.entry.url)
                 : t('saveNoticeExact')}
             </p>
+            <ul className="list-disc pl-4">
+              <li>{t('saveNoticeHistory', String(pending.history))}</li>
+              <li>{t('saveNoticeBookmarks', String(pending.bookmarks))}</li>
+            </ul>
             <p>{t('saveNoticeEffects')}</p>
             <Label className="flex items-center gap-2 text-xs font-normal">
               <Checkbox checked={dontShowAgain} onCheckedChange={(v) => setDontShowAgain(v === true)} />
@@ -166,7 +177,7 @@ export function EntryForm({
               <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => setPending(null)}>
                 {t('saveNoticeBack')}
               </Button>
-              <Button type="button" size="sm" autoFocus disabled={busy} onClick={() => save(pending, dontShowAgain)}>
+              <Button type="button" size="sm" autoFocus disabled={busy} onClick={() => save(pending.entry, dontShowAgain)}>
                 {t('saveNoticeConfirm')}
               </Button>
             </div>

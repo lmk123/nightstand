@@ -1,4 +1,5 @@
 import {createMatcher, emptyMatchTable, hostOf, type UrlMatcher} from '@nightstand/core'
+import {historySince} from '@/platform/history'
 import {loadIndex, STORAGE_KEYS} from '@/platform/storage'
 import {readState, updateState} from './state'
 
@@ -37,32 +38,6 @@ async function deleteUrls(urls: Iterable<string>): Promise<number> {
     count++
   }
   return count
-}
-
-const SEARCH_PAGE = 1000
-
-/**
- * Every history item visited in [startTime, now], newest first, paging
- * backwards through `endTime` because `history.search` caps each call.
- */
-async function* historySince(startTime: number, text = ''): AsyncGenerator<chrome.history.HistoryItem> {
-  const seen = new Set<string>()
-  let endTime = Date.now() + 1
-  for (;;) {
-    const page = await chrome.history.search({text, startTime, endTime, maxResults: SEARCH_PAGE})
-    let fresh = 0
-    let oldest = endTime
-    for (const item of page) {
-      oldest = Math.min(oldest, item.lastVisitTime ?? oldest)
-      if (seen.has(item.id)) continue
-      seen.add(item.id)
-      fresh++
-      yield item
-    }
-    if (page.length < SEARCH_PAGE || fresh === 0) return
-    // Items sharing the boundary timestamp are de-duplicated by id above.
-    endTime = oldest + 1
-  }
 }
 
 /** Deletes every history item (optionally restricted to a text search) that matches. */
