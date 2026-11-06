@@ -1,12 +1,12 @@
 import {useEffect, useMemo, useRef, useState} from 'react'
-import {ExternalLink, Lock, Pencil, Plus, Settings, SquarePlus} from 'lucide-react'
+import {AppWindow, Lock, Pencil, Plus, Search, SlidersHorizontal} from 'lucide-react'
 import {searchEntries, type VaultEntry} from '@nightstand/core'
 import {cn} from 'cn'
 import {Button} from '@/components/ui/button'
-import {Input} from '@/components/ui/input'
 import {t} from '@/platform/i18n'
 import {SiteAvatar} from '../components/Avatar'
 import {Header} from '../components/Header'
+import {buttonClass, outlineButtonClass} from '../components/styles'
 import {entryTitle} from '../title'
 
 export function VaultList({
@@ -52,13 +52,33 @@ export function VaultList({
   return (
     <div className="flex max-h-[580px] flex-col">
       <Header
-        title={t('vaultTitle')}
+        bordered={false}
+        title={
+          <>
+            {t('vaultTitle')}
+            <span className="bg-track text-subtle-foreground rounded-full px-2 py-px text-xs font-medium">{entries.length}</span>
+          </>
+        }
         actions={
           <>
-            <Button variant="ghost" size="icon-sm" onClick={onSettings} aria-label={t('settings')} title={t('settings')}>
-              <Settings />
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              className="text-subtle-foreground rounded-[10px]"
+              onClick={onSettings}
+              aria-label={t('settings')}
+              title={t('settings')}
+            >
+              <SlidersHorizontal />
             </Button>
-            <Button variant="ghost" size="icon-sm" onClick={onLock} aria-label={t('lock')} title={t('lock')}>
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              className="text-subtle-foreground rounded-[10px]"
+              onClick={onLock}
+              aria-label={t('lock')}
+              title={t('lock')}
+            >
               <Lock />
             </Button>
           </>
@@ -66,30 +86,35 @@ export function VaultList({
       />
       {notice}
       {entries.length > 0 && (
-        <div className="p-2 pb-0">
-          <Input
-            autoFocus
-            placeholder={t('vaultSearchPlaceholder')}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value)
-              setSelectedId(null)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                e.preventDefault()
-                moveSelection(e.key === 'ArrowDown' ? 1 : -1)
-              } else if (e.key === 'Enter' && selected) {
-                onOpen(selected)
-              }
-            }}
-          />
+        <div className="px-3 pb-2">
+          <label className="bg-card focus-within:border-ring focus-within:ring-ring/25 flex h-10 items-center gap-2 rounded-[10px] border px-3 focus-within:ring-3">
+            <Search className="text-muted-foreground size-4 shrink-0" aria-hidden />
+            <input
+              autoFocus
+              aria-label={t('vaultSearchPlaceholder')}
+              placeholder={t('vaultSearchPlaceholder')}
+              className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm outline-none"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setSelectedId(null)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  moveSelection(e.key === 'ArrowDown' ? 1 : -1)
+                } else if (e.key === 'Enter' && selected) {
+                  onOpen(selected)
+                }
+              }}
+            />
+          </label>
         </div>
       )}
-      <ul ref={listRef} className="min-h-0 flex-1 overflow-y-auto p-1">
-        {entries.length === 0 && <li className="text-muted-foreground p-4 text-center text-sm">{t('vaultEmpty')}</li>}
+      <ul ref={listRef} className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2">
+        {entries.length === 0 && <li className="text-muted-foreground px-6 py-8 text-center text-[13px] leading-relaxed">{t('vaultEmpty')}</li>}
         {entries.length > 0 && visible.length === 0 && (
-          <li className="text-muted-foreground p-4 text-center text-sm">{t('noMatches')}</li>
+          <li className="text-muted-foreground p-6 text-center text-[13px]">{t('noMatches')}</li>
         )}
         {visible.map((entry) => {
           const isSelected = entry.id === selected?.id
@@ -98,24 +123,24 @@ export function VaultList({
               key={entry.id}
               aria-current={isSelected || undefined}
               className={cn(
-                'group flex items-center gap-1 rounded-md pr-1',
-                isSelected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
+                'group flex h-12 shrink-0 items-center gap-1 rounded-[10px] pr-1.5',
+                isSelected ? 'bg-accent text-accent-foreground shadow-[inset_0_0_0_1px_var(--accent-line)]' : 'hover:bg-muted'
               )}
             >
               <button
                 type="button"
-                className="flex min-w-0 flex-1 items-center gap-2 rounded-md p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="focus-visible:ring-ring/50 flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-[10px] px-2 text-left outline-none focus-visible:ring-2"
                 onClick={() => setSelectedId(entry.id)}
               >
                 {/* Title only: some domains are revealing on their own, so the
                     list never shows the URL or the extra hosts, not even in a tooltip. */}
                 <SiteAvatar text={entryTitle(entry)} icon={entry.icon} />
-                <span className="min-w-0 flex-1 truncate text-sm">{entryTitle(entry)}</span>
+                <span className={cn('min-w-0 flex-1 truncate text-sm', isSelected && 'font-medium')}>{entryTitle(entry)}</span>
               </button>
               <Button
                 variant="ghost"
-                size="icon-xs"
-                className={cn(!isSelected && 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')}
+                size="icon-sm"
+                className={cn('rounded-lg', isSelected ? 'hover:bg-accent-line/60 text-accent-foreground' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100')}
                 onClick={() => onEdit(entry)}
                 aria-label={t('edit')}
                 title={t('edit')}
@@ -123,8 +148,8 @@ export function VaultList({
                 <Pencil />
               </Button>
               {isSelected && (
-                <Button size="xs" onClick={() => onOpen(entry)}>
-                  <ExternalLink />
+                // The ↵ hint is a pseudo-element, so the button's text stays just "打开".
+                <Button size="sm" className="rounded-lg pr-2.5 pl-3 after:rounded after:border after:border-current/45 after:px-1 after:text-[11px] after:leading-[15px] after:opacity-80 after:content-['↵']" onClick={() => onOpen(entry)}>
                   {t('vaultOpen')}
                 </Button>
               )}
@@ -132,12 +157,17 @@ export function VaultList({
           )
         })}
       </ul>
-      <footer className="flex gap-2 border-t p-2">
-        <Button variant="secondary" size="sm" className="flex-1" onClick={onAddCurrent}>
-          <SquarePlus />
+      {visible.length > 0 && (
+        <p className="text-muted-foreground px-[18px] py-1.5 text-[11px]" aria-hidden>
+          {t('vaultKeysHint')}
+        </p>
+      )}
+      <footer className="border-line grid grid-cols-2 gap-2 border-t p-3 pt-2.5">
+        <Button className={buttonClass} onClick={onAddCurrent}>
+          <AppWindow />
           {t('addCurrentTab')}
         </Button>
-        <Button variant="secondary" size="sm" className="flex-1" onClick={onAddManual}>
+        <Button variant="outline" className={cn(buttonClass, outlineButtonClass)} onClick={onAddManual}>
           <Plus />
           {t('addManually')}
         </Button>

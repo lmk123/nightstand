@@ -55,6 +55,12 @@ export interface VaultSettings {
    * and builds that don't know it simply drop it (the notice comes back).
    */
   skipSaveNotice?: boolean
+  /**
+   * The user ticked "don't show again" on the reminder shown after a save
+   * (check the address bar yourself). Absent means it is shown. Optional,
+   * like `skipSaveNotice`, so no payload version bump.
+   */
+  skipSaveCheck?: boolean
 }
 
 /**
@@ -388,5 +394,6 @@ export function migrateVaultData(raw: unknown): VaultData {
       : DEFAULT_SETTINGS.openMode
   const out: VaultSettings = {openMode}
   if (typeof settings.skipSaveNotice === 'boolean') out.skipSaveNotice = settings.skipSaveNotice
+  if (typeof settings.skipSaveCheck === 'boolean') out.skipSaveCheck = settings.skipSaveCheck
   return {version: VAULT_DATA_VERSION, entries, settings: out}
 }

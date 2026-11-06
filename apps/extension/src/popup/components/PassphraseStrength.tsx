@@ -11,11 +11,11 @@ const LABEL: Record<Strength, MessageKey> = {
 
 const LEVEL: Record<Strength, number> = {weak: 1, fair: 2, good: 3, strong: 4}
 
-const COLOR: Record<Strength, string> = {
-  weak: 'bg-destructive',
-  fair: 'bg-amber-500',
-  good: 'bg-emerald-500',
-  strong: 'bg-emerald-600'
+const COLOR: Record<Strength, {bar: string; text: string}> = {
+  weak: {bar: 'bg-destructive', text: 'text-destructive'},
+  fair: {bar: 'bg-fair', text: 'text-fair-foreground'},
+  good: {bar: 'bg-ok', text: 'text-ok-foreground'},
+  strong: {bar: 'bg-ok', text: 'text-ok-foreground'}
 }
 
 /** A hint only: any passphrase that passes `checkPassphrase` can still be used. */
@@ -24,13 +24,13 @@ export function PassphraseStrength({passphrase}: {passphrase: string}) {
   const level = passphrase ? LEVEL[strength] : 0
   return (
     <div className="grid gap-1.5" aria-live="polite">
-      <div className="flex gap-1" aria-hidden>
+      <div className="grid grid-cols-4 gap-1" aria-hidden>
         {[1, 2, 3, 4].map((i) => (
-          <span key={i} className={'h-1 flex-1 rounded-full ' + (i <= level ? COLOR[strength] : 'bg-muted')} />
+          <span key={i} className={'h-1 rounded-full ' + (i <= level ? COLOR[strength].bar : 'bg-border')} />
         ))}
       </div>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-muted-foreground text-xs">{passphrase ? t('passStrength', t(LABEL[strength])) : ''}</span>
+        <span className={'text-xs ' + COLOR[strength].text}>{passphrase ? t('passStrength', t(LABEL[strength])) : ''}</span>
         <HelpLink topic="passphrase" label="faqPassQ" />
       </div>
     </div>

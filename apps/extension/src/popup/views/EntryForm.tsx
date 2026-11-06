@@ -1,5 +1,6 @@
 import {useState} from 'react'
-import {ChevronDown, ChevronRight} from 'lucide-react'
+import {ChevronDown, ChevronUp, Trash2} from 'lucide-react'
+import {cn} from 'cn'
 import {
   createEntry,
   editEntry,
@@ -16,13 +17,14 @@ import {Button} from '@/components/ui/button'
 import {Checkbox} from '@/components/ui/checkbox'
 import {Input} from '@/components/ui/input'
 import {Label} from '@/components/ui/label'
-import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group'
 import {Textarea} from '@/components/ui/textarea'
 import {findBookmarksFor} from '@/platform/bookmarks'
 import {countHistoryFor} from '@/platform/history'
 import {t} from '@/platform/i18n'
+import {ChoiceCards} from '../components/ChoiceCards'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
+import {buttonClass, fieldClass, mainButtonClass, outlineButtonClass} from '../components/styles'
 import {HelpLink} from '../help'
 import {entryTitle} from '../title'
 
@@ -114,16 +116,18 @@ export function EntryForm({
   }
 
   return (
-    <div className="flex flex-col">
+    <div className={cn('relative flex flex-col', pending && 'min-h-[460px]')}>
       <Header title={editing ? t('entryEditTitle') : t('entryAddTitle')} onBack={onCancel} />
-      <form className="flex flex-col gap-3 p-3" onSubmit={submit}>
+      <form className="flex flex-col" onSubmit={submit}>
         {/* Locked while the notice is up, so the confirmed entry is what was shown. */}
-        <fieldset disabled={!!pending} className="flex min-w-0 flex-col gap-3">
+        <fieldset disabled={!!pending} className="flex min-w-0 flex-col gap-4 p-4">
           <Field label={t('fieldUrl')} htmlFor="url" error={error}>
             <Input
               id="url"
+              className={fieldClass}
               autoFocus={!initial?.url}
               spellCheck={false}
+              aria-invalid={error ? true : undefined}
               value={url}
               onChange={(e) => {
                 setUrl(e.target.value)
@@ -135,6 +139,7 @@ export function EntryForm({
           <Field label={t('fieldTitle')} htmlFor="title">
             <Input
               id="title"
+              className={fieldClass}
               autoFocus={!!initial?.url}
               placeholder={t('untitledEntry')}
               value={title}
@@ -142,36 +147,41 @@ export function EntryForm({
             />
           </Field>
           <Field label={t('fieldMatchMode')}>
-            <RadioGroup value={matchMode} onValueChange={(v) => setMatchMode(v as MatchMode)} className="gap-2">
-              <Label className="flex items-center gap-2 text-sm font-normal">
-                <RadioGroupItem value="site" />
-                {t('matchSite')}
-              </Label>
-              <Label className="flex items-center gap-2 text-sm font-normal">
-                <RadioGroupItem value="exact" />
-                {t('matchExact')}
-              </Label>
-            </RadioGroup>
+            <ChoiceCards
+              value={matchMode}
+              onChange={setMatchMode}
+              options={[
+                {value: 'site', label: t('matchSite')},
+                {value: 'exact', label: t('matchExact')}
+              ]}
+            />
             <HelpLink topic="matchMode" label="faqMatchLink" />
           </Field>
-          <div className="grid gap-1.5">
+          <div className="panel grid">
             <button
               type="button"
-              className="text-foreground flex w-fit items-center gap-1 text-xs font-medium"
+              className="focus-visible:ring-ring/50 flex min-h-11 items-center justify-between rounded-xl px-3 text-left text-[13px] font-medium outline-none focus-visible:ring-2"
               aria-expanded={extraOpen}
               aria-controls="extra-hosts"
               onClick={() => setExtraOpen((open) => !open)}
             >
-              {extraOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
               {t('fieldExtraHosts', String(parseExtraHosts(extraHosts).hosts.length))}
+              {extraOpen ? (
+                <ChevronUp className="text-muted-foreground size-4" aria-hidden />
+              ) : (
+                <ChevronDown className="text-muted-foreground size-4" aria-hidden />
+              )}
             </button>
             {extraOpen && (
-              <>
+              <div className="grid gap-2 px-3 pb-3">
                 <Textarea
                   id="extra-hosts"
+                  aria-label={t('fieldExtraHosts', String(parseExtraHosts(extraHosts).hosts.length))}
                   rows={3}
                   spellCheck={false}
+                  className="bg-background dark:bg-background rounded-lg px-3 font-mono text-xs leading-relaxed md:text-xs"
                   placeholder={'video.example.net\npay.example.org'}
+                  aria-invalid={extraError ? true : undefined}
                   value={extraHosts}
                   onChange={(e) => {
                     setExtraHosts(e.target.value)
@@ -181,19 +191,55 @@ export function EntryForm({
                 {extraError ? (
                   <p className="text-destructive text-xs">{extraError}</p>
                 ) : (
-                  <p className="text-muted-foreground text-xs">{t('fieldExtraHostsHint')}</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{t('fieldExtraHostsHint')}</p>
                 )}
-                <HelpLink topic="extraHosts" label="faqExtraLink" />
-              </>
+              </div>
             )}
           </div>
+          <div className="-mt-2">
+            <HelpLink topic="extraHosts" label="faqExtraLink" />
+          </div>
         </fieldset>
-        {pending ? (
-          <div role="alertdialog" aria-labelledby="save-notice-title" className="bg-accent text-accent-foreground grid gap-2 rounded-md p-3 text-xs leading-relaxed">
-            <p id="save-notice-title" className="font-medium">
+        <footer className="border-line flex items-center gap-2 border-t p-3">
+          {editing &&
+            (confirmingDelete ? (
+              <Button type="button" variant="destructive" className={buttonClass} onClick={() => onDelete(editing)}>
+                <Trash2 />
+                {t('confirmDelete')}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                className={cn(buttonClass, 'text-destructive hover:text-destructive px-3')}
+                onClick={() => setConfirmingDelete(true)}
+              >
+                <Trash2 />
+                {t('delete')}
+              </Button>
+            ))}
+          <span className="flex-1" />
+          <Button type="button" variant="outline" className={cn(buttonClass, outlineButtonClass)} onClick={onCancel}>
+            {t('cancel')}
+          </Button>
+          <Button type="submit" className={cn(buttonClass, 'px-5')} disabled={busy || !url.trim() || !!pending}>
+            {t('save')}
+          </Button>
+        </footer>
+      </form>
+      {pending && (
+        <>
+          <div aria-hidden className="bg-scrim absolute inset-0" onClick={() => !busy && setPending(null)} />
+          <section
+            role="alertdialog"
+            aria-labelledby="save-notice-title"
+            className="bg-card absolute inset-x-0 bottom-0 grid max-h-full gap-3.5 overflow-y-auto rounded-t-[18px] px-4 pt-2.5 pb-4 shadow-[0_-8px_24px_rgb(0_0_0/0.14)]"
+          >
+            <span aria-hidden className="bg-input h-1 w-9 justify-self-center rounded-full" />
+            <h2 id="save-notice-title" className="text-base font-semibold">
               {t('saveNoticeTitle')}
-            </p>
-            <p>
+            </h2>
+            <p className="text-subtle-foreground text-[13px] leading-relaxed">
               {/* No domains here: some are revealing on their own. */}
               {pending.entry.extraHosts.length > 0
                 ? t(
@@ -202,47 +248,32 @@ export function EntryForm({
                   )
                 : t(pending.entry.matchMode === 'site' ? 'saveNoticeSite' : 'saveNoticeExact')}
             </p>
-            <ul className="list-disc pl-4">
-              <li>{t('saveNoticeHistory', String(pending.history))}</li>
-              <li>{t('saveNoticeBookmarks', String(pending.bookmarks))}</li>
+            <ul className="grid grid-cols-2 gap-2">
+              <li className="bg-muted rounded-xl p-3 text-[12.5px] leading-snug">{t('saveNoticeHistory', String(pending.history))}</li>
+              <li className="bg-muted rounded-xl p-3 text-[12.5px] leading-snug">{t('saveNoticeBookmarks', String(pending.bookmarks))}</li>
             </ul>
-            <p>{t('saveNoticeEffects')}</p>
-            <Label className="flex items-center gap-2 text-xs font-normal">
+            <p className="text-muted-foreground text-xs leading-relaxed">{t('saveNoticeEffects')}</p>
+            <Label className="text-subtle-foreground flex min-h-8 items-center gap-2 text-[13px] font-normal">
               <Checkbox checked={dontShowAgain} onCheckedChange={(v) => setDontShowAgain(v === true)} />
               {t('saveNoticeSkip')}
             </Label>
-            <div className="flex items-center gap-2">
-              <span className="flex-1" />
-              <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => setPending(null)}>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(mainButtonClass, outlineButtonClass)}
+                disabled={busy}
+                onClick={() => setPending(null)}
+              >
                 {t('saveNoticeBack')}
               </Button>
-              <Button type="button" size="sm" autoFocus disabled={busy} onClick={() => save(pending.entry, dontShowAgain)}>
+              <Button type="button" className={mainButtonClass} autoFocus disabled={busy} onClick={() => save(pending.entry, dontShowAgain)}>
                 {t('saveNoticeConfirm')}
               </Button>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 pt-1">
-            {editing &&
-              (confirmingDelete ? (
-                <Button type="button" variant="destructive" size="sm" onClick={() => onDelete(editing)}>
-                  {t('confirmDelete')}
-                </Button>
-              ) : (
-                <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmingDelete(true)}>
-                  {t('delete')}
-                </Button>
-              ))}
-            <span className="flex-1" />
-            <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-              {t('cancel')}
-            </Button>
-            <Button type="submit" size="sm" disabled={busy || !url.trim()}>
-              {t('save')}
-            </Button>
-          </div>
-        )}
-      </form>
+          </section>
+        </>
+      )}
     </div>
   )
 }

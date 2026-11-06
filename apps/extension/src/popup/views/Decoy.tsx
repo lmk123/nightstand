@@ -1,8 +1,7 @@
 import {useMemo, useState} from 'react'
-import {Settings} from 'lucide-react'
+import {Search, SlidersHorizontal} from 'lucide-react'
 import {filterDecoyLinks, hostOf, type DecoyLink, type StoredVault} from '@nightstand/core'
 import {Button} from '@/components/ui/button'
-import {Input} from '@/components/ui/input'
 import {t} from '@/platform/i18n'
 import {SiteAvatar} from '../components/Avatar'
 import {attemptUnlock, type UnlockResult} from '../session'
@@ -47,48 +46,65 @@ export function Decoy({
 
   return (
     <div className="flex max-h-[580px] flex-col">
-      <div className="flex items-center gap-1 border-b p-2">
-        <Input
-          autoFocus
-          autoComplete="off"
-          spellCheck={false}
-          placeholder={t('decoyFilterPlaceholder')}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.nativeEvent.isComposing) tryUnlock().catch(console.error)
-          }}
-        />
-        <Button variant="ghost" size="icon-sm" onClick={onSettings} aria-label={t('decoySettingsTitle')} title={t('decoySettingsTitle')}>
-          <Settings />
+      <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+        <label className="bg-card focus-within:border-ring focus-within:ring-ring/25 flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[10px] border px-3 focus-within:ring-3">
+          <Search className="text-muted-foreground size-4 shrink-0" aria-hidden />
+          <input
+            autoFocus
+            autoComplete="off"
+            spellCheck={false}
+            aria-label={t('decoyFilterPlaceholder')}
+            placeholder={t('decoyFilterPlaceholder')}
+            className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm outline-none"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) tryUnlock().catch(console.error)
+            }}
+          />
+        </label>
+        <Button
+          variant="ghost"
+          size="icon-lg"
+          className="text-subtle-foreground rounded-[10px]"
+          onClick={onSettings}
+          aria-label={t('decoySettingsTitle')}
+          title={t('decoySettingsTitle')}
+        >
+          <SlidersHorizontal />
         </Button>
       </div>
       {loadError && (
-        <p role="status" className="bg-muted text-muted-foreground m-2 mb-0 rounded-md p-2 text-xs leading-relaxed">
+        <p role="status" className="bg-muted text-muted-foreground mx-3 mt-2 rounded-[10px] p-3 text-xs leading-relaxed">
           {t('decoyDataUnreadable')}
         </p>
       )}
-      <ul className="min-h-0 flex-1 overflow-y-auto p-1">
-        {visible.length === 0 && (
-          <li className="text-muted-foreground p-4 text-center text-sm">{t('decoyEmpty')}</li>
-        )}
-        {visible.map((link) => (
-          <li key={link.id}>
-            <button
-              type="button"
-              className="hover:bg-muted flex w-full items-center gap-2 rounded-md p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              onClick={() => open(link)}
-              title={link.url}
-            >
-              <SiteAvatar text={link.title} pageUrl={link.url} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm">{link.title}</span>
-                <span className="text-muted-foreground block truncate text-xs">{hostOf(link.url) ?? link.url}</span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      <div className="text-muted-foreground flex items-baseline justify-between px-[18px] pt-3 pb-1 text-xs">
+        <span className="font-semibold tracking-[0.04em]">{t('popupTitle')}</span>
+        <span>{visible.length}</span>
+      </div>
+      {visible.length === 0 ? (
+        <div className="text-muted-foreground flex flex-col items-center gap-2.5 px-4 pt-8 pb-12 text-[13px]">
+          <Search className="size-7 opacity-60" strokeWidth={1.6} aria-hidden />
+          {t('decoyEmpty')}
+        </div>
+      ) : (
+        <ul className="grid min-h-0 grid-cols-4 gap-0.5 overflow-y-auto px-2 pt-0.5 pb-3">
+          {visible.map((link) => (
+            <li key={link.id} className="min-w-0">
+              <button
+                type="button"
+                className="hover:bg-muted focus-visible:ring-ring/50 flex w-full min-w-0 flex-col items-center gap-2 rounded-xl px-1 pt-3 pb-2.5 outline-none focus-visible:ring-2"
+                onClick={() => open(link)}
+                title={`${link.title}\n${hostOf(link.url) ?? link.url}`}
+              >
+                <SiteAvatar text={link.title} pageUrl={link.url} size="lg" />
+                <span className="max-w-full truncate text-xs leading-4">{link.title}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

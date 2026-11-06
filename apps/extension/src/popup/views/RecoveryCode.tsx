@@ -6,6 +6,7 @@ import {Label} from '@/components/ui/label'
 import {t} from '@/platform/i18n'
 import {Header} from '../components/Header'
 import {RecoveryCodeBox} from '../components/RecoveryCodeBox'
+import {mainButtonClass} from '../components/styles'
 import {commitStored, type Session} from '../session'
 
 /** Issues a new recovery code (the old one stops working) and shows it once. */
@@ -38,28 +39,32 @@ export function RecoveryCode({
   return (
     <div className="flex flex-col">
       <Header title={t('recoveryTitle')} onBack={code ? undefined : onBack} />
-      <div className="flex flex-col gap-3 p-3">
+      <div className="flex flex-col gap-3.5 p-4">
         {code && pending ? (
           <>
-            <p className="text-sm leading-relaxed">{t('recoveryNewBody')}</p>
+            <p className="text-subtle-foreground text-[13px] leading-relaxed">{t('recoveryNewBody')}</p>
             <RecoveryCodeBox code={code} />
-            <Label className="flex items-center gap-2 text-sm font-normal">
+            <p className="text-muted-foreground text-xs leading-relaxed">{t('recoveryRotateBody')}</p>
+            <Label className="bg-muted flex min-h-11 items-center gap-2.5 rounded-[10px] px-3 text-[13px] font-normal">
               <Checkbox checked={saved} onCheckedChange={(v) => setSaved(v === true)} />
               {t('onbCodeConfirm')}
             </Label>
-            <Button disabled={!saved} onClick={() => onDone(pending)}>
-              {t('done')}
-            </Button>
           </>
         ) : (
-          <>
-            <p className="text-sm leading-relaxed">{t('recoveryRotateBody')}</p>
-            <Button onClick={generate} disabled={busy}>
-              {busy ? t('working') : t('recoveryRotate')}
-            </Button>
-          </>
+          <p className="text-subtle-foreground text-[13px] leading-relaxed">{t('recoveryRotateBody')}</p>
         )}
       </div>
+      <footer className="border-line border-t p-3">
+        {code && pending ? (
+          <Button className={mainButtonClass + ' w-full'} disabled={!saved} onClick={() => onDone(pending)}>
+            {t('done')}
+          </Button>
+        ) : (
+          <Button className={mainButtonClass + ' w-full'} onClick={generate} disabled={busy}>
+            {busy ? t('working') : t('recoveryRotate')}
+          </Button>
+        )}
+      </footer>
     </div>
   )
 }

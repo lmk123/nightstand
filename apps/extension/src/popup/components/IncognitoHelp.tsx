@@ -9,13 +9,12 @@ import {t} from '@/platform/i18n'
  */
 export function IncognitoHelp() {
   return (
-    <div className="bg-accent text-accent-foreground grid gap-2 rounded-md p-3 text-xs leading-relaxed">
+    <div className="bg-accent text-accent-foreground border-accent-line grid gap-2.5 rounded-xl border p-3 text-xs leading-relaxed">
       <p>{isFirefoxLike ? t('privateNeededFirefox') : t('incognitoNeeded')}</p>
       {isChromiumLike && (
         <Button
-          size="xs"
           variant="outline"
-          className="justify-self-start"
+          className="border-accent-line bg-card dark:bg-card h-9 justify-self-start rounded-lg px-3 text-[13px]"
           onClick={() => chrome.tabs.create({url: `chrome://extensions/?id=${chrome.runtime.id}`})}
         >
           {t('incognitoOpenDetails')}

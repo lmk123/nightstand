@@ -199,6 +199,10 @@
   "noMatches": {
     "message": "没有匹配的条目"
   },
+  "vaultKeysHint": {
+    "message": "↑↓ 选择　↵ 打开",
+    "description": "Keyboard hint under the vault list."
+  },
   "addCurrentTab": {
     "message": "添加当前页"
   },
@@ -349,17 +353,14 @@
   "saveNoticeSetting": {
     "message": "保存前提醒：会立即删除该网站或网址的浏览记录和书签"
   },
+  "saveCheckSetting": {
+    "message": "保存后提醒：马上检查地址栏里还有没有这个网站"
+  },
   "shortcutSection": {
     "message": "快速收起快捷键"
   },
-  "shortcutCurrent": {
-    "message": "当前快捷键：$KEY$",
-    "placeholders": {
-      "key": {
-        "content": "$1",
-        "example": "Alt+Shift+Q"
-      }
-    }
+  "shortcutCurrentLabel": {
+    "message": "当前快捷键"
   },
   "shortcutNone": {
     "message": "当前没有设置快捷键。"
@@ -544,6 +545,14 @@
   },
   "faqColExact": {
     "message": "仅此网址"
+  },
+  "faqMarkDeleted": {
+    "message": "删除",
+    "description": "FAQ match table cell: this visit's history is deleted."
+  },
+  "faqMarkKept": {
+    "message": "保留",
+    "description": "FAQ match table cell: this visit's history is kept."
   },
   "faqMatchSite": {
     "message": "整个站点：只看域名，路径、协议和端口都不管。这个域名和它所有子域名下的任何页面，访问后都会从历史记录里删掉。上一级域名（如 def.com 之于 abc.def.com）和名字相近的域名（如 evil-example.com）不受影响。"

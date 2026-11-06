@@ -32,9 +32,9 @@ export function HelpLink({topic, label}: {topic: FaqTopic; label: MessageKey}) {
     <button
       type="button"
       onClick={() => openHelp(topic)}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 justify-self-start rounded-sm text-xs underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
+      className="text-primary hover:text-primary/80 dark:text-accent-foreground inline-flex items-center gap-1 justify-self-start rounded-sm py-0.5 text-xs underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
     >
-      <CircleHelp className="size-3.5" />
+      <CircleHelp className="size-3.5" aria-hidden />
       {t(label)}
     </button>
   )

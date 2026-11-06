@@ -1,31 +1,43 @@
-import {useEffect, useState} from 'react'
-import type {DecoyConfig, OpenMode, VaultSettings} from '@nightstand/core'
+import {useEffect, useState, type ReactNode} from 'react'
+import type {OpenMode, VaultSettings} from '@nightstand/core'
 import {Label} from '@/components/ui/label'
-import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group'
 import {Switch} from '@/components/ui/switch'
 import {isFirefoxLike} from '@/lib/browser'
 import {t} from '@/platform/i18n'
 import {isIncognitoAllowed} from '@/platform/tabs'
+import {Segmented} from '../components/ChoiceCards'
 import {Header} from '../components/Header'
-import {IconPicker} from '../components/IconPicker'
 import {IncognitoHelp} from '../components/IncognitoHelp'
 import {ShortcutInfo} from '../components/ShortcutInfo'
+import {viewClass} from '../components/styles'
 
-/** Real settings: only reachable from the unlocked vault list. */
+function SwitchRow({checked, onChange, children}: {checked: boolean; onChange: (on: boolean) => void; children: ReactNode}) {
+  return (
+    <Label className="flex items-center gap-3 p-3 text-[13px] leading-normal font-normal">
+      <span className="flex-1">{children}</span>
+      <Switch
+        checked={checked}
+        onCheckedChange={onChange}
+        className="data-[size=default]:h-6 data-[size=default]:w-10 [&>span]:group-data-[size=default]/switch:size-[18px] [&>span]:group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-1px)] [&>span]:group-data-[size=default]/switch:data-unchecked:translate-x-[2px]"
+      />
+    </Label>
+  )
+}
+
+/**
+ * Real settings: only reachable from the unlocked vault list. The toolbar
+ * icon is not here: it is chosen in the Quick Links settings.
+ */
 export function Settings({
   settings,
-  links,
   onChange,
-  onLinksChange,
   onBack,
   children
 }: {
   settings: VaultSettings
-  links: DecoyConfig
   onChange: (patch: Partial<VaultSettings>) => Promise<void>
-  onLinksChange: (links: DecoyConfig) => void
   onBack: () => void
-  children?: React.ReactNode
+  children?: ReactNode
 }) {
   const [incognitoAllowed, setIncognitoAllowed] = useState<boolean | null>(null)
   useEffect(() => {
@@ -33,43 +45,36 @@ export function Settings({
   }, [])
 
   return (
-    <div className="flex max-h-[580px] flex-col">
+    <div className={viewClass}>
       <Header title={t('settingsTitle')} onBack={onBack} />
-      <div className="flex min-h-0 flex-col gap-5 overflow-y-auto p-3">
+      <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4">
         <section className="grid gap-2">
-          <h2 className="text-xs font-medium">{t('openModeLabel')}</h2>
-          <RadioGroup value={settings.openMode} onValueChange={(v) => onChange({openMode: v as OpenMode})} className="gap-2">
-            <Label className="flex items-center gap-2 text-sm font-normal">
-              <RadioGroupItem value="current" />
-              {t('openCurrent')}
-            </Label>
-            <Label className="flex items-center gap-2 text-sm font-normal">
-              <RadioGroupItem value="newTab" />
-              {t('openNewTab')}
-            </Label>
-            <Label className="flex items-center gap-2 text-sm font-normal">
-              <RadioGroupItem value="incognito" />
-              {isFirefoxLike ? t('openPrivateFirefox') : t('openIncognito')}
-            </Label>
-          </RadioGroup>
+          <h2 className="section-label">{t('openModeLabel')}</h2>
+          <Segmented
+            label={t('openModeLabel')}
+            value={settings.openMode}
+            onChange={(openMode: OpenMode) => onChange({openMode})}
+            options={[
+              {value: 'current', label: t('openCurrent')},
+              {value: 'newTab', label: t('openNewTab')},
+              {value: 'incognito', label: isFirefoxLike ? t('openPrivateFirefox') : t('openIncognito')}
+            ]}
+          />
           {settings.openMode === 'incognito' && incognitoAllowed === false && <IncognitoHelp />}
         </section>
         <section className="grid gap-2">
-          <h2 className="text-xs font-medium">{t('saveNoticeSection')}</h2>
-          <Label className="flex items-center gap-2 text-sm font-normal">
-            <Switch
-              checked={settings.skipSaveNotice !== true}
-              onCheckedChange={(on) => onChange({skipSaveNotice: !on})}
-            />
-            {t('saveNoticeSetting')}
-          </Label>
+          <h2 className="section-label">{t('saveNoticeSection')}</h2>
+          <div className="panel divide-line grid divide-y">
+            <SwitchRow checked={settings.skipSaveNotice !== true} onChange={(on) => onChange({skipSaveNotice: !on})}>
+              {t('saveNoticeSetting')}
+            </SwitchRow>
+            <SwitchRow checked={settings.skipSaveCheck !== true} onChange={(on) => onChange({skipSaveCheck: !on})}>
+              {t('saveCheckSetting')}
+            </SwitchRow>
+          </div>
         </section>
         <section className="grid gap-2">
-          <h2 className="text-xs font-medium">{t('iconSection')}</h2>
-          <IconPicker links={links} onChange={onLinksChange} />
-        </section>
-        <section className="grid gap-2">
-          <h2 className="text-xs font-medium">{t('shortcutSection')}</h2>
+          <h2 className="section-label">{t('shortcutSection')}</h2>
           <ShortcutInfo />
         </section>
         {children}

@@ -22,7 +22,7 @@ import {loadLinks, loadShelf} from '@/platform/storage'
 import {getActiveTab, isIncognitoAllowed, openUrl} from '@/platform/tabs'
 import {IncognitoHelp} from './components/IncognitoHelp'
 import {SaveCheck} from './components/SaveCheck'
-import {SettingsLink} from './components/SettingsLink'
+import {SettingsLink, SettingsLinks} from './components/SettingsLink'
 import {useOpenHelp} from './help'
 import {commit, openSession, type Session, type UnlockResult} from './session'
 import {Backup} from './views/Backup'
@@ -195,15 +195,20 @@ export default function App() {
           entries={session.data.entries}
           notice={
             view.notice === 'incognito' ? (
-              <div className="p-2 pb-0">
+              <div className="px-3 pb-2">
                 <IncognitoHelp />
               </div>
             ) : view.notice === 'unsupportedTab' ? (
-              <p className="bg-accent text-accent-foreground m-2 mb-0 rounded-md p-2 text-xs">{t('currentTabUnsupported')}</p>
+              <p role="status" className="bg-accent text-accent-foreground mx-3 mb-2 rounded-[10px] p-3 text-xs">
+                {t('currentTabUnsupported')}
+              </p>
             ) : view.notice === 'saveCheck' ? (
-              <div className="p-2 pb-0">
-                <SaveCheck onDismiss={() => setView({name: 'vault'})} />
-              </div>
+              <SaveCheck
+                onDismiss={async (skipFromNow) => {
+                  if (skipFromNow) await update(updateSettings(session.data, {skipSaveCheck: true}))
+                  setView({name: 'vault'})
+                }}
+              />
             ) : undefined
           }
           onOpen={openEntry}
@@ -233,8 +238,9 @@ export default function App() {
             await removeBookmarksFor(entry).catch(console.error)
             // Cleaning has missed address-bar suggestions before (redirect
             // hops, other domains): ask the user to check it right away
-            // whenever this save protects something new.
-            setView(widensScope(view.editing, entry) ? {name: 'vault', notice: 'saveCheck'} : {name: 'vault'})
+            // whenever this save protects something new, unless they opted out.
+            const check = widensScope(view.editing, entry) && next.settings.skipSaveCheck !== true
+            setView(check ? {name: 'vault', notice: 'saveCheck'} : {name: 'vault'})
           }}
           onDelete={async (entry) => {
             await update(removeEntry(session.data, entry.id))
@@ -246,18 +252,16 @@ export default function App() {
       return (
         <Settings
           settings={session.data.settings}
-          links={boot.links}
-          onLinksChange={(links) => setBoot({...boot, links})}
           onChange={(patch) => update(updateSettings(session.data, patch))}
           onBack={() => setView({name: 'vault'})}
         >
-          <section className="grid gap-1">
+          <SettingsLinks>
             <SettingsLink onClick={() => setView({name: 'bookmarkImport'})}>{t('bmImportTitle')}</SettingsLink>
             <SettingsLink onClick={() => setView({name: 'backup'})}>{t('backupTitle')}</SettingsLink>
             <SettingsLink onClick={() => setView({name: 'changePassphrase'})}>{t('changePassTitle')}</SettingsLink>
             <SettingsLink onClick={() => setView({name: 'recoveryCode'})}>{t('recoveryTitle')}</SettingsLink>
             <SettingsLink onClick={() => openHelp()}>{t('faqTitle')}</SettingsLink>
-          </section>
+          </SettingsLinks>
         </Settings>
       )
     case 'changePassphrase':

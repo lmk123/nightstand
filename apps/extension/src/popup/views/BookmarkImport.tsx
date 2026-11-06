@@ -1,4 +1,6 @@
 import {useEffect, useMemo, useState} from 'react'
+import {Folder} from 'lucide-react'
+import {cn} from 'cn'
 import {
   addEntry,
   createEntry,
@@ -11,12 +13,12 @@ import {
 import {Button} from '@/components/ui/button'
 import {Checkbox} from '@/components/ui/checkbox'
 import {Label} from '@/components/ui/label'
-import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group'
 import {bookmarkRows, removeBookmarks, type BookmarkRow} from '@/platform/bookmarks'
 import {withIcon} from '@/platform/favicon'
 import {t} from '@/platform/i18n'
-import {Field} from '../components/Field'
+import {Segmented} from '../components/ChoiceCards'
 import {Header} from '../components/Header'
+import {mainButtonClass, viewClass} from '../components/styles'
 import {HelpLink} from '../help'
 
 /**
@@ -80,22 +82,29 @@ export function BookmarkImport({
   }
 
   return (
-    <div className="flex max-h-[580px] flex-col">
+    <div className={viewClass}>
       <Header title={t('bmImportTitle')} onBack={onBack} />
-      <ul className="min-h-0 flex-1 overflow-y-auto p-2">
-        {rows.length === 0 && <li className="text-muted-foreground p-4 text-center text-sm">{t('bmImportEmpty')}</li>}
+      <ul className="panel mx-3 mt-3 grid min-h-0 flex-1 content-start overflow-y-auto p-1">
+        {rows.length === 0 && <li className="text-muted-foreground p-4 text-center text-[13px]">{t('bmImportEmpty')}</li>}
         {rows.map((row) => {
           const count = row.urlIds.filter((id) => selected.has(id)).length
           const checked = count === row.urlIds.length
           return (
-            <li key={row.id} style={{paddingLeft: `${row.depth * 12}px`}}>
-              <Label className="hover:bg-muted flex items-center gap-2 rounded-md px-1 py-1 text-sm font-normal">
+            <li key={row.id} style={{paddingLeft: `${row.depth * 20}px`}}>
+              <Label
+                className={cn(
+                  'flex items-center gap-2.5 rounded-lg px-2 font-normal',
+                  row.url ? 'h-10 text-[13px]' : 'text-muted-foreground h-9 text-xs font-semibold',
+                  row.url && checked ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
+                )}
+              >
                 <Checkbox
                   checked={checked}
                   indeterminate={count > 0 && !checked}
                   onCheckedChange={(v) => toggle(row, v === true)}
                 />
-                <span className={row.url ? 'min-w-0 flex-1 truncate' : 'min-w-0 flex-1 truncate font-medium'}>
+                {!row.url && <Folder className="size-[15px] shrink-0" aria-hidden />}
+                <span className="min-w-0 flex-1 truncate">
                   {row.title || (row.url ? t('untitledEntry') : t('bmUntitledFolder'))}
                 </span>
               </Label>
@@ -103,26 +112,30 @@ export function BookmarkImport({
           )
         })}
       </ul>
-      <div className="grid gap-3 border-t p-3">
-        <Field label={t('fieldMatchMode')}>
-          <RadioGroup value={matchMode} onValueChange={(v) => setMatchMode(v as MatchMode)} className="flex gap-4">
-            <Label className="flex items-center gap-2 text-xs font-normal">
-              <RadioGroupItem value="site" />
-              {t('matchSiteShort')}
-            </Label>
-            <Label className="flex items-center gap-2 text-xs font-normal">
-              <RadioGroupItem value="exact" />
-              {t('matchExact')}
-            </Label>
-          </RadioGroup>
+      <div className="grid gap-3 p-3 pt-3.5">
+        <div className="grid gap-1.5">
+          <div className="flex items-center gap-2.5">
+            <span className="text-subtle-foreground text-xs font-semibold">{t('fieldMatchMode')}</span>
+            <div className="flex-1">
+              <Segmented
+                label={t('fieldMatchMode')}
+                value={matchMode}
+                onChange={setMatchMode}
+                options={[
+                  {value: 'site', label: t('matchSiteShort')},
+                  {value: 'exact', label: t('matchExact')}
+                ]}
+              />
+            </div>
+          </div>
           <HelpLink topic="matchMode" label="faqMatchLink" />
-        </Field>
-        <Label className="flex items-center gap-2 text-xs font-normal">
+        </div>
+        <Label className="text-subtle-foreground flex min-h-8 items-center gap-2 text-[13px] font-normal">
           <Checkbox checked={removeOriginals} onCheckedChange={(v) => setRemoveOriginals(v === true)} />
           {t('bmRemoveOriginals')}
         </Label>
-        {done !== null && <p className="bg-accent text-accent-foreground rounded-md p-2 text-xs">{t('bmImported', String(done))}</p>}
-        <Button size="sm" disabled={busy || selected.size === 0} onClick={runImport}>
+        {done !== null && <p className="bg-accent text-accent-foreground rounded-[10px] p-2.5 text-xs">{t('bmImported', String(done))}</p>}
+        <Button className={mainButtonClass} disabled={busy || selected.size === 0} onClick={runImport}>
           {busy ? t('working') : t('bmImportButton', String(selected.size))}
         </Button>
       </div>

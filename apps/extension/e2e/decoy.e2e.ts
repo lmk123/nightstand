@@ -23,12 +23,8 @@ describe.skipIf(!hasChrome)('decoy launcher (Chrome)', () => {
     const p = await openPopup(s)
     // A fresh profile has no cached icons: letter tiles.
     await waitIcons(p)
-    expect(await listItems(p)).toEqual([
-      'GGitHubgithub.com',
-      'MMDN Web Docsdeveloper.mozilla.org',
-      'GGoogle Docsdocs.google.com',
-      'GGmailmail.google.com'
-    ])
+    // A launcher grid: letter tile + name; the address is only in the tooltip.
+    expect(await listItems(p)).toEqual(['GGitHub', 'MMDN Web Docs', 'GGoogle Docs', 'GGmail'])
     await p.type('input', 'goo')
     await sleep(50)
     expect(await listItems(p)).toHaveLength(2)
@@ -61,30 +57,29 @@ describe.skipIf(!hasChrome)('decoy launcher (Chrome)', () => {
     await p.close()
   })
 
-  it('decoy settings edit links without unlocking, but not the toolbar icon', async () => {
+  it('decoy settings edit links and the toolbar icon without unlocking', async () => {
     const p = await openPopup(s)
     await p.click('button[aria-label="快捷链接设置"]')
     await p.type('input[placeholder="名称"]', 'Wiki')
     await p.type('input[placeholder="网址"]', 'wikipedia.org')
     await clickText(p, '添加')
     await sleep(200)
-    expect(await p.$$('button[aria-pressed]')).toHaveLength(0)
-    const links = (await storageSnapshot(s)).links as {links: {title: string}[]}
-    expect(links.links.map((l) => l.title)).toContain('Wiki')
-    await p.close()
-  })
-
-  it('the toolbar icon is chosen in the unlocked settings', async () => {
-    const p = await openPopup(s)
-    expect(await submitUnlock(p, 'notes')).toBe(true)
-    await p.click('button[aria-label="设置"]')
-    await waitText(p, '快速收起快捷键')
     const icons = await p.$$('button[aria-pressed]')
     expect(icons).toHaveLength(4)
     await icons[2]?.click()
     await sleep(300)
-    const links = (await storageSnapshot(s)).links as {icon: string}
+    const links = (await storageSnapshot(s)).links as {icon: string; links: {title: string}[]}
+    expect(links.links.map((l) => l.title)).toContain('Wiki')
     expect(links.icon).toBe('star')
+    await p.close()
+  })
+
+  it('the unlocked settings no longer offer the toolbar icon', async () => {
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    await p.click('button[aria-label="设置"]')
+    await waitText(p, '快速收起快捷键')
+    expect(await p.$$('button[aria-pressed]')).toHaveLength(0)
     await p.close()
   })
 

@@ -1,7 +1,9 @@
 import {useEffect, useRef, useState, type ReactNode} from 'react'
-import {ChevronRight} from 'lucide-react'
+import {ChevronDown} from 'lucide-react'
+import {cn} from 'cn'
 import {t, type MessageKey} from '@/platform/i18n'
 import {Header} from '../components/Header'
+import {viewClass} from '../components/styles'
 
 export type FaqTopic = 'matchMode' | 'extraHosts' | 'passphrase' | 'storage' | 'secrets'
 
@@ -58,9 +60,9 @@ export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void})
   }
 
   return (
-    <div className="flex max-h-[580px] flex-col">
+    <div className={viewClass}>
       <Header title={t('faqTitle')} onBack={onBack} />
-      <div className="flex min-h-0 flex-col gap-1 overflow-y-auto p-2">
+      <div className="flex min-h-0 flex-col gap-2 overflow-y-auto p-3">
         {TOPICS.map(({id, question}) => {
           const expanded = open === id
           return (
@@ -70,18 +72,28 @@ export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void})
                 if (el) refs.current.set(id, el)
                 else refs.current.delete(id)
               }}
-              className="scroll-mt-2"
+              className="panel scroll-mt-3"
             >
               <button
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => toggle(id)}
-                className="hover:bg-muted flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className={cn(
+                  'focus-visible:ring-ring/50 flex min-h-12 w-full items-center gap-2.5 rounded-xl p-3 text-left text-sm outline-none focus-visible:ring-2',
+                  expanded ? 'font-semibold' : 'font-medium'
+                )}
               >
-                <ChevronRight className={'text-muted-foreground size-4 shrink-0 transition-transform ' + (expanded ? 'rotate-90' : '')} />
-                {t(question)}
+                <span className="flex-1">{t(question)}</span>
+                <ChevronDown
+                  className={cn('text-muted-foreground size-4 shrink-0 transition-transform', expanded && 'rotate-180')}
+                  aria-hidden
+                />
               </button>
-              {expanded && <div className="grid gap-2 px-2 pt-1 pb-3 text-xs leading-relaxed">{body[id]}</div>}
+              {expanded && (
+                <div className="text-subtle-foreground grid gap-3 px-3 pb-3.5 text-[12.5px] leading-relaxed [&_strong]:text-foreground">
+                  {body[id]}
+                </div>
+              )}
             </section>
           )
         })}
@@ -91,35 +103,54 @@ export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void})
 }
 
 function Mark({yes}: {yes: boolean}) {
-  return <span className={yes ? 'block text-center' : 'text-muted-foreground block text-center'}>{yes ? '✓' : '✗'}</span>
+  return (
+    <span className={cn('block text-center font-semibold', yes ? 'text-ok-foreground' : 'text-muted-foreground')}>
+      {yes ? t('faqMarkDeleted') : t('faqMarkKept')}
+    </span>
+  )
+}
+
+/** A bordered table that fits the popup's width. */
+function Table({head, children}: {head: ReactNode; children: ReactNode}) {
+  return (
+    <div className="overflow-hidden rounded-[10px] border">
+      <table className="w-full border-collapse text-[11.5px] leading-snug">
+        <thead className="bg-muted text-foreground">{head}</thead>
+        <tbody className="[&_td]:border-line [&_td]:border-t">{children}</tbody>
+      </table>
+    </div>
+  )
+}
+
+function Tip({children}: {children: ReactNode}) {
+  return <p className="bg-accent text-accent-foreground rounded-[10px] px-3 py-2.5">{children}</p>
 }
 
 function MatchModeAnswer() {
   return (
     <>
       <p>{t('faqMatchIntro')}</p>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="text-muted-foreground border-b">
-            <th className="py-1 text-left font-normal">{t('faqColUrl')}</th>
-            <th className="w-14 py-1 font-normal">{t('faqColSite')}</th>
-            <th className="w-14 py-1 font-normal">{t('faqColExact')}</th>
+      <Table
+        head={
+          <tr>
+            <th className="p-2 text-left font-semibold">{t('faqColUrl')}</th>
+            <th className="w-[54px] px-1 py-2 font-semibold">{t('faqColSite')}</th>
+            <th className="w-[54px] px-1 py-2 font-semibold">{t('faqColExact')}</th>
           </tr>
-        </thead>
-        <tbody>
-          {MATCH_EXAMPLES.map(([url, site, exact]) => (
-            <tr key={url} className="border-b last:border-0">
-              <td className="py-1 pr-1 font-mono text-[11px] break-all">{url}</td>
-              <td className="py-1"><Mark yes={site} /></td>
-              <td className="py-1"><Mark yes={exact} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        }
+      >
+        {MATCH_EXAMPLES.map(([url, site, exact]) => (
+          <tr key={url}>
+            <td className="text-foreground px-2 py-1.5 font-mono text-[11px] break-all">{url}</td>
+            <td className="px-1 py-1.5"><Mark yes={site} /></td>
+            <td className="px-1 py-1.5"><Mark yes={exact} /></td>
+          </tr>
+        ))}
+      </Table>
       <p>{t('faqMatchSite')}</p>
       <p>{t('faqMatchExact')}</p>
       <p>{t('faqMatchWhen')}</p>
-      <p className="bg-accent text-accent-foreground rounded-md p-2">{t('faqMatchTip')}</p>
+      <Tip>{t('faqMatchTip')}</Tip>
     </>
   )
 }
@@ -129,14 +160,14 @@ function ExtraHostsAnswer() {
     <>
       <p>{t('faqExtra1')}</p>
       <p>{t('faqExtra2')}</p>
-      <p className="font-medium">{t('faqExtraFindTitle')}</p>
+      <p className="text-foreground font-semibold">{t('faqExtraFindTitle')}</p>
       <p>{t('faqExtraFind1')}</p>
       <ul className="list-disc pl-4">
         <li>{t('faqExtraFind2')}</li>
         <li>{t('faqExtraFind3')}</li>
       </ul>
       <p>{t('faqExtraFind4')}</p>
-      <p className="bg-accent text-accent-foreground rounded-md p-2">{t('faqExtraTip')}</p>
+      <Tip>{t('faqExtraTip')}</Tip>
     </>
   )
 }
@@ -146,22 +177,21 @@ function PassphraseAnswer() {
     <>
       <p>{t('faqPass1')}</p>
       <p>{t('faqPass2')}</p>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="text-muted-foreground border-b">
-            <th className="py-1 text-left font-normal">{t('faqColPassExample')}</th>
-            <th className="py-1 text-right font-normal">{t('faqColPassTime')}</th>
+      <Table
+        head={
+          <tr>
+            <th className="p-2 text-left font-semibold">{t('faqColPassExample')}</th>
+            <th className="p-2 text-right font-semibold">{t('faqColPassTime')}</th>
           </tr>
-        </thead>
-        <tbody>
-          {PASS_EXAMPLES.map(([row, time]) => (
-            <tr key={row} className="border-b last:border-0">
-              <td className="py-1 pr-2">{t(row)}</td>
-              <td className="py-1 text-right whitespace-nowrap">{t(time)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        }
+      >
+        {PASS_EXAMPLES.map(([row, time]) => (
+          <tr key={row}>
+            <td className="text-foreground p-2">{t(row)}</td>
+            <td className="text-foreground p-2 text-right whitespace-nowrap">{t(time)}</td>
+          </tr>
+        ))}
+      </Table>
       <p className="text-muted-foreground">{t('faqPassNote')}</p>
       <p>{t('faqPassChoose')}</p>
       <p>{t('faqPassMeter')}</p>
@@ -198,7 +228,7 @@ function SecretsAnswer() {
       <p>{t('faqSecret4')}</p>
       <p>{t('faqSecret5')}</p>
       <p>{t('faqSecret6')}</p>
-      <p className="bg-accent text-accent-foreground rounded-md p-2">{t('faqSecretWarn')}</p>
+      <Tip>{t('faqSecretWarn')}</Tip>
     </>
   )
 }

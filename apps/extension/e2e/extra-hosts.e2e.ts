@@ -1,7 +1,7 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {historyUrls, launchChrome, openPopup, visit, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {clearAndType, clickText, hasText, listItems, onboard, waitText} from './support/popup'
+import {addEntry, clearAndType, clickText, hasText, listItems, onboard, openSettings, submitUnlock, waitText} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp} from './support/temp'
 
@@ -84,5 +84,32 @@ describe.skipIf(!hasChrome)('extra hosts (Chrome)', () => {
       'http://example.org/keep',
       'http://example.org/still'
     ])
+  })
+
+  it('the address-bar check can be turned off with "don’t show again", and back on in settings', async () => {
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    await addEntry(p, 'example.info/one')
+    await waitText(p, '请马上检查一下地址栏')
+    await p.click('[role=status] [data-slot=checkbox]')
+    await clickText(p, '知道了')
+    // Saving the opt-out takes a moment (it re-encrypts the vault) before the notice goes.
+    await p.waitForFunction(() => !document.body.textContent?.includes('请马上检查一下地址栏'))
+
+    // Opted out: the next save that protects something new goes without it.
+    await addEntry(p, 'example.info/two', 'exact')
+    expect(await hasText(p, '请马上检查一下地址栏')).toBe(false)
+
+    // The second switch under "保存网址" brings it back.
+    await openSettings(p)
+    await waitText(p, '保存后提醒')
+    const toggles = await p.$$('[data-slot=switch]')
+    expect(await toggles[1]?.evaluate((el) => el.getAttribute('aria-checked'))).toBe('false')
+    await toggles[1]?.click()
+    await p.waitForFunction(() => document.querySelectorAll('[data-slot=switch]')[1]?.getAttribute('aria-checked') === 'true')
+    await p.click('button[aria-label="返回"]')
+    await addEntry(p, 'example.info/three', 'exact')
+    await waitText(p, '请马上检查一下地址栏')
+    await p.close()
   })
 })

@@ -277,6 +277,12 @@ describe('migrateVaultData', () => {
     expect(migrateVaultData({version: 1, entries: [], settings: {openMode: 'current', skipSaveNotice: 'yes'}}).settings).toEqual({openMode: 'current'})
     expect(emptyVaultData().settings).not.toHaveProperty('skipSaveNotice')
   })
+  it('keeps the optional save-check flag only when it is a boolean', () => {
+    const data = updateSettings(emptyVaultData(), {skipSaveCheck: true})
+    expect(migrateVaultData(JSON.parse(JSON.stringify(data))).settings).toEqual({openMode: 'newTab', skipSaveCheck: true})
+    expect(migrateVaultData({version: 4, entries: [], settings: {openMode: 'current', skipSaveCheck: 1}}).settings).toEqual({openMode: 'current'})
+    expect(emptyVaultData().settings).not.toHaveProperty('skipSaveCheck')
+  })
   it('rejects malformed payloads and unknown versions', () => {
     const cases: [unknown, string][] = [
       [null, 'invalid-data'],
