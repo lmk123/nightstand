@@ -1,4 +1,5 @@
 export * from './errors.ts'
+export * from './guards.ts'
 export * from './url.ts'
 export * from './model.ts'
 export * from './match-table.ts'

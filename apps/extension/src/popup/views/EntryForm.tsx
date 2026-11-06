@@ -14,6 +14,7 @@ import {Label} from '@/components/ui/label'
 import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group'
 import {Textarea} from '@/components/ui/textarea'
 import {t} from '@/platform/i18n'
+import {BookmarkCheck} from '../components/BookmarkCheck'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
 
@@ -110,6 +111,11 @@ export function EntryForm({
         <Field label={t('fieldNote')} htmlFor="note">
           <Textarea id="note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
+        {editing && (
+          <Field label={t('bookmarkSection')}>
+            <BookmarkCheck entry={editing} />
+          </Field>
+        )}
         <div className="flex items-center gap-2 pt-1">
           {editing &&
             (confirmingDelete ? (

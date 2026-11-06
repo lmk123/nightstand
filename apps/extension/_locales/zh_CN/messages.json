@@ -237,5 +237,44 @@
   },
   "resetPassHint": {
     "message": "已用恢复码解锁。请设置一个新的口令，旧口令将失效。"
+  },
+  "bookmarkCheckIntro": {
+    "message": "浏览器书签也会出现在地址栏提示里。要检查书签里有没有这个站点吗？需要授予读取书签的权限。"
+  },
+  "bookmarkCheck": {
+    "message": "检查书签"
+  },
+  "bookmarkNone": {
+    "message": "书签里没有这个站点。"
+  },
+  "bookmarkFound": {
+    "message": "书签里有 $COUNT$ 个这个站点的书签，它们仍会出现在地址栏提示里。条目已经收进 Nightstand，可以删除原书签。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "bookmarkRemove": {
+    "message": "删除原书签"
+  },
+  "bookmarkKeep": {
+    "message": "保留"
+  },
+  "bookmarkRemoved": {
+    "message": "已删除 $COUNT$ 个书签。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "dismiss": {
+    "message": "知道了"
+  },
+  "bookmarkSection": {
+    "message": "书签"
   }
 }

@@ -3,6 +3,7 @@ import {
   addEntry,
   createEntry,
   editEntry,
+  entryCoversUrl,
   emptyVaultData,
   findDuplicate,
   isCoreError,
@@ -90,6 +91,21 @@ describe('vault operations', () => {
     expect(searchEntries(entries, 'org').map((e) => e.id)).toEqual(['2'])
     expect(searchEntries(entries, 'reading beta').map((e) => e.id)).toEqual(['2'])
     expect(searchEntries(entries, 'work beta')).toEqual([])
+  })
+})
+
+describe('entryCoversUrl', () => {
+  it('site entries cover the host and subdomains on label boundaries', () => {
+    const site = createEntry({url: 'www.example.com'}, NOW)
+    expect(entryCoversUrl(site, 'https://a.example.com/x')).toBe(true)
+    expect(entryCoversUrl(site, 'http://EXAMPLE.com:8080/')).toBe(true)
+    expect(entryCoversUrl(site, 'https://evil-example.com/')).toBe(false)
+    expect(entryCoversUrl(site, 'chrome://bookmarks')).toBe(false)
+  })
+  it('exact entries cover only the same normalized address', () => {
+    const exact = createEntry({url: 'https://example.org/p?q=1', matchMode: 'exact'}, NOW)
+    expect(entryCoversUrl(exact, 'http://www.example.org/p?q=1#h')).toBe(true)
+    expect(entryCoversUrl(exact, 'https://example.org/p')).toBe(false)
   })
 })
 

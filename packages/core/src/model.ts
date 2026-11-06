@@ -1,6 +1,6 @@
 import {CoreError} from './errors.ts'
 import {isFiniteNumber, isRecord, isString, isStringArray} from './guards.ts'
-import {hostOf, normalizeExactUrl, parseUserUrl} from './url.ts'
+import {hostCandidates, hostOf, normalizeExactUrl, parseUserUrl} from './url.ts'
 
 /** `site`: the whole site including every subdomain (default). `exact`: this one address only. */
 export type MatchMode = 'site' | 'exact'
@@ -110,6 +110,20 @@ export function editEntry(entry: VaultEntry, patch: EntryInput): VaultEntry {
 export function entryKey(entry: Pick<VaultEntry, 'url' | 'matchMode'>): string | null {
   const value = entry.matchMode === 'site' ? hostOf(entry.url) : normalizeExactUrl(entry.url)
   return value ? `${entry.matchMode}:${value}` : null
+}
+
+/**
+ * Plaintext check (popup only, where the vault is unlocked): is `url` covered
+ * by this entry? Same rules as the hashed match table.
+ */
+export function entryCoversUrl(entry: Pick<VaultEntry, 'url' | 'matchMode'>, url: string): boolean {
+  if (entry.matchMode === 'exact') {
+    const target = normalizeExactUrl(entry.url)
+    return target !== null && normalizeExactUrl(url) === target
+  }
+  const protectedHost = hostOf(entry.url)
+  const host = hostOf(url)
+  return protectedHost !== null && host !== null && hostCandidates(host).includes(protectedHost)
 }
 
 export function findDuplicate(
