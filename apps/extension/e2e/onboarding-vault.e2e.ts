@@ -155,6 +155,13 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
     await clickText(p, '取消')
     await openSettings(p, '常见问题')
     await waitText(p, '数据是怎么保存的？会被破解吗？')
+    // Only one answer is open at a time.
+    await clickText(p, '数据是怎么保存的？会被破解吗？')
+    await waitText(p, '所有数据只保存在这台电脑的浏览器里')
+    await clickText(p, '口令和恢复码保存在哪里？')
+    await waitText(p, '哪里都不保存')
+    expect(await hasText(p, '所有数据只保存在这台电脑的浏览器里')).toBe(false)
+    expect(await p.$$eval('button[aria-expanded="true"]', (els) => els.length)).toBe(1)
     await p.close()
   })
 })

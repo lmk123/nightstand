@@ -3,12 +3,13 @@ import {ChevronRight} from 'lucide-react'
 import {t, type MessageKey} from '@/platform/i18n'
 import {Header} from '../components/Header'
 
-export type FaqTopic = 'matchMode' | 'passphrase' | 'storage'
+export type FaqTopic = 'matchMode' | 'passphrase' | 'storage' | 'secrets'
 
 const TOPICS: {id: FaqTopic; question: MessageKey}[] = [
   {id: 'matchMode', question: 'faqMatchQ'},
   {id: 'passphrase', question: 'faqPassQ'},
-  {id: 'storage', question: 'faqStoreQ'}
+  {id: 'storage', question: 'faqStoreQ'},
+  {id: 'secrets', question: 'faqSecretQ'}
 ]
 
 /** Example visits for an entry `example.com/docs/guide`: [url, site mode cleans, exact mode cleans]. */
@@ -33,30 +34,25 @@ const PASS_EXAMPLES: [MessageKey, MessageKey][] = [
 
 /** FAQ: a view inside the popup (never an extension tab). Opened from settings and from "?" links. */
 export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void}) {
-  const [open, setOpen] = useState<Set<FaqTopic>>(() => new Set(initial ? [initial] : []))
+  // One answer at a time: the popup is short, and a second open answer would
+  // push the one being read off screen.
+  const [open, setOpen] = useState<FaqTopic | null>(initial ?? null)
   const refs = useRef(new Map<FaqTopic, HTMLElement>())
 
-  function show(topic: FaqTopic) {
-    setOpen((s) => new Set(s).add(topic))
-    requestAnimationFrame(() => refs.current.get(topic)?.scrollIntoView({block: 'start'}))
-  }
-
+  // Bring the opened question to the top (collapsing a long answer above it moves it).
   useEffect(() => {
-    if (initial) refs.current.get(initial)?.scrollIntoView({block: 'start'})
-  }, [initial])
+    if (open) refs.current.get(open)?.scrollIntoView({block: 'start'})
+  }, [open])
 
   function toggle(topic: FaqTopic) {
-    setOpen((s) => {
-      const next = new Set(s)
-      if (!next.delete(topic)) next.add(topic)
-      return next
-    })
+    setOpen((current) => (current === topic ? null : topic))
   }
 
   const body: Record<FaqTopic, ReactNode> = {
     matchMode: <MatchModeAnswer />,
     passphrase: <PassphraseAnswer />,
-    storage: <StorageAnswer onPassphrase={() => show('passphrase')} />
+    storage: <StorageAnswer onPassphrase={() => setOpen('passphrase')} />,
+    secrets: <SecretsAnswer />
   }
 
   return (
@@ -64,7 +60,7 @@ export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void})
       <Header title={t('faqTitle')} onBack={onBack} />
       <div className="flex min-h-0 flex-col gap-1 overflow-y-auto p-2">
         {TOPICS.map(({id, question}) => {
-          const expanded = open.has(id)
+          const expanded = open === id
           return (
             <section
               key={id}
@@ -170,6 +166,20 @@ function StorageAnswer({onPassphrase}: {onPassphrase: () => void}) {
       </button>
       <p>{t('faqStore4')}</p>
       <p>{t('faqStore5')}</p>
+    </>
+  )
+}
+
+function SecretsAnswer() {
+  return (
+    <>
+      <p>{t('faqSecret1')}</p>
+      <p>{t('faqSecret2')}</p>
+      <p>{t('faqSecret3')}</p>
+      <p>{t('faqSecret4')}</p>
+      <p>{t('faqSecret5')}</p>
+      <p>{t('faqSecret6')}</p>
+      <p className="bg-accent text-accent-foreground rounded-md p-2">{t('faqSecretWarn')}</p>
     </>
   )
 }
