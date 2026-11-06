@@ -13,19 +13,19 @@ import {
   removeEntry,
   replaceEntry,
   searchEntries,
-  updateSettings
+  updateSettings,
+  widensScope
 } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 
 describe('createEntry', () => {
   it('normalizes input and fills defaults', () => {
-    const e = createEntry({url: ' example.com/foo ', tags: [' a ', 'a', '', 'b'], note: '  '}, NOW, 'id1')
+    const e = createEntry({url: ' example.com/foo '}, NOW, 'id1')
     expect(e).toEqual({
       id: 'id1',
       url: 'https://example.com/foo',
       title: 'example.com',
-      tags: ['a', 'b'],
       matchMode: 'site',
       extraHosts: [],
       createdAt: NOW,
@@ -46,10 +46,9 @@ describe('createEntry', () => {
       expect(isCoreError(error, 'invalid-host')).toBe(true)
     }
   })
-  it('keeps a given title, note and exact mode', () => {
-    const e = createEntry({url: 'https://example.org/x', title: ' T ', note: ' n ', matchMode: 'exact'}, NOW)
+  it('keeps a given title and exact mode', () => {
+    const e = createEntry({url: 'https://example.org/x', title: ' T ', matchMode: 'exact'}, NOW)
     expect(e.title).toBe('T')
-    expect(e.note).toBe('n')
     expect(e.matchMode).toBe('exact')
     expect(e.id).toMatch(/^[0-9a-f-]{36}$/)
   })
@@ -114,10 +113,10 @@ describe('vault operations', () => {
     expect(findDuplicate(entries, {url: 'https://example.org/p/?q=1', matchMode: 'exact'})?.id).toBe('exact')
     expect(findDuplicate(entries, {url: 'https://example.com/', matchMode: 'site'}, 'site')).toBeUndefined()
   })
-  it('searchEntries matches title, url, note and tags; all terms must match', () => {
+  it('searchEntries matches title and url; all terms must match', () => {
     const entries = [
-      createEntry({url: 'example.com', title: 'Alpha', tags: ['work']}, NOW, '1'),
-      createEntry({url: 'example.org', title: 'Beta', note: 'Reading list'}, NOW, '2')
+      createEntry({url: 'example.com', title: 'Alpha work'}, NOW, '1'),
+      createEntry({url: 'example.org', title: 'Beta reading'}, NOW, '2')
     ]
     expect(searchEntries(entries, '').map((e) => e.id)).toEqual(['1', '2'])
     expect(searchEntries(entries, 'ALPHA').map((e) => e.id)).toEqual(['1'])
@@ -128,6 +127,21 @@ describe('vault operations', () => {
   it('searchEntries also matches extra hosts', () => {
     const entries = [createEntry({url: 'example.com', extraHosts: ['video.cdn.test']}, NOW, '1')]
     expect(searchEntries(entries, 'cdn').map((e) => e.id)).toEqual(['1'])
+  })
+})
+
+describe('widensScope', () => {
+  it('is true for a new entry, a new site / URL / mode, or an added extra host', () => {
+    const e = createEntry({url: 'example.com', extraHosts: ['cdn.test']}, NOW, 'x')
+    expect(widensScope(undefined, e)).toBe(true)
+    expect(widensScope(e, editEntry(e, {url: 'example.org'}))).toBe(true)
+    expect(widensScope(e, editEntry(e, {url: 'example.com/a', matchMode: 'exact'}))).toBe(true)
+    expect(widensScope(e, editEntry(e, {url: 'example.com', extraHosts: ['cdn.test', 'pay.test']}))).toBe(true)
+  })
+  it('is false when only the title changes or extra hosts are removed', () => {
+    const e = createEntry({url: 'example.com', extraHosts: ['cdn.test']}, NOW, 'x')
+    expect(widensScope(e, editEntry(e, {url: 'https://www.example.com/other', title: 'New'}))).toBe(false)
+    expect(widensScope(e, editEntry(e, {url: 'example.com', extraHosts: []}))).toBe(false)
   })
 })
 
@@ -164,16 +178,28 @@ describe('migrateVaultData', () => {
     expect(migrateVaultData({version: 1, entries: [], settings: {openMode: 'teleport', extra: 1}}).settings).toEqual({openMode: 'newTab'})
     expect(migrateVaultData({version: 1, entries: []}).settings.openMode).toBe('newTab')
   })
-  it('upgrades v1 entries with empty extra hosts; v2 entries must carry them', () => {
-    const v1Entry: Record<string, unknown> = {...createEntry({url: 'example.com'}, NOW, 'x')}
+  it('upgrades v1 entries with empty extra hosts and drops note / tags; v2 entries must carry extra hosts', () => {
+    const current = createEntry({url: 'example.com'}, NOW, 'x')
+    const v1Entry: Record<string, unknown> = {...current, note: 'n', tags: ['t']}
     delete v1Entry.extraHosts
     expect(migrateVaultData({version: 1, entries: [v1Entry]})).toEqual({
-      version: 2,
-      entries: [{...v1Entry, extraHosts: []}],
+      version: 3,
+      entries: [current],
       settings: {openMode: 'newTab'}
     })
+    expect(() => migrateVaultData({version: 1, entries: [{...v1Entry, tags: undefined}]})).toThrow()
     expect(() => migrateVaultData({version: 2, entries: [v1Entry]})).toThrow()
     expect(() => migrateVaultData({version: 2, entries: [{...v1Entry, extraHosts: [1]}]})).toThrow()
+  })
+  it('upgrades v2 entries by dropping note and tags', () => {
+    const current = {...createEntry({url: 'example.com', extraHosts: ['cdn.test']}, NOW, 'x'), lastOpenedAt: NOW + 1}
+    const v2Entry = {...current, note: 'n', tags: ['a', 'b']}
+    const out = migrateVaultData({version: 2, entries: [v2Entry]})
+    expect(out.version).toBe(3)
+    expect(out.entries).toEqual([current])
+    expect(out.entries[0]).not.toHaveProperty('note')
+    expect(out.entries[0]).not.toHaveProperty('tags')
+    expect(() => migrateVaultData({version: 2, entries: [{...current}]})).toThrow()
   })
   it('keeps the optional save-notice flag only when it is a boolean', () => {
     const data = updateSettings(emptyVaultData(), {skipSaveNotice: true})

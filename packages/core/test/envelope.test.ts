@@ -18,7 +18,7 @@ import {
 const FAST = {iterations: 1_000}
 
 function sampleData(): VaultData {
-  return addEntry(emptyVaultData(), createEntry({url: 'example.com', note: '中文备注'}, 1, 'e1'))
+  return addEntry(emptyVaultData(), createEntry({url: 'example.com', title: '中文标题'}, 1, 'e1'))
 }
 
 describe('envelope encryption', () => {

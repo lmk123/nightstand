@@ -7,6 +7,7 @@ import {
   addEntry,
   replaceEntry,
   updateSettings,
+  widensScope,
   type DecoyConfig,
   type EntryInput,
   type StoredVault,
@@ -18,6 +19,7 @@ import {isPopupNotice, sendToBackground} from '@/platform/messages'
 import {loadLinks, loadShelf} from '@/platform/storage'
 import {getActiveTab, isIncognitoAllowed, openUrl} from '@/platform/tabs'
 import {IncognitoHelp} from './components/IncognitoHelp'
+import {SaveCheck} from './components/SaveCheck'
 import {SettingsLink} from './components/SettingsLink'
 import {useOpenHelp} from './help'
 import {commit, openSession, type Session, type UnlockResult} from './session'
@@ -37,7 +39,7 @@ type View =
   | {name: 'onboarding'}
   | {name: 'locked'}
   | {name: 'decoySettings'}
-  | {name: 'vault'; notice?: 'incognito' | 'unsupportedTab'}
+  | {name: 'vault'; notice?: 'incognito' | 'unsupportedTab'; savedHost?: string}
   | {name: 'entry'; editing?: VaultEntry; prefill?: EntryInput}
   | {name: 'settings'}
   | {name: 'resetPassphrase'}
@@ -185,6 +187,10 @@ export default function App() {
               </div>
             ) : view.notice === 'unsupportedTab' ? (
               <p className="bg-accent text-accent-foreground m-2 mb-0 rounded-md p-2 text-xs">{t('currentTabUnsupported')}</p>
+            ) : view.savedHost ? (
+              <div className="p-2 pb-0">
+                <SaveCheck host={view.savedHost} onDismiss={() => setView({name: 'vault'})} />
+              </div>
             ) : undefined
           }
           onOpen={openEntry}
@@ -210,7 +216,11 @@ export default function App() {
             purgeFor(entry)
             // Bookmarks would keep the site in address-bar suggestions.
             await removeBookmarksFor(entry).catch(console.error)
-            setView({name: 'vault'})
+            // Cleaning has missed address-bar suggestions before (redirect
+            // hops, other domains): ask the user to check it right away
+            // whenever this save protects something new.
+            const host = widensScope(view.editing, entry) ? hostOf(entry.url) : null
+            setView(host ? {name: 'vault', savedHost: host} : {name: 'vault'})
           }}
           onDelete={async (entry) => {
             await update(removeEntry(session.data, entry.id))

@@ -3,14 +3,14 @@ import {ChevronDown, ChevronRight} from 'lucide-react'
 import {
   createEntry,
   editEntry,
-  entryKey,
   findDuplicate,
   hostOf,
   isCoreError,
   parseExtraHosts,
   type EntryInput,
   type MatchMode,
-  type VaultEntry
+  type VaultEntry,
+  widensScope
 } from '@nightstand/core'
 import {Button} from '@/components/ui/button'
 import {Checkbox} from '@/components/ui/checkbox'
@@ -55,8 +55,6 @@ export function EntryForm({
   const initial = editing ?? prefill
   const [url, setUrl] = useState(initial?.url ?? '')
   const [title, setTitle] = useState(initial?.title ?? '')
-  const [note, setNote] = useState(initial?.note ?? '')
-  const [tags, setTags] = useState((initial?.tags ?? []).join(', '))
   const [matchMode, setMatchMode] = useState<MatchMode>(initial?.matchMode ?? 'site')
   const [extraHosts, setExtraHosts] = useState((initial?.extraHosts ?? []).join('\n'))
   const [extraOpen, setExtraOpen] = useState(false)
@@ -84,14 +82,7 @@ export function EntryForm({
       setExtraOpen(true)
       return setExtraError(t('errExtraHost', extra.invalid.join(' ')))
     }
-    const input: EntryInput = {
-      url,
-      title,
-      note,
-      tags: tags.split(/[,，]/),
-      matchMode,
-      extraHosts: extra.hosts
-    }
+    const input: EntryInput = {url, title, matchMode, extraHosts: extra.hosts}
     let entry: VaultEntry
     try {
       entry = editing ? editEntry(editing, input) : createEntry(input, Date.now())
@@ -114,13 +105,9 @@ export function EntryForm({
       setBusy(false)
     }
     // A new site / URL / extra host always gets the notice (it also explains
-    // that future visits are cleaned). Editing only the title, tags or note
-    // asks only when something is there to delete, e.g. a bookmark added since.
-    const newScope =
-      !editing ||
-      entryKey(editing) !== entryKey(entry) ||
-      entry.extraHosts.some((h) => !editing.extraHosts.includes(h))
-    if (!newScope && history === 0 && bookmarks === 0) return save(entry, false)
+    // that future visits are cleaned). Editing only the title asks only when
+    // something is there to delete, e.g. a bookmark added since.
+    if (!widensScope(editing, entry) && history === 0 && bookmarks === 0) return save(entry, false)
     setDontShowAgain(false)
     setPending({entry, history, bookmarks})
   }
@@ -193,12 +180,6 @@ export function EntryForm({
               </>
             )}
           </div>
-          <Field label={t('fieldTags')} htmlFor="tags" hint={t('fieldTagsHint')}>
-            <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} />
-          </Field>
-          <Field label={t('fieldNote')} htmlFor="note">
-            <Textarea id="note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-          </Field>
         </fieldset>
         {pending ? (
           <div role="alertdialog" aria-labelledby="save-notice-title" className="bg-accent text-accent-foreground grid gap-2 rounded-md p-3 text-xs leading-relaxed">

@@ -9,11 +9,17 @@ import {
 } from '../src/index.ts'
 import fixture from './fixtures/v1.json' with {type: 'json'}
 
-// The v1 payload as the current build reads it: v2 gave every entry `extraHosts`.
+// The v1 payload as the current build reads it: v2 gave every entry
+// `extraHosts`, v3 dropped `note` and `tags`.
 const expected = {
   ...fixture.expected,
-  version: 2,
-  entries: fixture.expected.entries.map((e) => ({...e, extraHosts: []}))
+  version: 3,
+  entries: fixture.expected.entries.map((e) => {
+    const out: Record<string, unknown> = {...e, extraHosts: []}
+    delete out.note
+    delete out.tags
+    return out
+  })
 }
 
 // `fixture` is a v1 vault frozen at the time v1 shipped. Every future build

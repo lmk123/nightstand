@@ -12,8 +12,6 @@ export interface VaultEntry {
   id: string
   url: string
   title: string
-  note?: string
-  tags: string[]
   matchMode: MatchMode
   /**
    * More hosts this entry protects besides its own URL, each with every
@@ -39,15 +37,15 @@ export interface VaultSettings {
 
 /**
  * Decrypted vault payload. `version` is the payload schema version:
- * 1 — initial; 2 — entries gain `extraHosts`.
+ * 1 — initial; 2 — entries gain `extraHosts`; 3 — entries lose `note` and `tags`.
  */
 export interface VaultData {
-  version: 2
+  version: 3
   entries: VaultEntry[]
   settings: VaultSettings
 }
 
-export const VAULT_DATA_VERSION = 2
+export const VAULT_DATA_VERSION = 3
 
 export const DEFAULT_SETTINGS: VaultSettings = {openMode: 'newTab'}
 
@@ -58,8 +56,6 @@ export function emptyVaultData(): VaultData {
 export interface EntryInput {
   url: string
   title?: string
-  note?: string
-  tags?: string[]
   matchMode?: MatchMode
   /** Hosts or URLs as typed; see `parseExtraHosts`. */
   extraHosts?: readonly string[]
@@ -91,20 +87,6 @@ export function parseExtraHosts(input: string | readonly string[]): ParsedExtraH
   return {hosts: [...hosts], invalid}
 }
 
-function cleanTags(tags: readonly string[] | undefined): string[] {
-  const seen = new Set<string>()
-  for (const tag of tags ?? []) {
-    const trimmed = tag.trim()
-    if (trimmed) seen.add(trimmed)
-  }
-  return [...seen]
-}
-
-function cleanNote(note: string | undefined): string | undefined {
-  const trimmed = note?.trim()
-  return trimmed ? trimmed : undefined
-}
-
 /**
  * Validates and normalizes user input into a new entry. Throws `invalid-url`,
  * or `invalid-host` when an extra host doesn't parse (check with
@@ -124,19 +106,15 @@ export function createEntry(
   if (extra.invalid.length > 0) throw new CoreError('invalid-host', extra.invalid.join(' '))
   // The entry's own host is already covered in `site` mode.
   const ownHost = matchMode === 'site' ? hostOf(url) : null
-  const entry: VaultEntry = {
+  return {
     id,
     url,
     title,
-    tags: cleanTags(input.tags),
     matchMode,
     extraHosts: extra.hosts.filter((h) => h !== ownHost),
     createdAt: now,
     openCount: 0
   }
-  const note = cleanNote(input.note)
-  if (note) entry.note = note
-  return entry
 }
 
 /** Applies an edit; the URL is re-validated. Throws `invalid-url`. */
@@ -145,8 +123,6 @@ export function editEntry(entry: VaultEntry, patch: EntryInput): VaultEntry {
     {
       url: patch.url,
       title: patch.title,
-      note: patch.note,
-      tags: patch.tags,
       matchMode: patch.matchMode ?? entry.matchMode,
       extraHosts: patch.extraHosts ?? entry.extraHosts
     },
@@ -169,6 +145,18 @@ export function entryKey(entry: Pick<VaultEntry, 'url' | 'matchMode'>): string |
 
 /** What decides which URLs an entry covers. */
 export type EntryScope = Pick<VaultEntry, 'url' | 'matchMode'> & {extraHosts?: readonly string[]}
+
+/**
+ * Does saving `after` (over `before`, or as a new entry when `before` is
+ * undefined) protect anything that wasn't protected yet: a new site / URL or
+ * a new extra host? Only the title changing (or hosts dropped) is not.
+ */
+export function widensScope(before: EntryScope | undefined, after: EntryScope): boolean {
+  if (!before) return true
+  if (entryKey(before) !== entryKey(after)) return true
+  const old = before.extraHosts ?? []
+  return (after.extraHosts ?? []).some((h) => !old.includes(h))
+}
 
 /** Every host an entry protects with all its subdomains: its own (in `site` mode) and its extra hosts. */
 export function entrySiteHosts(entry: EntryScope): string[] {
@@ -227,12 +215,12 @@ export function updateSettings(data: VaultData, patch: Partial<VaultSettings>): 
   return {...data, settings: {...data.settings, ...patch}}
 }
 
-/** Case-insensitive search over title, URL, note and tags; every whitespace-separated term must match. */
+/** Case-insensitive search over title, URL and extra hosts; every whitespace-separated term must match. */
 export function searchEntries(entries: readonly VaultEntry[], query: string): VaultEntry[] {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
   if (terms.length === 0) return [...entries]
   return entries.filter((e) => {
-    const haystack = [e.title, e.url, e.note ?? '', ...e.tags, ...e.extraHosts].join('\n').toLowerCase()
+    const haystack = [e.title, e.url, ...e.extraHosts].join('\n').toLowerCase()
     return terms.every((term) => haystack.includes(term))
   })
 }
@@ -240,15 +228,12 @@ export function searchEntries(entries: readonly VaultEntry[], query: string): Va
 const MATCH_MODES: readonly string[] = ['site', 'exact']
 const OPEN_MODES: readonly string[] = ['current', 'newTab', 'incognito']
 
-/** A v1 entry: everything but `extraHosts`. */
-function isVaultEntryV1(value: unknown): value is Omit<VaultEntry, 'extraHosts'> {
-  if (!isRecord(value)) return false
+/** Fields every payload version's entries have, checked without `note` / `tags` / `extraHosts`. */
+function hasCommonEntryFields(value: Record<string, unknown>): boolean {
   return (
     isString(value.id) &&
     isString(value.url) &&
     isString(value.title) &&
-    (value.note === undefined || isString(value.note)) &&
-    isStringArray(value.tags) &&
     isString(value.matchMode) &&
     MATCH_MODES.includes(value.matchMode) &&
     isFiniteNumber(value.createdAt) &&
@@ -257,8 +242,40 @@ function isVaultEntryV1(value: unknown): value is Omit<VaultEntry, 'extraHosts'>
   )
 }
 
-export function isVaultEntry(value: unknown): value is VaultEntry {
+/** A v1 entry: v3 fields minus `extraHosts`, plus an optional `note` and `tags`. */
+type EntryV1 = Omit<VaultEntry, 'extraHosts'> & {note?: string; tags: string[]}
+
+function isVaultEntryV1(value: unknown): value is EntryV1 {
+  return (
+    isRecord(value) &&
+    hasCommonEntryFields(value) &&
+    (value.note === undefined || isString(value.note)) &&
+    isStringArray(value.tags)
+  )
+}
+
+/** A v2 entry: a v1 entry with `extraHosts`. */
+function isVaultEntryV2(value: unknown): value is EntryV1 & {extraHosts: string[]} {
   return isVaultEntryV1(value) && isStringArray((value as Record<string, unknown>).extraHosts)
+}
+
+export function isVaultEntry(value: unknown): value is VaultEntry {
+  return isRecord(value) && hasCommonEntryFields(value) && isStringArray(value.extraHosts)
+}
+
+/** Copies only the current entry fields, so removed ones (`note`, `tags`) don't linger. */
+function pickEntry(e: Omit<VaultEntry, 'extraHosts'>, extraHosts: string[]): VaultEntry {
+  const entry: VaultEntry = {
+    id: e.id,
+    url: e.url,
+    title: e.title,
+    matchMode: e.matchMode,
+    extraHosts,
+    createdAt: e.createdAt,
+    openCount: e.openCount
+  }
+  if (e.lastOpenedAt !== undefined) entry.lastOpenedAt = e.lastOpenedAt
+  return entry
 }
 
 /**
@@ -271,17 +288,24 @@ export function migrateVaultData(raw: unknown): VaultData {
   let entries: VaultEntry[]
   switch (raw.version) {
     case 1:
-      // v1 → v2: entries gain `extraHosts`.
+      // v1 → v2: entries gain `extraHosts`; v2 → v3: `note` and `tags` are dropped.
       if (!Array.isArray(raw.entries) || !raw.entries.every(isVaultEntryV1)) {
         throw new CoreError('invalid-data', 'bad entries')
       }
-      entries = raw.entries.map((e) => ({...e, extraHosts: []}))
+      entries = raw.entries.map((e) => pickEntry(e, []))
       break
     case 2:
+      // v2 → v3: `note` and `tags` are dropped.
+      if (!Array.isArray(raw.entries) || !raw.entries.every(isVaultEntryV2)) {
+        throw new CoreError('invalid-data', 'bad entries')
+      }
+      entries = raw.entries.map((e) => pickEntry(e, [...e.extraHosts]))
+      break
+    case 3:
       if (!Array.isArray(raw.entries) || !raw.entries.every(isVaultEntry)) {
         throw new CoreError('invalid-data', 'bad entries')
       }
-      entries = raw.entries
+      entries = raw.entries.map((e) => pickEntry(e, [...e.extraHosts]))
       break
     default:
       throw new CoreError('unsupported-version', `payload version ${String(raw.version)}`)

@@ -1,7 +1,7 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {historyUrls, launchChrome, openPopup, visit, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {clearAndType, clickText, listItems, onboard, waitText} from './support/popup'
+import {clearAndType, clickText, hasText, listItems, onboard, waitText} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp} from './support/temp'
 
@@ -55,6 +55,18 @@ describe.skipIf(!hasChrome)('extra hosts (Chrome)', () => {
     await clickText(p, '确认保存')
     await waitText(p, '添加当前页')
     expect((await listItems(p)).some((item) => item.includes('example.com+2'))).toBe(true)
+    // A save that protects something new asks for a look at the address bar.
+    await waitText(p, '已保存。请马上检查一下地址栏')
+    await waitText(p, '输入 example.com 开头的几个字母（例如“exa”）')
+    await p.click('button[title="知道了"]')
+    expect(await hasText(p, '请马上检查一下地址栏')).toBe(false)
+    // Changing only the title protects nothing new: no notice, no check.
+    await p.click('button[title="编辑"]')
+    await clearAndType(p, '#title', 'Renamed')
+    await clickText(p, '保存')
+    await waitText(p, '添加当前页')
+    expect((await listItems(p)).some((item) => item.includes('Renamed'))).toBe(true)
+    expect(await hasText(p, '请马上检查一下地址栏')).toBe(false)
     await p.close()
     expect(await historyUrls(s)).toEqual(['http://example.net/keep', 'http://example.org/keep'])
     expect(await s.sw.evaluate(async () => (await chrome.bookmarks.search({url: 'http://video.example.net/'})).length)).toBe(0)
