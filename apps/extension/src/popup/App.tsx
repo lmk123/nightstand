@@ -18,6 +18,7 @@ import {getActiveTab, isIncognitoAllowed, openUrl} from '@/platform/tabs'
 import {BookmarkCheck} from './components/BookmarkCheck'
 import {IncognitoHelp} from './components/IncognitoHelp'
 import {SettingsLink} from './components/SettingsLink'
+import {useOpenHelp} from './help'
 import {commit, openSession, type Session, type UnlockResult} from './session'
 import {Backup} from './views/Backup'
 import {BookmarkImport} from './views/BookmarkImport'
@@ -69,6 +70,7 @@ export default function App() {
   const [boot, setBoot] = useState<Boot | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [view, setView] = useState<View>({name: 'loading'})
+  const openHelp = useOpenHelp()
 
   useEffect(() => {
     ;(async () => {
@@ -232,6 +234,7 @@ export default function App() {
             <SettingsLink onClick={() => setView({name: 'backup'})}>{t('backupTitle')}</SettingsLink>
             <SettingsLink onClick={() => setView({name: 'changePassphrase'})}>{t('changePassTitle')}</SettingsLink>
             <SettingsLink onClick={() => setView({name: 'recoveryCode'})}>{t('recoveryTitle')}</SettingsLink>
+            <SettingsLink onClick={() => openHelp()}>{t('faqTitle')}</SettingsLink>
           </section>
         </Settings>
       )

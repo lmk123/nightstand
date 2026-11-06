@@ -62,18 +62,29 @@ describe.skipIf(!hasChrome)('decoy launcher (Chrome)', () => {
     await p.close()
   })
 
-  it('decoy settings edit links and the toolbar icon without unlocking', async () => {
+  it('decoy settings edit links without unlocking, but not the toolbar icon', async () => {
     const p = await openPopup(s)
     await p.click('button[aria-label="快捷链接设置"]')
     await p.type('input[placeholder="名称"]', 'Wiki')
     await p.type('input[placeholder="网址"]', 'wikipedia.org')
     await clickText(p, '添加')
     await sleep(200)
+    expect(await p.$$('button[aria-pressed]')).toHaveLength(0)
+    const links = (await storageSnapshot(s)).links as {links: {title: string}[]}
+    expect(links.links.map((l) => l.title)).toContain('Wiki')
+    await p.close()
+  })
+
+  it('the toolbar icon is chosen in the unlocked settings', async () => {
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    await p.click('button[aria-label="设置"]')
+    await waitText(p, '快速收起快捷键')
     const icons = await p.$$('button[aria-pressed]')
+    expect(icons).toHaveLength(4)
     await icons[2]?.click()
     await sleep(300)
-    const links = (await storageSnapshot(s)).links as {links: {title: string}[]; icon: string}
-    expect(links.links.map((l) => l.title)).toContain('Wiki')
+    const links = (await storageSnapshot(s)).links as {icon: string}
     expect(links.icon).toBe('star')
     await p.close()
   })

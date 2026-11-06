@@ -74,7 +74,7 @@
     "message": "设置解锁口令"
   },
   "onbPassHint": {
-    "message": "以后要在“筛选”框里输入口令来解锁，所以口令最好是一个看起来像普通筛选词的单词。旁人看到你在筛选框里打字，也不会觉得奇怪。"
+    "message": "以后要在“筛选”框里输入口令来解锁，所以口令最好看起来像普通的筛选词，比如几个用空格隔开的词。旁人看到你在筛选框里打字，也不会觉得奇怪。"
   },
   "onbPassLabel": {
     "message": "口令"
@@ -484,5 +484,134 @@
   },
   "onbIntroRestore": {
     "message": "要从备份恢复？先完成设置，再在“设置 → 备份与恢复”中导入。"
+  },
+  "passStrength": {
+    "message": "口令强度：$STRENGTH$",
+    "placeholders": {
+      "strength": {
+        "content": "$1",
+        "example": "一般"
+      }
+    }
+  },
+  "passStrengthWeak": {
+    "message": "弱"
+  },
+  "passStrengthFair": {
+    "message": "一般"
+  },
+  "passStrengthGood": {
+    "message": "较强"
+  },
+  "passStrengthStrong": {
+    "message": "强"
+  },
+  "faqTitle": {
+    "message": "常见问题"
+  },
+  "faqMatchLink": {
+    "message": "两种范围有什么区别？"
+  },
+  "faqMatchQ": {
+    "message": "“整个站点”和“仅此网址”有什么区别？"
+  },
+  "faqMatchIntro": {
+    "message": "假设添加的网址是 example.com/docs/guide，之后访问下面这些网址时，历史记录会不会被删掉："
+  },
+  "faqColUrl": {
+    "message": "访问的网址"
+  },
+  "faqColSite": {
+    "message": "整个站点"
+  },
+  "faqColExact": {
+    "message": "仅此网址"
+  },
+  "faqMatchSite": {
+    "message": "整个站点：只看域名，路径、协议和端口都不管。这个域名和它所有子域名下的任何页面，访问后都会从历史记录里删掉。上一级域名（如 def.com 之于 abc.def.com）和名字相近的域名（如 evil-example.com）不受影响。"
+  },
+  "faqMatchExact": {
+    "message": "仅此网址：只删这一个地址。协议（http 或 https）、开头的 www.、# 之后的部分和末尾的斜杠都不影响判断；但 ? 之后的参数必须完全一样。同一网站的首页和其他页面会留在历史记录里，所以在地址栏输入域名时，浏览器仍可能联想出这个网站。"
+  },
+  "faqMatchWhen": {
+    "message": "什么时候清理：添加后立刻清理已有的历史记录；之后每次访问，马上删掉这次的记录；另外每 15 分钟和每次浏览器启动时会补扫一遍。锁定状态下也照常清理。"
+  },
+  "faqMatchTip": {
+    "message": "想让地址栏完全联想不出这个网站，请选“整个站点”。"
+  },
+  "faqPassQ": {
+    "message": "口令长度有什么影响？"
+  },
+  "faqPass1": {
+    "message": "口令决定了别人能不能打开加密的列表。在这里连续输错会自动放慢，但如果有人把浏览器的数据文件拷走，就可以在自己的电脑上不受限制地一个个去猜。"
+  },
+  "faqPass2": {
+    "message": "Nightstand 让每猜一次都要做 60 万次运算，一张高端显卡每秒大约只能猜 1 万多次。所以能撑多久，几乎只取决于口令有多长、多难猜："
+  },
+  "faqColPassExample": {
+    "message": "口令"
+  },
+  "faqColPassTime": {
+    "message": "全部猜一遍约需"
+  },
+  "faqPassRow1": {
+    "message": "6 位数字（如生日）"
+  },
+  "faqPassTime1": {
+    "message": "约 1 分钟"
+  },
+  "faqPassRow2": {
+    "message": "6 个小写字母"
+  },
+  "faqPassTime2": {
+    "message": "约 6 小时"
+  },
+  "faqPassRow3": {
+    "message": "8 个小写字母"
+  },
+  "faqPassTime3": {
+    "message": "约半年"
+  },
+  "faqPassRow4": {
+    "message": "8 个字符，大小写字母和数字混用"
+  },
+  "faqPassTime4": {
+    "message": "约 500 年"
+  },
+  "faqPassRow5": {
+    "message": "4 个随机挑选、互不相关的常用词"
+  },
+  "faqPassTime5": {
+    "message": "数千年以上"
+  },
+  "faqPassNote": {
+    "message": "以上按一张显卡、穷举全部可能来估算。用 100 张显卡就快 100 倍；常见密码、单词、生日和键盘顺序会被优先尝试，实际可能快得多。"
+  },
+  "faqPassChoose": {
+    "message": "怎么选：口令是在“筛选”框里输入的，用几个互不相关的词、中间加空格，看起来就像一串普通的搜索词；再加上数字更好。避免生日、常见密码和单个单词。"
+  },
+  "faqPassMeter": {
+    "message": "设置口令时显示的强度只是粗略估算：它会把一串字母大致当作一个单词来算，但认不出具体的单词、名字和日期，请把它当作参考。"
+  },
+  "faqPassRecovery": {
+    "message": "恢复码是 160 位的随机数，无法被猜出。请把它保存在别人拿不到的地方。"
+  },
+  "faqStoreQ": {
+    "message": "数据是怎么保存的？会被破解吗？"
+  },
+  "faqStore1": {
+    "message": "所有数据只保存在这台电脑的浏览器里，不会上传到任何地方。"
+  },
+  "faqStore2": {
+    "message": "你的列表（网址、标题、备注、标签）用 AES-256-GCM 加密。解开它的密钥只在解锁后的弹窗内存里，关闭弹窗就销毁，从不写入磁盘。"
+  },
+  "faqStore3": {
+    "message": "口令和恢复码各自经过 PBKDF2（60 万次运算）换算出一把钥匙，用来解开那个密钥。加密本身没法直接破解，能被攻击的只有口令。"
+  },
+  "faqStore4": {
+    "message": "有一处需要知道：为了锁定时也能清理历史记录，扩展另存了一份“哪些网站要清理”的匹配表。它只保存加盐哈希，直接看不出网址；但拿到浏览器数据的人可以拿常见网站列表逐个比对，确认你是否添加了某个知名网站，也能看出条目数量。标题、备注和标签不会因此泄露。"
+  },
+  "faqStore5": {
+    "message": "Nightstand 防的是旁人：投屏、共享屏幕、有人凑过来看。它防不住能完全控制这台电脑的人，也管不到 Google 账号的活动记录、DNS 和网络层面的记录。"
   }
 }

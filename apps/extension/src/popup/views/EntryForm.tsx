@@ -17,6 +17,7 @@ import {t} from '@/platform/i18n'
 import {BookmarkCheck} from '../components/BookmarkCheck'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
+import {HelpLink} from '../help'
 
 /**
  * Short add/edit form. Unsaved changes are simply dropped when the popup
@@ -104,6 +105,7 @@ export function EntryForm({
               {t('matchExact')}
             </Label>
           </RadioGroup>
+          <HelpLink topic="matchMode" label="faqMatchLink" />
         </Field>
         <Field label={t('fieldTags')} htmlFor="tags" hint={t('fieldTagsHint')}>
           <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} />

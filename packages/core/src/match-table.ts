@@ -14,7 +14,7 @@ import {CoreError} from './errors.ts'
 import {isRecord, isString, isStringArray} from './guards.ts'
 import type {VaultEntry} from './model.ts'
 import {base64ToBytes, bytesToBase64, bytesToHex, concatBytes, randomBytes, utf8Encode, type Bytes} from './crypto/encoding.ts'
-import {hostCandidates, hostOf, normalizeExactUrl, parseHttpUrl, normalizeHost} from './url.ts'
+import {exactCandidates, hostCandidates, hostOf, normalizeExactUrl, parseHttpUrl, normalizeHost} from './url.ts'
 
 export interface MatchTable {
   version: 1
@@ -92,8 +92,10 @@ export function createMatcher(table: MatchTable): UrlMatcher {
       if (!parsed) return false
       if (await matchesHost(parsed.hostname)) return true
       if (exact.size === 0) return false
-      const normalized = normalizeExactUrl(url)
-      return normalized !== null && exact.has(await hashWith(salt, 'exact', normalized))
+      for (const candidate of exactCandidates(url)) {
+        if (exact.has(await hashWith(salt, 'exact', candidate))) return true
+      }
+      return false
     }
   }
 }

@@ -15,6 +15,7 @@ import {Label} from '@/components/ui/label'
 import {t} from '@/platform/i18n'
 import {saveInitialSetup} from '@/platform/storage'
 import {Field} from '../components/Field'
+import {PassphraseStrength} from '../components/PassphraseStrength'
 import {RecoveryCodeBox} from '../components/RecoveryCodeBox'
 import type {Session} from '../session'
 
@@ -101,6 +102,7 @@ function PassphraseStep({onCreated}: {onCreated: (vault: CreatedVault) => void})
       <p className="text-muted-foreground text-xs leading-relaxed">{t('onbPassHint')}</p>
       <Field label={t('onbPassLabel')} htmlFor="pass">
         <Input id="pass" type="password" autoFocus autoComplete="new-password" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} />
+        <PassphraseStrength passphrase={passphrase} />
       </Field>
       <Field label={t('onbPassConfirmLabel')} htmlFor="pass2" error={error}>
         <Input id="pass2" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />

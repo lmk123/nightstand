@@ -5,6 +5,7 @@ import {Input} from '@/components/ui/input'
 import {t} from '@/platform/i18n'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
+import {PassphraseStrength} from '../components/PassphraseStrength'
 import {commitStored, type Session} from '../session'
 
 /**
@@ -52,6 +53,7 @@ export function NewPassphrase({
         <p className="text-muted-foreground text-xs leading-relaxed">{t('onbPassHint')}</p>
         <Field label={t('newPassLabel')} htmlFor="np1">
           <Input id="np1" type="password" autoFocus autoComplete="new-password" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} />
+          <PassphraseStrength passphrase={passphrase} />
         </Field>
         <Field label={t('onbPassConfirmLabel')} htmlFor="np2" error={error}>
           <Input id="np2" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />

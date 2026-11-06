@@ -8,6 +8,7 @@ import {t} from '@/platform/i18n'
 import {isIncognitoAllowed} from '@/platform/tabs'
 import {saveLinks} from '@/platform/storage'
 import {Header} from '../components/Header'
+import {IconPicker} from '../components/IconPicker'
 import {IncognitoHelp} from '../components/IncognitoHelp'
 import {ShortcutInfo} from '../components/ShortcutInfo'
 
@@ -69,6 +70,10 @@ export function Settings({
           <p className="text-muted-foreground text-xs leading-relaxed">
             {links.disguise ? t('disguiseOnHint') : t('disguiseOffHint')}
           </p>
+        </section>
+        <section className="grid gap-2">
+          <h2 className="text-xs font-medium">{t('iconSection')}</h2>
+          <IconPicker links={links} onChange={onLinksChange} />
         </section>
         <section className="grid gap-2">
           <h2 className="text-xs font-medium">{t('shortcutSection')}</h2>

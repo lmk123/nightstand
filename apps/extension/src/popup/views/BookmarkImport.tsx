@@ -22,6 +22,7 @@ import {
 import {t} from '@/platform/i18n'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
+import {HelpLink} from '../help'
 
 /**
  * Move sites from browser bookmarks into Nightstand. Optionally deletes the
@@ -140,6 +141,7 @@ export function BookmarkImport({
                   {t('matchExact')}
                 </Label>
               </RadioGroup>
+              <HelpLink topic="matchMode" label="faqMatchLink" />
             </Field>
             <Label className="flex items-center gap-2 text-xs font-normal">
               <Checkbox checked={removeOriginals} onCheckedChange={(v) => setRemoveOriginals(v === true)} />

@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {hostCandidates, hostOf, normalizeExactUrl, normalizeHost, parseUserUrl} from '../src/index.ts'
+import {hostCandidates, hostOf, exactCandidates, normalizeExactUrl, normalizeHost, parseUserUrl} from '../src/index.ts'
 
 describe('parseUserUrl', () => {
   it('adds https:// when no scheme is given', () => {
@@ -63,10 +63,29 @@ describe('normalizeExactUrl', () => {
   it('drops credentials', () => {
     expect(normalizeExactUrl('https://user:pw@example.com/')).toBe('example.com/')
   })
+  it('ignores a trailing slash on the path but keeps the root', () => {
+    expect(normalizeExactUrl('https://example.com/a/b/')).toBe('example.com/a/b')
+    expect(normalizeExactUrl('https://example.com/a/b//?q=1')).toBe('example.com/a/b?q=1')
+    expect(normalizeExactUrl('https://example.com')).toBe('example.com/')
+    expect(normalizeExactUrl('https://example.com/?q=1')).toBe('example.com/?q=1')
+  })
   it('distinguishes queries', () => {
     expect(normalizeExactUrl('https://example.com/?a=1')).not.toBe(
       normalizeExactUrl('https://example.com/?a=2')
     )
+  })
+})
+
+describe('exactCandidates', () => {
+  it('yields the canonical form and the trailing-slash form', () => {
+    expect(exactCandidates('https://example.com/a/')).toEqual(['example.com/a', 'example.com/a/'])
+    expect(exactCandidates('https://example.com/a?q=1')).toEqual(['example.com/a?q=1', 'example.com/a/?q=1'])
+  })
+  it('yields only the root for the root', () => {
+    expect(exactCandidates('https://example.com/?q=1')).toEqual(['example.com/?q=1'])
+  })
+  it('yields nothing for non-http URLs', () => {
+    expect(exactCandidates('about:blank')).toEqual([])
   })
 })
 

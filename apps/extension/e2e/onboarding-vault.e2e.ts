@@ -41,6 +41,22 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
     expect(await vaultKeys(s)).toEqual([])
   })
 
+  it('rates the passphrase and opens the FAQ without losing onboarding input or writing anything', async () => {
+    const p = await openPopup(s)
+    await clickText(p, '开始设置')
+    await p.type('#pass', 'notes')
+    await waitText(p, '口令强度：弱')
+    await clearAndType(p, '#pass', 'tide lamp quiver 47')
+    await waitText(p, '口令强度：强')
+    await clickText(p, '口令长度有什么影响？')
+    await waitText(p, '全部猜一遍约需')
+    await p.click('button[aria-label="返回"]')
+    expect(await hasText(p, '全部猜一遍约需')).toBe(false)
+    expect(await p.$eval('#pass', (el) => (el as HTMLInputElement).value)).toBe('tide lamp quiver 47')
+    await p.close()
+    expect(await vaultKeys(s)).toEqual([])
+  })
+
   it('validates the passphrase, then writes everything only at the last step', async () => {
     const p = await openPopup(s)
     expect(await hasText(p, '欢迎使用 Nightstand')).toBe(true)
@@ -121,6 +137,24 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
     expect(await submitUnlock(p, 'shelf')).toBe(true)
     await openSettings(p)
     await waitText(p, '打开方式')
+    await p.close()
+  })
+
+  it('explains the match modes from the entry form (keeping the draft) and lists the FAQ in settings', async () => {
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'shelf')).toBe(true)
+    await clickText(p, '手动添加')
+    await p.type('#url', 'example.net/a/')
+    await clickText(p, '两种范围有什么区别？')
+    await waitText(p, '访问的网址')
+    // The entry form stays mounted (hidden) underneath, with its own back button.
+    const backs = await p.$$('button[aria-label="返回"]')
+    await backs.at(-1)?.click()
+    expect(await hasText(p, '访问的网址')).toBe(false)
+    expect(await p.$eval('#url', (el) => (el as HTMLInputElement).value)).toBe('example.net/a/')
+    await clickText(p, '取消')
+    await openSettings(p, '常见问题')
+    await waitText(p, '数据是怎么保存的？会被破解吗？')
     await p.close()
   })
 })

@@ -79,6 +79,7 @@ describe('vault operations', () => {
     expect(findDuplicate(entries, {url: 'http://EXAMPLE.com/other', matchMode: 'site'})?.id).toBe('site')
     expect(findDuplicate(entries, {url: 'https://example.com/a', matchMode: 'exact'})).toBeUndefined()
     expect(findDuplicate(entries, {url: 'https://example.org/p?q=1', matchMode: 'exact'})?.id).toBe('exact')
+    expect(findDuplicate(entries, {url: 'https://example.org/p/?q=1', matchMode: 'exact'})?.id).toBe('exact')
     expect(findDuplicate(entries, {url: 'https://example.com/', matchMode: 'site'}, 'site')).toBeUndefined()
   })
   it('searchEntries matches title, url, note and tags; all terms must match', () => {
@@ -106,6 +107,7 @@ describe('entryCoversUrl', () => {
     const exact = createEntry({url: 'https://example.org/p?q=1', matchMode: 'exact'}, NOW)
     expect(entryCoversUrl(exact, 'http://www.example.org/p?q=1#h')).toBe(true)
     expect(entryCoversUrl(exact, 'https://example.org/p')).toBe(false)
+    expect(entryCoversUrl(exact, 'https://example.org/p/?q=1')).toBe(true)
   })
 })
 

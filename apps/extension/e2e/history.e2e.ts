@@ -42,12 +42,13 @@ describe.skipIf(!hasChrome)('history cleanup and panic (Chrome)', () => {
     await p.close()
   })
 
-  it('cleans visits while locked: subdomains, www, case, fragments, exact URLs — not look-alikes', async () => {
+  it('cleans visits while locked: subdomains, www, case, fragments, exact URLs (with or without a trailing slash) — not look-alikes', async () => {
     for (const url of [
       'http://sub.example.com/c',
       'http://WWW.EXAMPLE.COM/d#frag',
       'http://evil-example.com/again',
       'http://example.org/x?q=1#h',
+      'http://example.org/x/?q=1',
       'http://example.org/z'
     ]) {
       await visit(s, url)

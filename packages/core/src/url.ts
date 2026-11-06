@@ -9,6 +9,8 @@
  * - `exact` matching compares the normalized URL without its fragment. The
  *   scheme is ignored (http and https of the same address are the same entry,
  *   so an http→https redirect is still caught); a non-default port is kept.
+ *   A trailing slash on the path is ignored (`/a/` and `/a` are the same
+ *   address); the query must still match exactly.
  * - Only http(s) URLs ever match.
  */
 
@@ -52,7 +54,8 @@ export function hostOf(url: string): string | null {
 
 /**
  * Canonical form used for `exact` matching: normalized host, non-default
- * port, path and query; no scheme, credentials or fragment.
+ * port, path without trailing slashes (the root stays `/`) and query; no
+ * scheme, credentials or fragment.
  */
 export function normalizeExactUrl(url: string): string | null {
   const parsed = parseHttpUrl(url)
@@ -60,7 +63,24 @@ export function normalizeExactUrl(url: string): string | null {
   const host = normalizeHost(parsed.hostname)
   if (!host) return null
   const port = parsed.port ? `:${parsed.port}` : ''
-  return `${host}${port}${parsed.pathname}${parsed.search}`
+  const path = parsed.pathname.replace(/\/+$/, '') || '/'
+  return `${host}${port}${path}${parsed.search}`
+}
+
+/**
+ * Every form an `exact` entry for this URL may have been hashed under: the
+ * canonical one, plus the same path with one trailing slash. Match tables
+ * written before trailing slashes were ignored hashed the path as typed, and
+ * the background cannot rebuild them while the vault is locked.
+ */
+export function exactCandidates(url: string): string[] {
+  const canonical = normalizeExactUrl(url)
+  if (!canonical) return []
+  const queryAt = canonical.indexOf('?')
+  const base = queryAt === -1 ? canonical : canonical.slice(0, queryAt)
+  if (base.endsWith('/')) return [canonical]
+  const query = queryAt === -1 ? '' : canonical.slice(queryAt)
+  return [canonical, `${base}/${query}`]
 }
 
 function isIpLiteral(host: string): boolean {

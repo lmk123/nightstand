@@ -1,29 +1,16 @@
 import {useState} from 'react'
 import {X} from 'lucide-react'
-import {
-  DEFAULT_DECOY_LINKS,
-  ICON_SETS,
-  makeDecoyLink,
-  type DecoyConfig,
-  type IconSet
-} from '@nightstand/core'
+import {DEFAULT_DECOY_LINKS, makeDecoyLink, type DecoyConfig} from '@nightstand/core'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
-import {applyIcon, iconPaths} from '@/platform/icons'
-import {t, type MessageKey} from '@/platform/i18n'
+import {t} from '@/platform/i18n'
 import {saveLinks} from '@/platform/storage'
 import {Header} from '../components/Header'
 
-const ICON_LABEL: Record<IconSet, MessageKey> = {
-  nightstand: 'iconNightstand',
-  book: 'iconBook',
-  star: 'iconStar',
-  grid: 'iconGrid'
-}
-
 /**
  * "Quick Links settings": the decoy's own, ordinary-looking settings. Edits
- * the decoy links and the toolbar icon — nothing here hints at the vault.
+ * the decoy links only — nothing here hints at the vault. The toolbar icon is
+ * chosen in the real settings, so a bystander cannot change it.
  */
 export function DecoySettings({
   config,
@@ -50,11 +37,6 @@ export function DecoySettings({
     await save({...config, links: [...config.links, link]})
     setTitle('')
     setUrl('')
-  }
-
-  async function chooseIcon(icon: IconSet) {
-    await save({...config, icon})
-    await applyIcon(icon)
   }
 
   return (
@@ -111,26 +93,6 @@ export function DecoySettings({
               </Button>
             </div>
           </form>
-        </section>
-        <section className="grid gap-2">
-          <h2 className="text-xs font-medium">{t('iconSection')}</h2>
-          <div className="grid grid-cols-4 gap-2">
-            {ICON_SETS.map((icon) => (
-              <button
-                key={icon}
-                type="button"
-                onClick={() => chooseIcon(icon)}
-                aria-pressed={config.icon === icon}
-                className={
-                  'flex flex-col items-center gap-1 rounded-md border p-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ' +
-                  (config.icon === icon ? 'border-primary bg-accent' : 'hover:bg-muted')
-                }
-              >
-                <img src={iconPaths(icon)['32']} alt="" width={24} height={24} />
-                {t(ICON_LABEL[icon])}
-              </button>
-            ))}
-          </div>
         </section>
       </div>
     </div>

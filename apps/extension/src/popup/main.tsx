@@ -1,5 +1,6 @@
 import {createRoot} from 'react-dom/client'
 import App from './App'
+import {HelpProvider} from './help'
 import {t} from '@/platform/i18n'
 import '../styles/globals.css'
 
@@ -14,4 +15,8 @@ dark.addEventListener('change', applyTheme)
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Popup root element not found')
 
-createRoot(rootElement).render(<App />)
+createRoot(rootElement).render(
+  <HelpProvider>
+    <App />
+  </HelpProvider>
+)

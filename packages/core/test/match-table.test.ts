@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {buildMatchTable, createMatcher, emptyMatchTable, newMatchSalt, parseMatchTable, isCoreError} from '../src/index.ts'
+import {buildMatchTable, createMatcher, emptyMatchTable, hashMatchValue, newMatchSalt, parseMatchTable, isCoreError} from '../src/index.ts'
 
 async function matcherFor(entries: {url: string; matchMode: 'site' | 'exact'}[]) {
   return createMatcher(await buildMatchTable(entries))
@@ -66,6 +66,25 @@ describe('exact matching', () => {
     expect(await m.matches('https://example.com/')).toBe(false)
     expect(await m.matches('https://example.com:8443/page?q=1')).toBe(false)
     expect(await m.matchesHost('example.com')).toBe(false)
+  })
+  it('treats the address with and without a trailing slash as the same', async () => {
+    for (const entered of ['https://example.com/a/b', 'https://example.com/a/b/']) {
+      const m = await matcherFor([{url: entered, matchMode: 'exact'}])
+      expect(await m.matches('https://example.com/a/b')).toBe(true)
+      expect(await m.matches('https://example.com/a/b/')).toBe(true)
+      expect(await m.matches('https://example.com/a/b/c')).toBe(false)
+      expect(await m.matches('https://example.com/a')).toBe(false)
+    }
+  })
+  it('still matches tables that hashed the trailing slash as typed', async () => {
+    // Tables written before trailing slashes were ignored; the background
+    // cannot rebuild them until the vault is next unlocked and saved.
+    const salt = newMatchSalt()
+    const legacy = {version: 1 as const, salt, site: [], exact: [await hashMatchValue(salt, 'exact', 'example.com/a/b/?q=1')]}
+    const m = createMatcher(legacy)
+    expect(await m.matches('https://example.com/a/b?q=1')).toBe(true)
+    expect(await m.matches('https://example.com/a/b/?q=1')).toBe(true)
+    expect(await m.matches('https://example.com/a/b/?q=2')).toBe(false)
   })
 })
 
