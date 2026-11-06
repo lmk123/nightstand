@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    // No "DOM" and no ambient @types: core must not touch window/document/chrome.
+    // "WebWorker" provides exactly the standard globals core relies on
+    // (crypto.subtle, URL, TextEncoder/TextDecoder, btoa/atob).
+    "lib": ["ES2024", "WebWorker"],
+    "types": [],
+    "target": "ES2024",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src", "test"]
+}

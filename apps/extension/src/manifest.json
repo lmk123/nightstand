@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json.schemastore.org/chrome-manifest.json",
+  "manifest_version": 3,
+  "version": "0.1.0",
+  "name": "__MSG_extName__",
+  "description": "__MSG_extDescription__",
+  "default_locale": "zh_CN",
+  "icons": {
+    "16": "/icons/nightstand/16.png",
+    "32": "/icons/nightstand/32.png",
+    "48": "/icons/nightstand/48.png",
+    "128": "/icons/nightstand/128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "/icons/nightstand/16.png",
+      "32": "/icons/nightstand/32.png",
+      "48": "/icons/nightstand/48.png",
+      "128": "/icons/nightstand/128.png"
+    },
+    "default_title": "__MSG_actionTitle__",
+    "default_popup": "popup/index.html"
+  },
+  "background": {
+    "chromium:service_worker": "background/index.ts",
+    "firefox:scripts": ["background/index.ts"]
+  },
+  "permissions": ["storage", "history", "tabs", "alarms"],
+  "optional_permissions": ["bookmarks"],
+  "commands": {
+    "panic": {
+      "suggested_key": {
+        "default": "Alt+Shift+Q"
+      },
+      "description": "__MSG_commandPanic__"
+    }
+  }
+}

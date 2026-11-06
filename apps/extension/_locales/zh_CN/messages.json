@@ -1,0 +1,22 @@
+{
+  "extName": {
+    "message": "Nightstand",
+    "description": "Extension name shown on the extensions page. Must stay neutral."
+  },
+  "extDescription": {
+    "message": "把常用链接放在手边",
+    "description": "Extension description shown on the extensions page. Must stay neutral."
+  },
+  "actionTitle": {
+    "message": "快捷链接",
+    "description": "Toolbar button tooltip. Must stay neutral."
+  },
+  "commandPanic": {
+    "message": "快速收起",
+    "description": "Keyboard shortcut description on the shortcuts page. Must stay neutral."
+  },
+  "popupTitle": {
+    "message": "快捷链接",
+    "description": "Popup document title."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": {
+    "chrome-devtools-mcp@claude-plugins-official": false
+  },
+  "enabledMcpjsonServers": [
+    "extension-dev",
+    "extensionjs",
+    "chrome-devtools"
+  ]
+}
