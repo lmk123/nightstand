@@ -133,7 +133,6 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
 
     p = await openPopup(s)
     expect(await submitUnlock(p, 'notes')).toBe(false)
-    await sleep(1100) // let the silent back-off window pass
     expect(await submitUnlock(p, 'shelf')).toBe(true)
     await openSettings(p)
     await waitText(p, '打开方式')

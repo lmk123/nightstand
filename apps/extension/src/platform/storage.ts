@@ -1,13 +1,10 @@
 import {
-  INITIAL_THROTTLE,
   migrateStoredVault,
   parseDecoyConfig,
   parseMatchTable,
-  parseThrottle,
   type DecoyConfig,
   type MatchTable,
-  type StoredVault,
-  type UnlockThrottle
+  type StoredVault
 } from '@nightstand/core'
 
 /**
@@ -17,16 +14,17 @@ import {
  * - `shelf`    encrypted vault (absent until onboarding completes)
  * - `index`    hashed match table for the background
  * - `links`    decoy links + icon (plaintext, needed while locked)
- * - `throttle` failed-unlock back-off (written by the popup)
  * - `state`    background bookkeeping (written by the background)
  *
  * The vault key is never stored anywhere.
+ *
+ * Retired keys (no longer written; removed on install/update):
+ * - `throttle` failed-unlock back-off, dropped because it also locked out the owner
  */
 const KEY = {
   shelf: 'shelf',
   index: 'index',
   links: 'links',
-  throttle: 'throttle',
   state: 'state'
 } as const
 
@@ -75,14 +73,9 @@ export async function saveLinks(links: DecoyConfig): Promise<void> {
   await chrome.storage.local.set({[KEY.links]: links})
 }
 
-export async function loadThrottle(): Promise<UnlockThrottle> {
-  return parseThrottle(await get(KEY.throttle))
-}
+const RETIRED_KEYS = ['throttle']
 
-export async function saveThrottle(throttle: UnlockThrottle): Promise<void> {
-  await chrome.storage.local.set({[KEY.throttle]: throttle})
-}
-
-export async function resetThrottle(): Promise<void> {
-  await saveThrottle({...INITIAL_THROTTLE})
+/** Drops keys older builds wrote and nothing reads any more. */
+export async function removeRetiredKeys(): Promise<void> {
+  await chrome.storage.local.remove(RETIRED_KEYS)
 }

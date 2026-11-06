@@ -44,14 +44,11 @@ describe.skipIf(!hasChrome)('decoy launcher (Chrome)', () => {
     await p.close()
   })
 
-  it('silently ignores even the right passphrase during back-off', async () => {
+  it('the right passphrase still unlocks right after many wrong ones', async () => {
     const p = await openPopup(s)
-    for (let i = 0; i < 4; i++) await submitUnlock(p, `nope${i}`, 300)
-    expect((await storageSnapshot(s)).throttle).toMatchObject({failures: 4})
-    expect(await submitUnlock(p, 'notes', 300)).toBe(false)
-    await sleep(1200)
-    await p.keyboard.press('Enter')
-    await waitText(p, '添加当前页')
+    for (let i = 0; i < 6; i++) await submitUnlock(p, `nope${i}`, 300)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    expect(await storageSnapshot(s)).not.toHaveProperty('throttle')
     await p.close()
   })
 

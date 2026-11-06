@@ -5,7 +5,7 @@
 // handles the panic shortcut. It never sees the vault key.
 import {applyIcon} from '@/platform/icons'
 import {isBackgroundRequest} from '@/platform/messages'
-import {loadLinks} from '@/platform/storage'
+import {loadLinks, removeRetiredKeys} from '@/platform/storage'
 import {fullScan, handleVisited, incrementalScan, purgeEntries} from './cleaner'
 import {openIncognito} from './incognito'
 import {panic} from './panic'
@@ -61,6 +61,7 @@ chrome.runtime.onStartup.addListener(() => {
 })
 
 chrome.runtime.onInstalled.addListener(() => {
+  removeRetiredKeys().catch(console.error)
   restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
   fullScan().catch(console.error)

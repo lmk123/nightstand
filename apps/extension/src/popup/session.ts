@@ -1,17 +1,15 @@
 import {
   buildMatchTable,
-  canAttemptUnlock,
   looksLikeRecoveryCode,
   newMatchSalt,
   openVault,
-  recordUnlockFailure,
   sealVault,
   unlockWithPassphrase,
   unlockWithRecoveryCode,
   type StoredVault,
   type VaultData
 } from '@nightstand/core'
-import {loadIndex, loadThrottle, resetThrottle, saveShelfAndIndex, saveThrottle} from '@/platform/storage'
+import {loadIndex, saveShelfAndIndex} from '@/platform/storage'
 
 /**
  * An unlocked vault. Lives only in the popup's memory: closing the popup
@@ -51,28 +49,19 @@ export interface UnlockResult {
 }
 
 /**
- * One unlock attempt with silent back-off. Returns null for a wrong secret
- * *and* while backing off, so callers cannot (and must not) tell the user
- * which one happened.
+ * One unlock attempt. Returns null for a wrong secret; the caller shows
+ * nothing either way. There is deliberately no back-off: it would also
+ * swallow the owner's correct passphrase after a few stray Enters in the
+ * filter box, while a bystander guessing by hand gains little from it.
  */
 export async function attemptUnlock(
   stored: StoredVault,
   input: string
 ): Promise<UnlockResult | null> {
-  const throttle = await loadThrottle()
-  if (!canAttemptUnlock(throttle, Date.now())) return null
-
-  let result: UnlockResult | null = null
   if (looksLikeRecoveryCode(input)) {
     const dek = await unlockWithRecoveryCode(stored, input)
-    if (dek) result = {dek, via: 'recovery'}
+    if (dek) return {dek, via: 'recovery'}
   }
-  if (!result) {
-    const dek = await unlockWithPassphrase(stored, input)
-    if (dek) result = {dek, via: 'passphrase'}
-  }
-
-  if (result) await resetThrottle()
-  else await saveThrottle(recordUnlockFailure(throttle, Date.now()))
-  return result
+  const dek = await unlockWithPassphrase(stored, input)
+  return dek ? {dek, via: 'passphrase'} : null
 }
