@@ -65,7 +65,13 @@ export async function onboard(page: Page, passphrase: string): Promise<string> {
   return code
 }
 
-export async function addEntry(page: Page, url: string, mode: 'site' | 'exact' = 'site'): Promise<void> {
+/** Adds an entry through the form; `notice: false` when the save notice was turned off. */
+export async function addEntry(
+  page: Page,
+  url: string,
+  mode: 'site' | 'exact' = 'site',
+  {notice = true}: {notice?: boolean} = {}
+): Promise<void> {
   await clickText(page, '手动添加')
   await page.type('#url', url)
   if (mode === 'exact') {
@@ -73,6 +79,7 @@ export async function addEntry(page: Page, url: string, mode: 'site' | 'exact' =
     await radios[1]?.click()
   }
   await clickText(page, '保存')
+  if (notice) await clickText(page, '确认保存')
   await waitText(page, '添加当前页')
 }
 

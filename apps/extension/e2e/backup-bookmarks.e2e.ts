@@ -122,6 +122,7 @@ describe.skipIf(!hasChrome)('backup, passphrase management, bookmarks (Chrome)',
     await clickText(p, '手动添加')
     await p.type('#url', 'example.org')
     await clickText(p, '保存')
+    await clickText(p, '确认保存')
     await waitText(p, '删除原书签')
     await clickText(p, '删除原书签')
     await waitText(p, '已删除 2 个书签')

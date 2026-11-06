@@ -118,6 +118,12 @@ describe('migrateVaultData', () => {
     expect(migrateVaultData({version: 1, entries: [], settings: {openMode: 'teleport', extra: 1}}).settings).toEqual({openMode: 'newTab'})
     expect(migrateVaultData({version: 1, entries: []}).settings.openMode).toBe('newTab')
   })
+  it('keeps the optional save-notice flag only when it is a boolean', () => {
+    const data = updateSettings(emptyVaultData(), {skipSaveNotice: true})
+    expect(migrateVaultData(JSON.parse(JSON.stringify(data))).settings).toEqual({openMode: 'newTab', skipSaveNotice: true})
+    expect(migrateVaultData({version: 1, entries: [], settings: {openMode: 'current', skipSaveNotice: 'yes'}}).settings).toEqual({openMode: 'current'})
+    expect(emptyVaultData().settings).not.toHaveProperty('skipSaveNotice')
+  })
   it('rejects malformed payloads and unknown versions', () => {
     const cases: [unknown, string][] = [
       [null, 'invalid-data'],

@@ -207,9 +207,12 @@ export default function App() {
           entries={session.data.entries}
           editing={view.editing}
           prefill={view.prefill}
+          skipNotice={session.data.settings.skipSaveNotice === true}
           onCancel={() => setView({name: 'vault'})}
-          onSave={async (entry, isNew) => {
-            await update(isNew ? addEntry(session.data, entry) : replaceEntry(session.data, entry))
+          onSave={async (entry, isNew, skipNoticeFromNow) => {
+            let next = isNew ? addEntry(session.data, entry) : replaceEntry(session.data, entry)
+            if (skipNoticeFromNow) next = updateSettings(next, {skipSaveNotice: true})
+            await update(next)
             purgeFor(entry)
             setView(isNew ? {name: 'vault', added: entry} : {name: 'vault'})
           }}

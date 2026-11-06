@@ -43,6 +43,33 @@
   "save": {
     "message": "保存"
   },
+  "saveNoticeTitle": {
+    "message": "保存前请确认"
+  },
+  "saveNoticeSite": {
+    "message": "确认保存后，会立即删除 $HOST$（含所有子域名）的全部浏览记录，以后每次访问也会自动删除。",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "saveNoticeExact": {
+    "message": "确认保存后，会立即删除这个网址的全部浏览记录，以后每次访问也会自动删除。"
+  },
+  "saveNoticeEffects": {
+    "message": "删除的记录无法恢复，地址栏里来自浏览记录的提示也会随之消失。书签、Cookie、缓存和下载记录不受影响。"
+  },
+  "saveNoticeSkip": {
+    "message": "不再提示"
+  },
+  "saveNoticeBack": {
+    "message": "返回修改"
+  },
+  "saveNoticeConfirm": {
+    "message": "确认保存"
+  },
   "next": {
     "message": "下一步"
   },
@@ -291,6 +318,12 @@
   },
   "iconGrid": {
     "message": "网格"
+  },
+  "saveNoticeSection": {
+    "message": "保存网址"
+  },
+  "saveNoticeSetting": {
+    "message": "保存前提醒：会立即删除该网站或网址的浏览记录"
   },
   "shortcutSection": {
     "message": "快速收起快捷键"

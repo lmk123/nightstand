@@ -22,6 +22,13 @@ export interface VaultEntry {
 
 export interface VaultSettings {
   openMode: OpenMode
+  /**
+   * The user ticked "don't show again" on the notice shown before saving an
+   * entry (saving wipes that site's / URL's existing history). Absent means
+   * the notice is shown. Added without a payload version bump: it is optional,
+   * and builds that don't know it simply drop it (the notice comes back).
+   */
+  skipSaveNotice?: boolean
 }
 
 /** Decrypted vault payload. `version` is the payload schema version. */
@@ -208,5 +215,7 @@ export function migrateVaultData(raw: unknown): VaultData {
     isString(settings.openMode) && OPEN_MODES.includes(settings.openMode)
       ? (settings.openMode as OpenMode)
       : DEFAULT_SETTINGS.openMode
-  return {version: VAULT_DATA_VERSION, entries: raw.entries, settings: {openMode}}
+  const out: VaultSettings = {openMode}
+  if (typeof settings.skipSaveNotice === 'boolean') out.skipSaveNotice = settings.skipSaveNotice
+  return {version: VAULT_DATA_VERSION, entries: raw.entries, settings: out}
 }

@@ -163,4 +163,53 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
     expect(await p.$$eval('button[aria-expanded="true"]', (els) => els.length)).toBe(1)
     await p.close()
   })
+
+  it('asks before a save wipes history until "don’t show again"; settings bring it back', async () => {
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'shelf')).toBe(true)
+    const before = (await listItems(p)).length
+    await clickText(p, '手动添加')
+    await p.type('#url', 'www.example.net/a')
+    await clickText(p, '保存')
+    await waitText(p, '会立即删除 example.net（含所有子域名）的全部浏览记录')
+    // Backing out keeps the draft and saves nothing.
+    await clickText(p, '返回修改')
+    expect(await p.$eval('#url', (el) => (el as HTMLInputElement).value)).toBe('www.example.net/a')
+    expect(await hasText(p, '确认保存')).toBe(false)
+    await clickText(p, '保存')
+    await p.click('[role=alertdialog] [data-slot=checkbox]')
+    await clickText(p, '确认保存')
+    await waitText(p, '添加当前页')
+    expect(await listItems(p)).toHaveLength(before + 1)
+
+    // Opted out: the next save goes straight through.
+    await addEntry(p, 'example.info/x', 'exact', {notice: false})
+    expect(await listItems(p)).toHaveLength(before + 2)
+
+    // Turning the switch back on restores the notice (exact wording this time).
+    await openSettings(p)
+    await waitText(p, '保存网址')
+    const toggle = '[data-slot=switch]'
+    expect(await p.$eval(toggle, (el) => el.getAttribute('aria-checked'))).toBe('false')
+    await p.click(toggle)
+    await p.waitForFunction((sel) => document.querySelector(sel)?.getAttribute('aria-checked') === 'true', {}, toggle)
+    await p.click('button[aria-label="返回"]')
+    await clickText(p, '手动添加')
+    await p.type('#url', 'example.biz/only')
+    const radios = await p.$$('[data-slot=radio-group-item]')
+    await radios[1]?.click()
+    await clickText(p, '保存')
+    await waitText(p, '会立即删除这个网址的全部浏览记录')
+    await clickText(p, '返回修改')
+    await clickText(p, '取消')
+
+    // Editing only the title wipes nothing new, so no notice.
+    const [firstEdit] = await p.$$('button[aria-label="编辑"]')
+    await firstEdit?.click()
+    await clearAndType(p, '#title', 'renamed')
+    await clickText(p, '保存')
+    await waitText(p, '添加当前页')
+    expect(await hasText(p, 'renamed')).toBe(true)
+    await p.close()
+  })
 })
