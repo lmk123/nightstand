@@ -14,6 +14,7 @@ import {
   type VaultEntry
 } from '@nightstand/core'
 import {removeBookmarksFor} from '@/platform/bookmarks'
+import {withIcon} from '@/platform/favicon'
 import {t} from '@/platform/i18n'
 import {isPopupNotice, sendToBackground} from '@/platform/messages'
 import {loadLinks, loadShelf} from '@/platform/storage'
@@ -209,7 +210,9 @@ export default function App() {
           prefill={view.prefill}
           skipNotice={session.data.settings.skipSaveNotice === true}
           onCancel={() => setView({name: 'vault'})}
-          onSave={async (entry, isNew, skipNoticeFromNow) => {
+          onSave={async (saved, isNew, skipNoticeFromNow) => {
+            // Before the purge below: Chrome drops a site's cached icon with its history.
+            const entry = await withIcon(saved)
             let next = isNew ? addEntry(session.data, entry) : replaceEntry(session.data, entry)
             if (skipNoticeFromNow) next = updateSettings(next, {skipSaveNotice: true})
             await update(next)

@@ -4,7 +4,7 @@ import {filterDecoyLinks, hostOf, type DecoyLink, type StoredVault} from '@night
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {t} from '@/platform/i18n'
-import {LetterAvatar} from '../components/Avatar'
+import {SiteAvatar} from '../components/Avatar'
 import {attemptUnlock, type UnlockResult} from '../session'
 
 /**
@@ -80,7 +80,7 @@ export function Decoy({
               onClick={() => open(link)}
               title={link.url}
             >
-              <LetterAvatar text={link.title} />
+              <SiteAvatar text={link.title} pageUrl={link.url} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm">{link.title}</span>
                 <span className="text-muted-foreground block truncate text-xs">{hostOf(link.url) ?? link.url}</span>

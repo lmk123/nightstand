@@ -48,7 +48,8 @@ Collapse back to one `typescript` once typescript-eslint#10940 ships.
 - **Only Web Crypto.** No third-party crypto libraries.
 - **Offline only.** No backend, accounts, analytics, or any remote request.
 - **One UI surface: the action popup.** No options page, side panel, new-tab override, and never open an extension tab. Every screen (onboarding, decoy, decoy settings, lock screen, vault list, real settings…) is a view inside the popup.
-- **No content scripts, no host permissions.** Permissions: `storage`, `history`, `tabs`, `alarms`, `bookmarks` (required, not optional: saving an entry deletes its bookmarks, and Chrome's permission prompt would close the popup mid-save).
+- **No content scripts, no host permissions.** Permissions: `storage`, `history`, `tabs`, `alarms`, `bookmarks` (required, not optional: saving an entry deletes its bookmarks, and Chrome's permission prompt would close the popup mid-save), plus `favicon` on Chromium only (`chromium:permissions` in the manifest replaces the plain list there, so keep both lists in sync).
+- **Site icons come only from the browser's local cache** (Chromium `_favicon`), never from the network (no fetching `/favicon.ico` or icon services). Chrome deletes a page's cached icon with its history, so a vault entry's icon is captured at save time, before the purge, and stored in the encrypted entry (`icon`, a bounded `data:` URL — see `isEntryIcon`); Quick Links are looked up live. Firefox shows letter tiles.
 - **The vault key (DEK) lives only in popup memory.** Never write it to any storage (including `storage.session`) and never send it to the background. Closing the popup destroys it — that *is* the lock. No "stay unlocked for N minutes", no timers, no `idle`.
 - **No plaintext on disk.** Never persist edit drafts or other decrypted data to storage.
 - **Onboarding writes nothing until its last step.** Closing the popup mid-onboarding must leave storage empty.

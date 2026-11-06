@@ -74,6 +74,16 @@ describe('mergeEntries', () => {
     expect(result.updated).toBe(1)
   })
 
+  it('a newer duplicate without an icon keeps the current icon', () => {
+    const icon = 'data:image/png;base64,iVBORw0KGgo='
+    const current = [base('a', 'https://example.com/', {icon})]
+    const incoming = [base('x', 'https://example.com/', {title: 'New', lastOpenedAt: 500})]
+    expect(mergeEntries(current, incoming).entries[0]).toMatchObject({title: 'New', icon})
+    const newer = 'data:image/png;base64,AAAA'
+    const replaced = mergeEntries(current, [base('x', 'https://example.com/', {lastOpenedAt: 500, icon: newer})])
+    expect(replaced.entries[0]?.icon).toBe(newer)
+  })
+
   it('site and exact entries for the same host are different entries', () => {
     const current = [base('a', 'https://example.com/')]
     const incoming = [{...base('b', 'https://example.com/'), matchMode: 'exact' as const}]
@@ -100,5 +110,11 @@ describe('plaintext export', () => {
     const parsed = JSON.parse(toPlaintextExport(data, 7))
     expect(parsed).toMatchObject({format: 'nightstand-plaintext', version: 1, exportedAt: 7})
     expect(parsed.entries[0].url).toBe('https://example.com/')
+  })
+  it('leaves icons out', () => {
+    const entry = {...createEntry({url: 'example.com'}, 1, 'e1'), icon: 'data:image/png;base64,iVBORw0KGgo='}
+    const parsed = JSON.parse(toPlaintextExport(addEntry(emptyVaultData(), entry), 7))
+    expect(parsed.entries[0]).not.toHaveProperty('icon')
+    expect(parsed.entries[0].id).toBe('e1')
   })
 })

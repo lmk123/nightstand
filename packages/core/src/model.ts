@@ -23,6 +23,27 @@ export interface VaultEntry {
   createdAt: number
   lastOpenedAt?: number
   openCount: number
+  /**
+   * The site's icon, captured from the browser's local icon cache when the
+   * entry was saved (before its history, and with it the cached icon, is
+   * deleted). Absent when none was cached or the browser has no such cache;
+   * the list then shows a letter. See `isEntryIcon` for what is accepted.
+   */
+  icon?: string
+}
+
+/** Longest icon accepted, in characters (a 32×32 PNG is a few KB). */
+export const MAX_ENTRY_ICON_LENGTH = 32_768
+
+const ENTRY_ICON_PATTERN = /^data:image\/(?:png|webp|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/
+
+/**
+ * Only an inline base64 PNG / WebP / JPEG `data:` URL of bounded size: it is
+ * rendered as an `<img src>`, and anything else (an `http:` URL from an
+ * edited backup, say) would make the popup send a request.
+ */
+export function isEntryIcon(value: unknown): value is string {
+  return isString(value) && value.length <= MAX_ENTRY_ICON_LENGTH && ENTRY_ICON_PATTERN.test(value)
 }
 
 export interface VaultSettings {
@@ -38,15 +59,16 @@ export interface VaultSettings {
 
 /**
  * Decrypted vault payload. `version` is the payload schema version:
- * 1 — initial; 2 — entries gain `extraHosts`; 3 — entries lose `note` and `tags`.
+ * 1 — initial; 2 — entries gain `extraHosts`; 3 — entries lose `note` and
+ * `tags`; 4 — entries gain an optional `icon`.
  */
 export interface VaultData {
-  version: 3
+  version: 4
   entries: VaultEntry[]
   settings: VaultSettings
 }
 
-export const VAULT_DATA_VERSION = 3
+export const VAULT_DATA_VERSION = 4
 
 export const DEFAULT_SETTINGS: VaultSettings = {openMode: 'newTab'}
 
@@ -131,7 +153,11 @@ export function isUntitled(entry: Pick<VaultEntry, 'url' | 'title'>): boolean {
   return title === '' || title === entry.url || title === hostOf(entry.url)
 }
 
-/** Applies an edit; the URL is re-validated. Throws `invalid-url`. */
+/**
+ * Applies an edit; the URL is re-validated. Throws `invalid-url`. The icon is
+ * kept while the entry stays on the same host; a new host drops it (the
+ * caller may capture a new one).
+ */
 export function editEntry(entry: VaultEntry, patch: EntryInput): VaultEntry {
   const updated = createEntry(
     {
@@ -145,6 +171,7 @@ export function editEntry(entry: VaultEntry, patch: EntryInput): VaultEntry {
   )
   updated.openCount = entry.openCount
   if (entry.lastOpenedAt !== undefined) updated.lastOpenedAt = entry.lastOpenedAt
+  if (entry.icon !== undefined && hostOf(updated.url) === hostOf(entry.url)) updated.icon = entry.icon
   return updated
 }
 
@@ -273,12 +300,23 @@ function isVaultEntryV2(value: unknown): value is EntryV1 & {extraHosts: string[
   return isVaultEntryV1(value) && isStringArray((value as Record<string, unknown>).extraHosts)
 }
 
-export function isVaultEntry(value: unknown): value is VaultEntry {
+/** A v3 entry: v4 fields minus `icon`. */
+function isVaultEntryV3(value: unknown): value is Omit<VaultEntry, 'icon'> {
   return isRecord(value) && hasCommonEntryFields(value) && isStringArray(value.extraHosts)
 }
 
+/**
+ * A current entry. An `icon` that isn't an acceptable `data:` URL doesn't
+ * fail the entry; `migrateVaultData` drops it instead.
+ */
+export function isVaultEntry(value: unknown): value is VaultEntry {
+  if (!isVaultEntryV3(value)) return false
+  const {icon} = value as {icon?: unknown}
+  return icon === undefined || isString(icon)
+}
+
 /** Copies only the current entry fields, so removed ones (`note`, `tags`) don't linger. */
-function pickEntry(e: Omit<VaultEntry, 'extraHosts'>, extraHosts: string[]): VaultEntry {
+function pickEntry(e: Omit<VaultEntry, 'extraHosts' | 'icon'>, extraHosts: string[], icon?: unknown): VaultEntry {
   const entry: VaultEntry = {
     id: e.id,
     url: e.url,
@@ -289,6 +327,7 @@ function pickEntry(e: Omit<VaultEntry, 'extraHosts'>, extraHosts: string[]): Vau
     openCount: e.openCount
   }
   if (e.lastOpenedAt !== undefined) entry.lastOpenedAt = e.lastOpenedAt
+  if (isEntryIcon(icon)) entry.icon = icon
   return entry
 }
 
@@ -316,10 +355,17 @@ export function migrateVaultData(raw: unknown): VaultData {
       entries = raw.entries.map((e) => pickEntry(e, [...e.extraHosts]))
       break
     case 3:
-      if (!Array.isArray(raw.entries) || !raw.entries.every(isVaultEntry)) {
+      // v3 → v4: entries gain an optional `icon` (none yet).
+      if (!Array.isArray(raw.entries) || !raw.entries.every(isVaultEntryV3)) {
         throw new CoreError('invalid-data', 'bad entries')
       }
       entries = raw.entries.map((e) => pickEntry(e, [...e.extraHosts]))
+      break
+    case 4:
+      if (!Array.isArray(raw.entries) || !raw.entries.every(isVaultEntry)) {
+        throw new CoreError('invalid-data', 'bad entries')
+      }
+      entries = raw.entries.map((e) => pickEntry(e, [...e.extraHosts], e.icon))
       break
     default:
       throw new CoreError('unsupported-version', `payload version ${String(raw.version)}`)

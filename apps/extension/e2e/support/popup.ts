@@ -41,6 +41,17 @@ export async function clearAndType(page: Page, selector: string, text: string): 
   await page.type(selector, text)
 }
 
+/** Waits until every site tile has its icon or letter (Quick Links look icons up as they render). */
+export async function waitIcons(page: Page): Promise<void> {
+  await page.waitForFunction(() => !document.querySelector('ul li [aria-busy="true"]'))
+}
+
+/** The `src` of each list row's site icon, null for a letter tile. */
+export async function rowIcons(page: Page): Promise<(string | null)[]> {
+  await waitIcons(page)
+  return page.$$eval('ul li', (items) => items.map((li) => li.querySelector('img')?.getAttribute('src') ?? null))
+}
+
 export function listItems(page: Page): Promise<string[]> {
   return page.$$eval('ul li', (items) => items.map((li) => li.textContent ?? ''))
 }

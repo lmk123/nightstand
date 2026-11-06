@@ -120,6 +120,10 @@ export function mergeEntries(
         id: existing.id,
         openCount: Math.max(existing.openCount, entry.openCount)
       }
+      // Same host, so the icon still fits; a newer entry without one (saved
+      // where no icon was cached) shouldn't wipe it.
+      const icon = entry.icon ?? existing.icon
+      if (icon !== undefined) entries[existingIndex].icon = icon
       updated++
     } else {
       unchanged++
@@ -128,10 +132,19 @@ export function mergeEntries(
   return {entries, added, updated, unchanged}
 }
 
-/** Unencrypted export. The UI must show a prominent warning before offering this. */
+/**
+ * Unencrypted export. The UI must show a prominent warning before offering
+ * this. Icons are left out: they are kilobytes of base64 per entry that a
+ * person reading the file has no use for.
+ */
 export function toPlaintextExport(data: VaultData, now: number): string {
+  const entries = data.entries.map((entry) => {
+    const copy = {...entry}
+    delete copy.icon
+    return copy
+  })
   return `${JSON.stringify(
-    {format: 'nightstand-plaintext', version: 1, exportedAt: now, entries: data.entries},
+    {format: 'nightstand-plaintext', version: 1, exportedAt: now, entries},
     null,
     2
   )}\n`

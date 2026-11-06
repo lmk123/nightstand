@@ -1,7 +1,7 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {launchChrome, openPopup, storageSnapshot, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {clearAndType, clickText, hasText, listItems, onboard, sleep, submitUnlock, waitText} from './support/popup'
+import {clearAndType, clickText, hasText, listItems, onboard, sleep, submitUnlock, waitIcons, waitText} from './support/popup'
 import {cleanupTemp} from './support/temp'
 
 describe.skipIf(!hasChrome)('decoy launcher (Chrome)', () => {
@@ -21,6 +21,8 @@ describe.skipIf(!hasChrome)('decoy launcher (Chrome)', () => {
 
   it('shows only ordinary quick links while locked, and filters them', async () => {
     const p = await openPopup(s)
+    // A fresh profile has no cached icons: letter tiles.
+    await waitIcons(p)
     expect(await listItems(p)).toEqual([
       'GGitHubgithub.com',
       'MMDN Web Docsdeveloper.mozilla.org',

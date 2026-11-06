@@ -7,7 +7,9 @@ import {
   emptyVaultData,
   findDuplicate,
   isCoreError,
+  isEntryIcon,
   isUntitled,
+  MAX_ENTRY_ICON_LENGTH,
   migrateVaultData,
   parseExtraHosts,
   recordOpen,
@@ -19,6 +21,7 @@ import {
 } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
+const ICON = 'data:image/png;base64,iVBORw0KGgo='
 
 describe('createEntry', () => {
   it('normalizes input and fills defaults', () => {
@@ -96,6 +99,34 @@ describe('editEntry', () => {
     const e = createEntry({url: 'example.com', extraHosts: ['cdn.test']}, NOW)
     expect(editEntry(e, {url: 'example.com'}).extraHosts).toEqual(['cdn.test'])
     expect(editEntry(e, {url: 'example.com', extraHosts: []}).extraHosts).toEqual([])
+  })
+  it('keeps the icon on the same host and drops it for a new one', () => {
+    const e = {...createEntry({url: 'example.com'}, NOW), icon: ICON}
+    expect(editEntry(e, {url: 'https://example.com/other', title: 'T'}).icon).toBe(ICON)
+    expect(editEntry(e, {url: 'example.com', matchMode: 'exact'}).icon).toBe(ICON)
+    expect(editEntry(e, {url: 'example.org'})).not.toHaveProperty('icon')
+    expect(editEntry(createEntry({url: 'example.com'}, NOW), {url: 'example.com'})).not.toHaveProperty('icon')
+  })
+})
+
+describe('isEntryIcon', () => {
+  it('accepts only bounded base64 image data URLs', () => {
+    expect(isEntryIcon(ICON)).toBe(true)
+    expect(isEntryIcon('data:image/webp;base64,AAAA')).toBe(true)
+    expect(isEntryIcon('data:image/jpeg;base64,AAAA')).toBe(true)
+    for (const bad of [
+      undefined,
+      42,
+      '',
+      'https://example.com/favicon.ico',
+      'data:image/svg+xml;base64,PHN2Zz4=',
+      'data:image/png,raw',
+      'data:image/png;base64,AA AA',
+      'data:text/html;base64,PGI+',
+      `data:image/png;base64,${'A'.repeat(MAX_ENTRY_ICON_LENGTH)}`
+    ]) {
+      expect(isEntryIcon(bad), String(bad).slice(0, 40)).toBe(false)
+    }
   })
 })
 
@@ -196,7 +227,7 @@ describe('migrateVaultData', () => {
     const v1Entry: Record<string, unknown> = {...current, note: 'n', tags: ['t']}
     delete v1Entry.extraHosts
     expect(migrateVaultData({version: 1, entries: [v1Entry]})).toEqual({
-      version: 3,
+      version: 4,
       entries: [current],
       settings: {openMode: 'newTab'}
     })
@@ -208,11 +239,24 @@ describe('migrateVaultData', () => {
     const current = {...createEntry({url: 'example.com', extraHosts: ['cdn.test']}, NOW, 'x'), lastOpenedAt: NOW + 1}
     const v2Entry = {...current, note: 'n', tags: ['a', 'b']}
     const out = migrateVaultData({version: 2, entries: [v2Entry]})
-    expect(out.version).toBe(3)
+    expect(out.version).toBe(4)
     expect(out.entries).toEqual([current])
     expect(out.entries[0]).not.toHaveProperty('note')
     expect(out.entries[0]).not.toHaveProperty('tags')
     expect(() => migrateVaultData({version: 2, entries: [{...current}]})).toThrow()
+  })
+  it('upgrades v3 entries without icons; v4 keeps valid icons and drops the rest', () => {
+    const current = {...createEntry({url: 'example.com', extraHosts: ['cdn.test']}, NOW, 'x'), lastOpenedAt: NOW + 1}
+    const v3 = migrateVaultData({version: 3, entries: [{...current, icon: ICON}]})
+    expect(v3.version).toBe(4)
+    expect(v3.entries).toEqual([current])
+    const withIcon = {...current, icon: ICON}
+    expect(migrateVaultData({version: 4, entries: [withIcon]}).entries).toEqual([withIcon])
+    for (const icon of ['https://example.com/favicon.ico', 'data:image/svg+xml;base64,PHN2Zz4=']) {
+      expect(migrateVaultData({version: 4, entries: [{...current, icon}]}).entries).toEqual([current])
+    }
+    expect(() => migrateVaultData({version: 4, entries: [{...current, icon: 1}]})).toThrow()
+    expect(() => migrateVaultData({version: 4, entries: [{...current, extraHosts: undefined}]})).toThrow()
   })
   it('keeps the optional save-notice flag only when it is a boolean', () => {
     const data = updateSettings(emptyVaultData(), {skipSaveNotice: true})

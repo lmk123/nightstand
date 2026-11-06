@@ -13,6 +13,7 @@ import {Checkbox} from '@/components/ui/checkbox'
 import {Label} from '@/components/ui/label'
 import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group'
 import {bookmarkRows, removeBookmarks, type BookmarkRow} from '@/platform/bookmarks'
+import {withIcon} from '@/platform/favicon'
 import {t} from '@/platform/i18n'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
@@ -64,8 +65,10 @@ export function BookmarkImport({
         if (!row?.url) continue
         const entry = createEntry({url: row.url, title: row.title, matchMode}, now)
         if (findDuplicate(next.entries, entry)) continue
-        next = addEntry(next, entry)
-        added.push(entry)
+        // Before the caller purges history, which takes the cached icon with it.
+        const withSiteIcon = await withIcon(entry)
+        next = addEntry(next, withSiteIcon)
+        added.push(withSiteIcon)
       }
       await onImport(next, added)
       if (removeOriginals) await removeBookmarks([...selected])

@@ -4,7 +4,7 @@ import {searchEntries, type VaultEntry} from '@nightstand/core'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {t} from '@/platform/i18n'
-import {LetterAvatar} from '../components/Avatar'
+import {SiteAvatar} from '../components/Avatar'
 import {Header} from '../components/Header'
 import {entryTitle} from '../title'
 
@@ -73,7 +73,7 @@ export function VaultList({
             >
               {/* Title only: some domains are revealing on their own, so the
                   list never shows the URL or the extra hosts, not even in a tooltip. */}
-              <LetterAvatar text={entryTitle(entry)} />
+              <SiteAvatar text={entryTitle(entry)} icon={entry.icon} />
               <span className="min-w-0 flex-1 truncate text-sm">{entryTitle(entry)}</span>
             </button>
             <Button
