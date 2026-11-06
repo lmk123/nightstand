@@ -16,6 +16,7 @@ import {
   removeEntry,
   replaceEntry,
   searchEntries,
+  setEntryIcons,
   updateSettings,
   widensScope
 } from '../src/index.ts'
@@ -106,6 +107,18 @@ describe('editEntry', () => {
     expect(editEntry(e, {url: 'example.com', matchMode: 'exact'}).icon).toBe(ICON)
     expect(editEntry(e, {url: 'example.org'})).not.toHaveProperty('icon')
     expect(editEntry(createEntry({url: 'example.com'}, NOW), {url: 'example.com'})).not.toHaveProperty('icon')
+  })
+})
+
+describe('setEntryIcons', () => {
+  it('sets valid icons by id and leaves everything else alone', () => {
+    const a = createEntry({url: 'example.com'}, NOW, 'a')
+    const b = createEntry({url: 'example.org'}, NOW, 'b')
+    const data = addEntry(addEntry(emptyVaultData(), a), b)
+    const out = setEntryIcons(data, new Map([['a', ICON], ['b', 'https://example.org/favicon.ico'], ['zz', ICON]]))
+    expect(out.entries.map((e) => e.icon)).toEqual([undefined, ICON])
+    expect(out.entries).toHaveLength(2)
+    expect(data.entries.every((e) => e.icon === undefined)).toBe(true)
   })
 })
 

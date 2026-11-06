@@ -243,6 +243,17 @@ export function removeEntry(data: VaultData, id: string): VaultData {
   return {...data, entries: data.entries.filter((e) => e.id !== id)}
 }
 
+/** Gives entries (by id) an icon; ids not in the vault and invalid icons are ignored. */
+export function setEntryIcons(data: VaultData, icons: ReadonlyMap<string, string>): VaultData {
+  return {
+    ...data,
+    entries: data.entries.map((e) => {
+      const icon = icons.get(e.id)
+      return isEntryIcon(icon) ? {...e, icon} : e
+    })
+  }
+}
+
 export function recordOpen(data: VaultData, id: string, now: number): VaultData {
   return {
     ...data,

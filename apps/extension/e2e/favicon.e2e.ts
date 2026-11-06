@@ -99,6 +99,31 @@ describe.skipIf(!hasChrome)('site icons (Chrome)', () => {
     await q.close()
   })
 
+  it('an entry saved without an icon gets one on the next unlock after a visit', async () => {
+    // Plain (example.org) had no icon when it was saved. Visiting it now
+    // caches one under www. The visit's history is deleted as soon as it is
+    // recorded, before the icon arrives over the network, so Chrome keeps
+    // the icon. (With an instant icon it is a race: written first, the icon
+    // goes with the history, and the lookup just finds nothing this time.)
+    const visited = 'http://www.example.org/iconic?rgb=0,255,0&delay=300'
+    await visitWithIcon(s, visited)
+    expect(await historyUrls(s)).toEqual([])
+    const p = await openPopup(s)
+    expect(await chromeHasIcon(p, visited)).toBe(true)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    await waitText(p, '添加当前页')
+    const [green, red] = await rowIcons(p)
+    expect(await centre(p, green!)).toEqual([0, 255, 0, 255])
+    expect(await centre(p, red!)).toEqual([255, 0, 0, 255])
+    await p.close()
+    // Stored: the next unlock has it without looking it up again.
+    const q = await openPopup(s)
+    expect(await submitUnlock(q, 'notes')).toBe(true)
+    await waitText(q, '添加当前页')
+    expect((await rowIcons(q))[0]).toBe(green)
+    await q.close()
+  })
+
   it('quick links show the icon Chrome has cached, a letter otherwise', async () => {
     await visitWithIcon(s, 'http://example.net/iconic?rgb=0,0,255')
     const p = await openPopup(s)

@@ -1,4 +1,4 @@
-import {hostCandidates, hostOf, isEntryIcon, type VaultEntry} from '@nightstand/core'
+import {addressVariants, hostCandidates, hostOf, isEntryIcon, type VaultEntry} from '@nightstand/core'
 import {isChromiumLike} from '@/lib/browser'
 import {historySince} from './history'
 
@@ -9,15 +9,23 @@ import {historySince} from './history'
  * a letter. Firefox has no such endpoint, so there it is always a letter.
  *
  * Chrome drops a page's cached icon together with its history, so vault
- * entries get their icon captured once, at save time (before the purge), and
- * stored encrypted with the entry. Quick Links are ordinary sites whose
- * history stays, so they are looked up live.
+ * entries get their icon captured at save time (before the purge) and stored
+ * encrypted with the entry. A later visit to a protected site caches its icon
+ * again, and that one stays even though the visit's history is deleted right
+ * away (both checked in e2e), so entries still without an icon are looked up
+ * again on unlock. Quick Links are ordinary sites whose history stays, so
+ * they are looked up live.
+ *
+ * Chrome falls back to any cached page of the same host, but the host must
+ * match exactly: `www.example.com` and `example.com` are different.
  */
 
 /** Pixels per side of a stored icon: crisp at 16 CSS px on a 2× screen. */
 const SIZE = 32
 /** Most addresses tried per entry before giving up. */
-const MAX_TRIES = 12
+const MAX_TRIES = 16
+/** How long unlocking waits for icons of entries that have none, in ms. */
+const REFRESH_BUDGET_MS = 1500
 /** An address no profile has an icon for: what Chrome answers with then. */
 const NO_ICON_PAGE = 'https://nightstand.invalid/'
 
@@ -78,16 +86,25 @@ export function lookupIcon(pageUrl: string): Promise<string | null> {
 }
 
 /**
+ * The entry's address and its site root, each over http(s) and with and
+ * without `www.`: one of them shares the host of whatever page Chrome cached
+ * the icon for, in the common cases.
+ */
+function siteAddresses(entry: VaultEntry): string[] {
+  const host = hostOf(entry.url)
+  if (!host) return []
+  return [...new Set([...addressVariants(entry.url), ...addressVariants(`https://${host}/`)])]
+}
+
+/**
  * Pages of the entry's own host (or its subdomains) that Chrome may hold an
- * icon for: the entry's address and its site root first, then what history
- * has, newest first. Extra hosts are left out — the icon is the site's own.
+ * icon for: the entry's site addresses first, then what history has, newest
+ * first. Extra hosts are left out — the icon is the site's own.
  */
 async function* candidates(entry: VaultEntry): AsyncGenerator<string> {
   const host = hostOf(entry.url)
   if (!host) return
-  yield entry.url
-  yield `https://${host}/`
-  yield `http://${host}/`
+  yield* siteAddresses(entry)
   for await (const item of historySince(0, host)) {
     const itemHost = item.url ? hostOf(item.url) : null
     if (item.url && itemHost && hostCandidates(itemHost).includes(host)) yield item.url
@@ -113,6 +130,28 @@ export async function captureIcon(entry: VaultEntry): Promise<string | undefined
     console.error(error)
   }
   return undefined
+}
+
+/**
+ * On unlock: icons for entries that have none, found since they were saved
+ * (a visit after saving caches the site's icon again). Only the site
+ * addresses are tried — a protected site has no history left to search —
+ * and only for `REFRESH_BUDGET_MS`; whatever is found by then is returned,
+ * by entry id.
+ */
+export async function findMissingIcons(entries: readonly VaultEntry[]): Promise<Map<string, string>> {
+  const found = new Map<string, string>()
+  if (!isChromiumLike) return found
+  const lookups = entries
+    .filter((entry) => !entry.icon)
+    .map(async (entry) => {
+      for (const url of siteAddresses(entry)) {
+        const icon = await cachedIcon(url).catch(() => null)
+        if (icon) return void found.set(entry.id, icon)
+      }
+    })
+  await Promise.race([Promise.all(lookups), new Promise((resolve) => setTimeout(resolve, REFRESH_BUDGET_MS))])
+  return new Map(found)
 }
 
 /** `entry` with a captured icon when it has none yet and one is cached. */

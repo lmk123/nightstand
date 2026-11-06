@@ -6,6 +6,7 @@ import {
   removeEntry,
   addEntry,
   replaceEntry,
+  setEntryIcons,
   updateSettings,
   widensScope,
   type DecoyConfig,
@@ -14,7 +15,7 @@ import {
   type VaultEntry
 } from '@nightstand/core'
 import {removeBookmarksFor} from '@/platform/bookmarks'
-import {withIcon} from '@/platform/favicon'
+import {findMissingIcons, withIcon} from '@/platform/favicon'
 import {t} from '@/platform/i18n'
 import {isPopupNotice, sendToBackground} from '@/platform/messages'
 import {loadLinks, loadShelf} from '@/platform/storage'
@@ -107,7 +108,18 @@ export default function App() {
 
   async function handleUnlocked(result: UnlockResult) {
     if (!boot?.stored) return
-    const opened = await openSession(boot.stored, result.dek)
+    let opened = await openSession(boot.stored, result.dek)
+    // Entries saved without an icon may have one cached by now (a visit
+    // since). Done before the list shows, so no edit can race this commit.
+    const icons = await findMissingIcons(opened.data.entries)
+    if (icons.size > 0) {
+      try {
+        opened = await commit(opened, setEntryIcons(opened.data, icons))
+        setBoot((b) => (b ? {...b, stored: opened.stored} : b))
+      } catch (error) {
+        console.error(error)
+      }
+    }
     setSession(opened)
     setView(result.via === 'recovery' ? {name: 'resetPassphrase'} : {name: 'vault'})
   }

@@ -37,7 +37,8 @@ export function solidPng([r, g, b]: [number, number, number]): Buffer {
  * like a server redirect hop).
  *
  * `/iconic?rgb=r,g,b` is a page with a solid-colour icon (default red),
- * served from `/icon.png?rgb=…`; other pages have none.
+ * served from `/icon.png?rgb=…`; other pages have none. `&delay=ms` holds
+ * the icon back that long, like a real network would.
  */
 export async function startTestServer(): Promise<{port: number; close: () => Promise<void>}> {
   const server = http.createServer((req, res) => {
@@ -45,13 +46,16 @@ export async function startTestServer(): Promise<{port: number; close: () => Pro
     const url = new URL(req.url ?? '/', 'http://x')
     const rgb = (url.searchParams.get('rgb') ?? '255,0,0').split(',').map(Number) as [number, number, number]
     if (url.pathname === '/icon.png') {
-      res.writeHead(200, {'content-type': 'image/png'})
-      res.end(solidPng(rgb))
+      setTimeout(() => {
+        res.writeHead(200, {'content-type': 'image/png'})
+        res.end(solidPng(rgb))
+      }, Number(url.searchParams.get('delay') ?? 0))
       return
     }
     res.writeHead(200, {'content-type': 'text/html; charset=utf-8'})
     if (url.pathname === '/iconic') {
-      res.end(`<!doctype html><title>iconic</title><link rel="icon" href="/icon.png?rgb=${rgb.join(',')}"><p>ok`)
+      const icon = `/icon.png?${new URLSearchParams({rgb: rgb.join(','), delay: url.searchParams.get('delay') ?? '0'})}`
+      res.end(`<!doctype html><title>iconic</title><link rel="icon" href="${icon}"><p>ok`)
       return
     }
     if (url.pathname === '/js-redirect') {
