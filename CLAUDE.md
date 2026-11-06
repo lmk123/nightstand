@@ -87,6 +87,13 @@ Walk through the relevant items in a real browser for every milestone that touch
 
 Also verify, and document under "Known limitations" in the README: whether the Chrome address bar still suggests protected sites from bookmarks, open tabs, search-engine suggestions (server side, tied to Google account activity) or the omnibox "shortcuts" database after history deletion; and whether `history.deleteUrl` also deletes on other devices when Chrome Sync is on.
 
+## Testing in a real browser (what has worked)
+
+- **Chrome**: launch Google Chrome with `puppeteer-core` (`pipe: true`, `enableExtensions: [<dist/chromium>]`, a fresh `userDataDir`). The extension id comes from the service-worker target; `worker.evaluate()` reaches `chrome.*` in the background. Opening `chrome-extension://<id>/action/index.html` in a tab drives the popup UI headless. `--host-resolver-rules=MAP * 127.0.0.1:<port>` plus a local HTTP server makes `example.com` & co. real visits that land in history.
+- **The real popup** (needed for focus-related behaviour): run headed and call `chrome.action.openPopup({windowId})` from the service worker after focusing a normal window. Findings: a `permissions.request` prompt **closes** the popup; a file chooser does **not** (Chrome on macOS); a blob download completes after the popup closes.
+- **Firefox**: puppeteer's WebDriver BiDi can install the add-on (`browser.installExtension`) but refuses to navigate to or expose `moz-extension://` pages, so the popup UI can't be driven there. Background behaviour can be verified by seeding storage from a test-only copy of the build and reading `places.sqlite` with `sqlite3` after closing the browser. Popup-only Firefox branches (paste-based backup import, private-window wording) still need a manual pass with `pnpm dev:firefox`.
+- The bookmarks permission prompt can't be accepted headless; test the granted path with a copy of the build whose manifest lists `bookmarks` as a required permission.
+
 ## MCP servers
 
 `.mcp.json` wires three servers:

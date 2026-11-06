@@ -23,16 +23,35 @@
   },
   "background": {
     "chromium:service_worker": "background/index.ts",
-    "firefox:scripts": ["background/index.ts"]
+    "firefox:scripts": [
+      "background/index.ts"
+    ]
   },
-  "permissions": ["storage", "history", "tabs", "alarms"],
-  "optional_permissions": ["bookmarks"],
+  "permissions": [
+    "storage",
+    "history",
+    "tabs",
+    "alarms"
+  ],
+  "optional_permissions": [
+    "bookmarks"
+  ],
   "commands": {
     "panic": {
       "suggested_key": {
         "default": "Alt+Shift+Q"
       },
       "description": "__MSG_commandPanic__"
+    }
+  },
+  "firefox:browser_specific_settings": {
+    "gecko": {
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
     }
   }
 }
