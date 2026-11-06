@@ -100,6 +100,21 @@ describe('table', () => {
     expect(JSON.stringify(table)).not.toContain('example')
     expect(table.site[0]).toMatch(/^[0-9a-f]{64}$/)
   })
+  it('hashes extra hosts as site hosts, for exact entries too', async () => {
+    const table = await buildMatchTable([
+      {url: 'https://example.com/', matchMode: 'site', extraHosts: ['twimg.com', 'example.com']},
+      {url: 'https://example.org/a', matchMode: 'exact', extraHosts: ['pay.example.net']}
+    ])
+    expect(table.site).toHaveLength(3)
+    expect(table.exact).toHaveLength(1)
+    expect(JSON.stringify(table)).not.toMatch(/example|twimg/)
+    const m = createMatcher(table)
+    expect(await m.matches('https://video.twimg.com/v.mp4')).toBe(true)
+    expect(await m.matches('https://pay.example.net/checkout')).toBe(true)
+    expect(await m.matches('https://example.net/')).toBe(false)
+    expect(await m.matches('https://example.org/a')).toBe(true)
+    expect(await m.matches('https://example.org/b')).toBe(false)
+  })
   it('different salts give different hashes; same salt is stable', async () => {
     const entries = [{url: 'https://example.com/', matchMode: 'site' as const}]
     const salt = newMatchSalt()

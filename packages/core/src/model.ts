@@ -1,6 +1,6 @@
 import {CoreError} from './errors.ts'
 import {isFiniteNumber, isRecord, isString, isStringArray} from './guards.ts'
-import {hostCandidates, hostOf, normalizeExactUrl, parseUserUrl} from './url.ts'
+import {hostCandidates, hostOf, normalizeExactUrl, normalizeHost, parseUserUrl} from './url.ts'
 
 /** `site`: the whole site including every subdomain (default). `exact`: this one address only. */
 export type MatchMode = 'site' | 'exact'
@@ -15,6 +15,12 @@ export interface VaultEntry {
   note?: string
   tags: string[]
   matchMode: MatchMode
+  /**
+   * More hosts this entry protects besides its own URL, each with every
+   * subdomain (like a `site` entry), whatever `matchMode` is: the video CDN a
+   * site plays from, the payment page it hands off to. Normalized hosts.
+   */
+  extraHosts: string[]
   createdAt: number
   lastOpenedAt?: number
   openCount: number
@@ -31,14 +37,17 @@ export interface VaultSettings {
   skipSaveNotice?: boolean
 }
 
-/** Decrypted vault payload. `version` is the payload schema version. */
+/**
+ * Decrypted vault payload. `version` is the payload schema version:
+ * 1 — initial; 2 — entries gain `extraHosts`.
+ */
 export interface VaultData {
-  version: 1
+  version: 2
   entries: VaultEntry[]
   settings: VaultSettings
 }
 
-export const VAULT_DATA_VERSION = 1
+export const VAULT_DATA_VERSION = 2
 
 export const DEFAULT_SETTINGS: VaultSettings = {openMode: 'newTab'}
 
@@ -52,6 +61,34 @@ export interface EntryInput {
   note?: string
   tags?: string[]
   matchMode?: MatchMode
+  /** Hosts or URLs as typed; see `parseExtraHosts`. */
+  extraHosts?: readonly string[]
+}
+
+export interface ParsedExtraHosts {
+  /** Normalized, de-duplicated, in input order. */
+  hosts: string[]
+  /** Pieces that are not a host or http(s) URL, as typed. */
+  invalid: string[]
+}
+
+/**
+ * Splits user input (one host per line; spaces and commas also separate)
+ * into normalized hosts. A full URL contributes its host, and a leading
+ * `*.` is dropped since subdomains are always covered.
+ */
+export function parseExtraHosts(input: string | readonly string[]): ParsedExtraHosts {
+  const pieces = (typeof input === 'string' ? [input] : input).flatMap((s) => s.split(/[\s,，、]+/))
+  const hosts = new Set<string>()
+  const invalid: string[] = []
+  for (const piece of pieces) {
+    if (!piece) continue
+    const parsed = parseUserUrl(piece.replace(/^\*\./, ''))
+    const host = parsed ? normalizeHost(parsed.hostname) : null
+    if (host) hosts.add(host)
+    else invalid.push(piece)
+  }
+  return {hosts: [...hosts], invalid}
 }
 
 function cleanTags(tags: readonly string[] | undefined): string[] {
@@ -68,7 +105,11 @@ function cleanNote(note: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined
 }
 
-/** Validates and normalizes user input into a new entry. Throws `invalid-url`. */
+/**
+ * Validates and normalizes user input into a new entry. Throws `invalid-url`,
+ * or `invalid-host` when an extra host doesn't parse (check with
+ * `parseExtraHosts` first to show which).
+ */
 export function createEntry(
   input: EntryInput,
   now: number,
@@ -78,12 +119,18 @@ export function createEntry(
   if (!parsed) throw new CoreError('invalid-url')
   const url = parsed.href
   const title = input.title?.trim() || hostOf(url) || url
+  const matchMode = input.matchMode ?? 'site'
+  const extra = parseExtraHosts(input.extraHosts ?? [])
+  if (extra.invalid.length > 0) throw new CoreError('invalid-host', extra.invalid.join(' '))
+  // The entry's own host is already covered in `site` mode.
+  const ownHost = matchMode === 'site' ? hostOf(url) : null
   const entry: VaultEntry = {
     id,
     url,
     title,
     tags: cleanTags(input.tags),
-    matchMode: input.matchMode ?? 'site',
+    matchMode,
+    extraHosts: extra.hosts.filter((h) => h !== ownHost),
     createdAt: now,
     openCount: 0
   }
@@ -100,7 +147,8 @@ export function editEntry(entry: VaultEntry, patch: EntryInput): VaultEntry {
       title: patch.title,
       note: patch.note,
       tags: patch.tags,
-      matchMode: patch.matchMode ?? entry.matchMode
+      matchMode: patch.matchMode ?? entry.matchMode,
+      extraHosts: patch.extraHosts ?? entry.extraHosts
     },
     entry.createdAt,
     entry.id
@@ -119,18 +167,29 @@ export function entryKey(entry: Pick<VaultEntry, 'url' | 'matchMode'>): string |
   return value ? `${entry.matchMode}:${value}` : null
 }
 
+/** What decides which URLs an entry covers. */
+export type EntryScope = Pick<VaultEntry, 'url' | 'matchMode'> & {extraHosts?: readonly string[]}
+
+/** Every host an entry protects with all its subdomains: its own (in `site` mode) and its extra hosts. */
+export function entrySiteHosts(entry: EntryScope): string[] {
+  const own = entry.matchMode === 'site' ? hostOf(entry.url) : null
+  const extra = entry.extraHosts ?? []
+  return own ? [own, ...extra.filter((h) => h !== own)] : [...extra]
+}
+
 /**
  * Plaintext check (popup only, where the vault is unlocked): is `url` covered
  * by this entry? Same rules as the hashed match table.
  */
-export function entryCoversUrl(entry: Pick<VaultEntry, 'url' | 'matchMode'>, url: string): boolean {
+export function entryCoversUrl(entry: EntryScope, url: string): boolean {
+  const host = hostOf(url)
+  if (!host) return false
   if (entry.matchMode === 'exact') {
     const target = normalizeExactUrl(entry.url)
-    return target !== null && normalizeExactUrl(url) === target
+    if (target !== null && normalizeExactUrl(url) === target) return true
   }
-  const protectedHost = hostOf(entry.url)
-  const host = hostOf(url)
-  return protectedHost !== null && host !== null && hostCandidates(host).includes(protectedHost)
+  const candidates = hostCandidates(host)
+  return entrySiteHosts(entry).some((h) => candidates.includes(h))
 }
 
 export function findDuplicate(
@@ -173,7 +232,7 @@ export function searchEntries(entries: readonly VaultEntry[], query: string): Va
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
   if (terms.length === 0) return [...entries]
   return entries.filter((e) => {
-    const haystack = [e.title, e.url, e.note ?? '', ...e.tags].join('\n').toLowerCase()
+    const haystack = [e.title, e.url, e.note ?? '', ...e.tags, ...e.extraHosts].join('\n').toLowerCase()
     return terms.every((term) => haystack.includes(term))
   })
 }
@@ -181,7 +240,8 @@ export function searchEntries(entries: readonly VaultEntry[], query: string): Va
 const MATCH_MODES: readonly string[] = ['site', 'exact']
 const OPEN_MODES: readonly string[] = ['current', 'newTab', 'incognito']
 
-export function isVaultEntry(value: unknown): value is VaultEntry {
+/** A v1 entry: everything but `extraHosts`. */
+function isVaultEntryV1(value: unknown): value is Omit<VaultEntry, 'extraHosts'> {
   if (!isRecord(value)) return false
   return (
     isString(value.id) &&
@@ -197,6 +257,10 @@ export function isVaultEntry(value: unknown): value is VaultEntry {
   )
 }
 
+export function isVaultEntry(value: unknown): value is VaultEntry {
+  return isVaultEntryV1(value) && isStringArray((value as Record<string, unknown>).extraHosts)
+}
+
 /**
  * Validates a decrypted payload and upgrades older payload versions.
  * Unknown settings fall back to defaults instead of failing, so a payload
@@ -204,11 +268,23 @@ export function isVaultEntry(value: unknown): value is VaultEntry {
  */
 export function migrateVaultData(raw: unknown): VaultData {
   if (!isRecord(raw)) throw new CoreError('invalid-data', 'payload is not an object')
-  if (raw.version !== VAULT_DATA_VERSION) {
-    throw new CoreError('unsupported-version', `payload version ${String(raw.version)}`)
-  }
-  if (!Array.isArray(raw.entries) || !raw.entries.every(isVaultEntry)) {
-    throw new CoreError('invalid-data', 'bad entries')
+  let entries: VaultEntry[]
+  switch (raw.version) {
+    case 1:
+      // v1 → v2: entries gain `extraHosts`.
+      if (!Array.isArray(raw.entries) || !raw.entries.every(isVaultEntryV1)) {
+        throw new CoreError('invalid-data', 'bad entries')
+      }
+      entries = raw.entries.map((e) => ({...e, extraHosts: []}))
+      break
+    case 2:
+      if (!Array.isArray(raw.entries) || !raw.entries.every(isVaultEntry)) {
+        throw new CoreError('invalid-data', 'bad entries')
+      }
+      entries = raw.entries
+      break
+    default:
+      throw new CoreError('unsupported-version', `payload version ${String(raw.version)}`)
   }
   const settings = isRecord(raw.settings) ? raw.settings : {}
   const openMode =
@@ -217,5 +293,5 @@ export function migrateVaultData(raw: unknown): VaultData {
       : DEFAULT_SETTINGS.openMode
   const out: VaultSettings = {openMode}
   if (typeof settings.skipSaveNotice === 'boolean') out.skipSaveNotice = settings.skipSaveNotice
-  return {version: VAULT_DATA_VERSION, entries: raw.entries, settings: out}
+  return {version: VAULT_DATA_VERSION, entries, settings: out}
 }

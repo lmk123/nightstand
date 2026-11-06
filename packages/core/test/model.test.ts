@@ -8,6 +8,7 @@ import {
   findDuplicate,
   isCoreError,
   migrateVaultData,
+  parseExtraHosts,
   recordOpen,
   removeEntry,
   replaceEntry,
@@ -26,9 +27,24 @@ describe('createEntry', () => {
       title: 'example.com',
       tags: ['a', 'b'],
       matchMode: 'site',
+      extraHosts: [],
       createdAt: NOW,
       openCount: 0
     })
+  })
+  it('normalizes extra hosts and drops the entry\'s own host in site mode', () => {
+    const e = createEntry({url: 'example.com', extraHosts: ['Video.TWIMG.com', 'https://pay.example.net/x?y=1', 'www.example.com', '*.cdn.test']}, NOW)
+    expect(e.extraHosts).toEqual(['video.twimg.com', 'pay.example.net', 'cdn.test'])
+    const exact = createEntry({url: 'example.com/a', matchMode: 'exact', extraHosts: ['example.com']}, NOW)
+    expect(exact.extraHosts).toEqual(['example.com'])
+  })
+  it('throws invalid-host for an extra host that does not parse', () => {
+    try {
+      createEntry({url: 'example.com', extraHosts: ['ftp://x.test']}, NOW)
+      expect.unreachable()
+    } catch (error) {
+      expect(isCoreError(error, 'invalid-host')).toBe(true)
+    }
   })
   it('keeps a given title, note and exact mode', () => {
     const e = createEntry({url: 'https://example.org/x', title: ' T ', note: ' n ', matchMode: 'exact'}, NOW)
@@ -47,11 +63,27 @@ describe('createEntry', () => {
   })
 })
 
+describe('parseExtraHosts', () => {
+  it('splits on lines, spaces and commas, de-duplicates and reports what does not parse', () => {
+    expect(parseExtraHosts('a.test\n\n b.test, c.test，a.test\nhttp://D.test:8080/p\nftp://x.test\nhttp://')).toEqual({
+      hosts: ['a.test', 'b.test', 'c.test', 'd.test'],
+      invalid: ['ftp://x.test', 'http://']
+    })
+    expect(parseExtraHosts(['x.test', 'www.y.test'])).toEqual({hosts: ['x.test', 'y.test'], invalid: []})
+    expect(parseExtraHosts('   ')).toEqual({hosts: [], invalid: []})
+  })
+})
+
 describe('editEntry', () => {
   it('keeps identity and usage stats', () => {
     const e = {...createEntry({url: 'example.com'}, NOW, 'id1'), openCount: 3, lastOpenedAt: NOW + 5}
     const edited = editEntry(e, {url: 'example.org', title: 'Org'})
     expect(edited).toMatchObject({id: 'id1', createdAt: NOW, openCount: 3, lastOpenedAt: NOW + 5, url: 'https://example.org/', title: 'Org', matchMode: 'site'})
+  })
+  it('keeps extra hosts unless the patch replaces them', () => {
+    const e = createEntry({url: 'example.com', extraHosts: ['cdn.test']}, NOW)
+    expect(editEntry(e, {url: 'example.com'}).extraHosts).toEqual(['cdn.test'])
+    expect(editEntry(e, {url: 'example.com', extraHosts: []}).extraHosts).toEqual([])
   })
 })
 
@@ -93,6 +125,10 @@ describe('vault operations', () => {
     expect(searchEntries(entries, 'reading beta').map((e) => e.id)).toEqual(['2'])
     expect(searchEntries(entries, 'work beta')).toEqual([])
   })
+  it('searchEntries also matches extra hosts', () => {
+    const entries = [createEntry({url: 'example.com', extraHosts: ['video.cdn.test']}, NOW, '1')]
+    expect(searchEntries(entries, 'cdn').map((e) => e.id)).toEqual(['1'])
+  })
 })
 
 describe('entryCoversUrl', () => {
@@ -109,6 +145,16 @@ describe('entryCoversUrl', () => {
     expect(entryCoversUrl(exact, 'https://example.org/p')).toBe(false)
     expect(entryCoversUrl(exact, 'https://example.org/p/?q=1')).toBe(true)
   })
+  it('extra hosts cover themselves and their subdomains in either mode', () => {
+    for (const matchMode of ['site', 'exact'] as const) {
+      const e = createEntry({url: 'https://example.org/p', matchMode, extraHosts: ['twimg.com', 'pay.example.net']}, NOW)
+      expect(entryCoversUrl(e, 'https://video.twimg.com/v.mp4')).toBe(true)
+      expect(entryCoversUrl(e, 'http://www.pay.example.net/checkout?o=1')).toBe(true)
+      expect(entryCoversUrl(e, 'https://example.net/')).toBe(false)
+      expect(entryCoversUrl(e, 'https://evil-twimg.com/')).toBe(false)
+      expect(entryCoversUrl(e, 'https://example.org/other')).toBe(matchMode === 'site')
+    }
+  })
 })
 
 describe('migrateVaultData', () => {
@@ -117,6 +163,17 @@ describe('migrateVaultData', () => {
     expect(migrateVaultData(JSON.parse(JSON.stringify(data)))).toEqual(data)
     expect(migrateVaultData({version: 1, entries: [], settings: {openMode: 'teleport', extra: 1}}).settings).toEqual({openMode: 'newTab'})
     expect(migrateVaultData({version: 1, entries: []}).settings.openMode).toBe('newTab')
+  })
+  it('upgrades v1 entries with empty extra hosts; v2 entries must carry them', () => {
+    const v1Entry: Record<string, unknown> = {...createEntry({url: 'example.com'}, NOW, 'x')}
+    delete v1Entry.extraHosts
+    expect(migrateVaultData({version: 1, entries: [v1Entry]})).toEqual({
+      version: 2,
+      entries: [{...v1Entry, extraHosts: []}],
+      settings: {openMode: 'newTab'}
+    })
+    expect(() => migrateVaultData({version: 2, entries: [v1Entry]})).toThrow()
+    expect(() => migrateVaultData({version: 2, entries: [{...v1Entry, extraHosts: [1]}]})).toThrow()
   })
   it('keeps the optional save-notice flag only when it is a boolean', () => {
     const data = updateSettings(emptyVaultData(), {skipSaveNotice: true})

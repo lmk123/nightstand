@@ -4,6 +4,7 @@
  */
 export type CoreErrorCode =
   | 'invalid-url'
+  | 'invalid-host'
   | 'invalid-data'
   | 'unsupported-version'
   | 'decrypt-failed'

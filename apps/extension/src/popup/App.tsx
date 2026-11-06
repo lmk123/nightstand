@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useState} from 'react'
 import {
+  entrySiteHosts,
   hostOf,
   recordOpen,
   removeEntry,
@@ -52,16 +53,13 @@ interface Boot {
   links: DecoyConfig
 }
 
-/** Asks the background to delete existing history for these entries' sites / URLs. */
+/** Asks the background to delete existing history for these entries' sites / URLs / extra hosts. */
 function purgeFor(...entries: VaultEntry[]) {
   const hosts: string[] = []
   const urls: string[] = []
   for (const entry of entries) {
     if (entry.matchMode === 'exact') urls.push(entry.url)
-    else {
-      const host = hostOf(entry.url)
-      if (host) hosts.push(host)
-    }
+    hosts.push(...entrySiteHosts(entry))
   }
   if (hosts.length || urls.length) sendToBackground({type: 'purge', hosts, urls}).catch(console.error)
 }

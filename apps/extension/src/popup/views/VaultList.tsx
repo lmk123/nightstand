@@ -74,8 +74,13 @@ export function VaultList({
               <LetterAvatar text={entry.title} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm">{entry.title}</span>
-                <span className="text-muted-foreground block truncate text-xs">
-                  {entry.matchMode === 'site' ? hostOf(entry.url) : entry.url}
+                <span className="text-muted-foreground flex gap-1 text-xs">
+                  <span className="min-w-0 truncate">{entry.matchMode === 'site' ? hostOf(entry.url) : entry.url}</span>
+                  {entry.extraHosts.length > 0 && (
+                    <span className="shrink-0" title={entry.extraHosts.join('\n')}>
+                      {t('extraHostsBadge', String(entry.extraHosts.length))}
+                    </span>
+                  )}
                 </span>
               </span>
             </button>

@@ -2,7 +2,8 @@
  * The plaintext match table the background uses to clean history while the
  * vault is locked.
  *
- * It stores SHA-256(salt ‖ kind ‖ value) for every protected host (`site`)
+ * It stores SHA-256(salt ‖ kind ‖ value) for every protected host (`site`:
+ * the host of each `site` entry and every entry's extra hosts)
  * and every protected exact URL (`exact`), with a random per-device salt.
  *
  * Honest limits: this only keeps the list from being readable at a glance by
@@ -12,9 +13,9 @@
  */
 import {CoreError} from './errors.ts'
 import {isRecord, isString, isStringArray} from './guards.ts'
-import type {VaultEntry} from './model.ts'
+import {entrySiteHosts, type EntryScope} from './model.ts'
 import {base64ToBytes, bytesToBase64, bytesToHex, concatBytes, randomBytes, utf8Encode, type Bytes} from './crypto/encoding.ts'
-import {exactCandidates, hostCandidates, hostOf, normalizeExactUrl, parseHttpUrl, normalizeHost} from './url.ts'
+import {exactCandidates, hostCandidates, normalizeExactUrl, parseHttpUrl, normalizeHost} from './url.ts'
 
 export interface MatchTable {
   version: 1
@@ -42,17 +43,15 @@ export async function hashMatchValue(salt: string, kind: MatchKind, value: strin
 
 /** Builds the table from vault entries. Pass the existing salt to keep it stable across rebuilds. */
 export async function buildMatchTable(
-  entries: readonly Pick<VaultEntry, 'url' | 'matchMode'>[],
+  entries: readonly EntryScope[],
   salt: string = newMatchSalt()
 ): Promise<MatchTable> {
   const saltBytes = base64ToBytes(salt)
   const site = new Set<string>()
   const exact = new Set<string>()
   for (const entry of entries) {
-    if (entry.matchMode === 'site') {
-      const host = hostOf(entry.url)
-      if (host) site.add(await hashWith(saltBytes, 'site', host))
-    } else {
+    for (const host of entrySiteHosts(entry)) site.add(await hashWith(saltBytes, 'site', host))
+    if (entry.matchMode === 'exact') {
       const url = normalizeExactUrl(entry.url)
       if (url) exact.add(await hashWith(saltBytes, 'exact', url))
     }

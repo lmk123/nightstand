@@ -3,10 +3,11 @@ import {ChevronRight} from 'lucide-react'
 import {t, type MessageKey} from '@/platform/i18n'
 import {Header} from '../components/Header'
 
-export type FaqTopic = 'matchMode' | 'passphrase' | 'storage' | 'secrets'
+export type FaqTopic = 'matchMode' | 'extraHosts' | 'passphrase' | 'storage' | 'secrets'
 
 const TOPICS: {id: FaqTopic; question: MessageKey}[] = [
   {id: 'matchMode', question: 'faqMatchQ'},
+  {id: 'extraHosts', question: 'faqExtraQ'},
   {id: 'passphrase', question: 'faqPassQ'},
   {id: 'storage', question: 'faqStoreQ'},
   {id: 'secrets', question: 'faqSecretQ'}
@@ -50,6 +51,7 @@ export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void})
 
   const body: Record<FaqTopic, ReactNode> = {
     matchMode: <MatchModeAnswer />,
+    extraHosts: <ExtraHostsAnswer />,
     passphrase: <PassphraseAnswer />,
     storage: <StorageAnswer onPassphrase={() => setOpen('passphrase')} />,
     secrets: <SecretsAnswer />
@@ -118,6 +120,23 @@ function MatchModeAnswer() {
       <p>{t('faqMatchExact')}</p>
       <p>{t('faqMatchWhen')}</p>
       <p className="bg-accent text-accent-foreground rounded-md p-2">{t('faqMatchTip')}</p>
+    </>
+  )
+}
+
+function ExtraHostsAnswer() {
+  return (
+    <>
+      <p>{t('faqExtra1')}</p>
+      <p>{t('faqExtra2')}</p>
+      <p className="font-medium">{t('faqExtraFindTitle')}</p>
+      <p>{t('faqExtraFind1')}</p>
+      <ul className="list-disc pl-4">
+        <li>{t('faqExtraFind2')}</li>
+        <li>{t('faqExtraFind3')}</li>
+      </ul>
+      <p>{t('faqExtraFind4')}</p>
+      <p className="bg-accent text-accent-foreground rounded-md p-2">{t('faqExtraTip')}</p>
     </>
   )
 }

@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {ChevronDown, ChevronRight} from 'lucide-react'
 import {
   createEntry,
   editEntry,
@@ -6,6 +7,7 @@ import {
   findDuplicate,
   hostOf,
   isCoreError,
+  parseExtraHosts,
   type EntryInput,
   type MatchMode,
   type VaultEntry
@@ -56,6 +58,9 @@ export function EntryForm({
   const [note, setNote] = useState(initial?.note ?? '')
   const [tags, setTags] = useState((initial?.tags ?? []).join(', '))
   const [matchMode, setMatchMode] = useState<MatchMode>(initial?.matchMode ?? 'site')
+  const [extraHosts, setExtraHosts] = useState((initial?.extraHosts ?? []).join('\n'))
+  const [extraOpen, setExtraOpen] = useState(false)
+  const [extraError, setExtraError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -74,12 +79,18 @@ export function EntryForm({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
+    const extra = parseExtraHosts(extraHosts)
+    if (extra.invalid.length > 0) {
+      setExtraOpen(true)
+      return setExtraError(t('errExtraHost', extra.invalid.join(' ')))
+    }
     const input: EntryInput = {
       url,
       title,
       note,
       tags: tags.split(/[,，]/),
-      matchMode
+      matchMode,
+      extraHosts: extra.hosts
     }
     let entry: VaultEntry
     try {
@@ -102,11 +113,14 @@ export function EntryForm({
     } finally {
       setBusy(false)
     }
-    // A new site / URL always gets the notice (it also explains that future
-    // visits are cleaned). Editing only the title, tags or note asks only when
-    // something is there to delete, e.g. a bookmark added since.
-    const newKey = !editing || entryKey(editing) !== entryKey(entry)
-    if (!newKey && history === 0 && bookmarks === 0) return save(entry, false)
+    // A new site / URL / extra host always gets the notice (it also explains
+    // that future visits are cleaned). Editing only the title, tags or note
+    // asks only when something is there to delete, e.g. a bookmark added since.
+    const newScope =
+      !editing ||
+      entryKey(editing) !== entryKey(entry) ||
+      entry.extraHosts.some((h) => !editing.extraHosts.includes(h))
+    if (!newScope && history === 0 && bookmarks === 0) return save(entry, false)
     setDontShowAgain(false)
     setPending({entry, history, bookmarks})
   }
@@ -146,6 +160,39 @@ export function EntryForm({
             </RadioGroup>
             <HelpLink topic="matchMode" label="faqMatchLink" />
           </Field>
+          <div className="grid gap-1.5">
+            <button
+              type="button"
+              className="text-foreground flex w-fit items-center gap-1 text-xs font-medium"
+              aria-expanded={extraOpen}
+              aria-controls="extra-hosts"
+              onClick={() => setExtraOpen((open) => !open)}
+            >
+              {extraOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+              {t('fieldExtraHosts', String(parseExtraHosts(extraHosts).hosts.length))}
+            </button>
+            {extraOpen && (
+              <>
+                <Textarea
+                  id="extra-hosts"
+                  rows={3}
+                  spellCheck={false}
+                  placeholder={'video.example.net\npay.example.org'}
+                  value={extraHosts}
+                  onChange={(e) => {
+                    setExtraHosts(e.target.value)
+                    setExtraError(null)
+                  }}
+                />
+                {extraError ? (
+                  <p className="text-destructive text-xs">{extraError}</p>
+                ) : (
+                  <p className="text-muted-foreground text-xs">{t('fieldExtraHostsHint')}</p>
+                )}
+                <HelpLink topic="extraHosts" label="faqExtraLink" />
+              </>
+            )}
+          </div>
           <Field label={t('fieldTags')} htmlFor="tags" hint={t('fieldTagsHint')}>
             <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} />
           </Field>
@@ -160,8 +207,10 @@ export function EntryForm({
             </p>
             <p>
               {pending.entry.matchMode === 'site'
-                ? t('saveNoticeSite', hostOf(pending.entry.url) ?? pending.entry.url)
-                : t('saveNoticeExact')}
+                ? t('saveNoticeSite', [hostOf(pending.entry.url) ?? pending.entry.url, ...pending.entry.extraHosts].join('、'))
+                : pending.entry.extraHosts.length > 0
+                  ? t('saveNoticeExactExtra', pending.entry.extraHosts.join('、'))
+                  : t('saveNoticeExact')}
             </p>
             <ul className="list-disc pl-4">
               <li>{t('saveNoticeHistory', String(pending.history))}</li>
