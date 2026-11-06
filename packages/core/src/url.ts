@@ -88,6 +88,33 @@ function isIpLiteral(host: string): boolean {
 }
 
 /**
+ * The same address under both schemes, with and without a leading `www.`
+ * (same port, path, query and fragment), the input itself first.
+ *
+ * Chrome keeps the hops of a redirect chain — e.g. the http→https upgrade of
+ * a typed `example.com`, or a www redirect — as visits without the chain-end
+ * flag. `history.search` never returns those, yet the address bar still
+ * suggests their URLs, so cleanup has to delete them by exact address. These
+ * are the addresses such hops most often have. They are all covered by the
+ * same `site` or `exact` entry as the input (scheme and `www.` are ignored by
+ * matching). Empty for anything but http(s).
+ */
+export function addressVariants(url: string): string[] {
+  const parsed = parseHttpUrl(url)
+  if (!parsed) return []
+  const host = normalizeHost(parsed.hostname)
+  if (!host) return []
+  const hosts = isIpLiteral(host) || !host.includes('.') ? [host] : [host, `www.${host}`]
+  const port = parsed.port ? `:${parsed.port}` : ''
+  const rest = `${port}${parsed.pathname}${parsed.search}${parsed.hash}`
+  const variants = new Set([parsed.href])
+  for (const scheme of ['https:', 'http:']) {
+    for (const h of hosts) variants.add(`${scheme}//${h}${rest}`)
+  }
+  return [...variants]
+}
+
+/**
  * The host itself followed by each parent domain, split on label boundaries:
  * `a.b.example.com` → `a.b.example.com`, `b.example.com`, `example.com`.
  * The bare top-level label is never a candidate; IP literals and single-label

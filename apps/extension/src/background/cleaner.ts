@@ -1,4 +1,4 @@
-import {createMatcher, emptyMatchTable, hostOf, type UrlMatcher} from '@nightstand/core'
+import {addressVariants, createMatcher, emptyMatchTable, hostOf, type UrlMatcher} from '@nightstand/core'
 import {historySince} from '@/platform/history'
 import {loadIndex, STORAGE_KEYS} from '@/platform/storage'
 import {readState, updateState} from './state'
@@ -31,23 +31,28 @@ function isOwnPage(url: string): boolean {
   return url.startsWith(`${OWN_ORIGIN}/`)
 }
 
-async function deleteUrls(urls: Iterable<string>): Promise<number> {
-  let count = 0
-  for (const url of new Set(urls)) {
-    await chrome.history.deleteUrl({url})
-    count++
+/**
+ * Deletes each URL together with its scheme / `www.` variants: redirect hops
+ * of the same visit that `history.search` can't see (see `addressVariants`).
+ * Deleting an address that isn't in history is a no-op.
+ */
+async function deleteUrls(urls: Iterable<string>): Promise<void> {
+  const doomed = new Set<string>()
+  for (const url of urls) {
+    doomed.add(url)
+    for (const variant of addressVariants(url)) doomed.add(variant)
   }
-  return count
+  for (const url of doomed) await chrome.history.deleteUrl({url})
 }
 
 /** Deletes every history item (optionally restricted to a text search) that matches. */
-async function purgeMatching(matcher: UrlMatcher, startTime: number, text = ''): Promise<number> {
+async function purgeMatching(matcher: UrlMatcher, startTime: number, text = ''): Promise<void> {
   const doomed: string[] = []
   for await (const item of historySince(startTime, text)) {
     if (!item.url) continue
     if (isOwnPage(item.url) || (await matcher.matches(item.url))) doomed.push(item.url)
   }
-  return deleteUrls(doomed)
+  await deleteUrls(doomed)
 }
 
 /**
@@ -61,7 +66,7 @@ export async function handleVisited(url: string): Promise<void> {
   }
   const matcher = await getMatcher()
   if (matcher.isEmpty || !(await matcher.matches(url))) return
-  await chrome.history.deleteUrl({url})
+  await deleteUrls([url])
   const host = hostOf(url)
   if (host) await purgeMatching(matcher, 0, host)
 }
@@ -70,6 +75,10 @@ export async function handleVisited(url: string): Promise<void> {
  * Newly protected entries: wipe their existing history. Hosts/URLs come from
  * the popup in memory only. The match table was written just before this
  * message, so read it fresh instead of trusting the cache.
+ *
+ * Besides what a search finds, the site's root (or the exact URL) is deleted
+ * by address: typing the bare domain can leave only redirect hops behind,
+ * which no search returns but the address bar still suggests.
  */
 export async function purgeEntries(hosts: string[], urls: string[]): Promise<void> {
   invalidateMatcher()
@@ -80,6 +89,7 @@ export async function purgeEntries(hosts: string[], urls: string[]): Promise<voi
     const host = hostOf(url)
     if (host) terms.add(host)
   }
+  await deleteUrls([...hosts.map((host) => `https://${host}/`), ...urls])
   for (const term of terms) await purgeMatching(matcher, 0, term)
 }
 

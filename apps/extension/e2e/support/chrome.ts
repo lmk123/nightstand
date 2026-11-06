@@ -11,7 +11,7 @@ export interface ChromeSession {
 }
 
 export async function launchChrome(
-  options: {extension?: string; serverPort?: number; headless?: boolean} = {}
+  options: {extension?: string; serverPort?: number; headless?: boolean; userDataDir?: string} = {}
 ): Promise<ChromeSession> {
   const args = ['--no-first-run', '--no-default-browser-check', '--lang=zh-CN']
   if (options.serverPort) args.push(`--host-resolver-rules=MAP * 127.0.0.1:${options.serverPort}`)
@@ -20,7 +20,7 @@ export async function launchChrome(
     headless: options.headless ?? true,
     pipe: true,
     enableExtensions: [options.extension ?? DIST_CHROMIUM],
-    userDataDir: tempDir('chrome'),
+    userDataDir: options.userDataDir ?? tempDir('chrome'),
     args
   })
   const target = await browser.waitForTarget(

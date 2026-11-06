@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {hostCandidates, hostOf, exactCandidates, normalizeExactUrl, normalizeHost, parseUserUrl} from '../src/index.ts'
+import {addressVariants, hostCandidates, hostOf, exactCandidates, normalizeExactUrl, normalizeHost, parseUserUrl} from '../src/index.ts'
 
 describe('parseUserUrl', () => {
   it('adds https:// when no scheme is given', () => {
@@ -103,5 +103,32 @@ describe('hostCandidates', () => {
     expect(hostCandidates('localhost')).toEqual(['localhost'])
     expect(hostCandidates('192.168.1.10')).toEqual(['192.168.1.10'])
     expect(hostCandidates('[::1]')).toEqual(['[::1]'])
+  })
+})
+
+describe('addressVariants', () => {
+  it('returns both schemes with and without www., the input first', () => {
+    expect(addressVariants('https://example.cc/')).toEqual([
+      'https://example.cc/',
+      'https://www.example.cc/',
+      'http://example.cc/',
+      'http://www.example.cc/'
+    ])
+  })
+  it('starts from a www. host and keeps port, path, query and fragment', () => {
+    expect(addressVariants('http://WWW.Example.com:8080/a/b?q=1#h')).toEqual([
+      'http://www.example.com:8080/a/b?q=1#h',
+      'https://example.com:8080/a/b?q=1#h',
+      'https://www.example.com:8080/a/b?q=1#h',
+      'http://example.com:8080/a/b?q=1#h'
+    ])
+  })
+  it('adds no www. to IP literals or single-label hosts', () => {
+    expect(addressVariants('http://192.168.1.10/x')).toEqual(['http://192.168.1.10/x', 'https://192.168.1.10/x'])
+    expect(addressVariants('http://localhost:3000/')).toEqual(['http://localhost:3000/', 'https://localhost:3000/'])
+  })
+  it('is empty for non-http URLs and garbage', () => {
+    expect(addressVariants('chrome-extension://abc/action/index.html')).toEqual([])
+    expect(addressVariants('not a url')).toEqual([])
   })
 })
