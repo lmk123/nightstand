@@ -17,13 +17,17 @@ import {loadLinks, loadShelf} from '@/platform/storage'
 import {getActiveTab, isIncognitoAllowed, openUrl} from '@/platform/tabs'
 import {BookmarkCheck} from './components/BookmarkCheck'
 import {IncognitoHelp} from './components/IncognitoHelp'
+import {SettingsLink} from './components/SettingsLink'
 import {commit, openSession, type Session, type UnlockResult} from './session'
+import {Backup} from './views/Backup'
+import {BookmarkImport} from './views/BookmarkImport'
 import {Decoy} from './views/Decoy'
 import {DecoySettings} from './views/DecoySettings'
 import {EntryForm} from './views/EntryForm'
 import {LockScreen} from './views/LockScreen'
 import {NewPassphrase} from './views/NewPassphrase'
 import {Onboarding} from './views/Onboarding'
+import {RecoveryCode} from './views/RecoveryCode'
 import {Settings} from './views/Settings'
 import {VaultList} from './views/VaultList'
 
@@ -36,6 +40,10 @@ type View =
   | {name: 'entry'; editing?: VaultEntry; prefill?: EntryInput}
   | {name: 'settings'}
   | {name: 'resetPassphrase'}
+  | {name: 'changePassphrase'}
+  | {name: 'recoveryCode'}
+  | {name: 'backup'}
+  | {name: 'bookmarkImport'}
 
 interface Boot {
   stored: StoredVault | null
@@ -43,11 +51,18 @@ interface Boot {
   links: DecoyConfig
 }
 
-/** Asks the background to delete existing history for an entry's site / URL. */
-function purgeFor(entry: VaultEntry) {
-  const host = entry.matchMode === 'site' ? hostOf(entry.url) : null
-  const url = entry.matchMode === 'exact' ? entry.url : null
-  sendToBackground({type: 'purge', hosts: host ? [host] : [], urls: url ? [url] : []}).catch(console.error)
+/** Asks the background to delete existing history for these entries' sites / URLs. */
+function purgeFor(...entries: VaultEntry[]) {
+  const hosts: string[] = []
+  const urls: string[] = []
+  for (const entry of entries) {
+    if (entry.matchMode === 'exact') urls.push(entry.url)
+    else {
+      const host = hostOf(entry.url)
+      if (host) hosts.push(host)
+    }
+  }
+  if (hosts.length || urls.length) sendToBackground({type: 'purge', hosts, urls}).catch(console.error)
 }
 
 export default function App() {
@@ -211,6 +226,61 @@ export default function App() {
           onLinksChange={(links) => setBoot({...boot, links})}
           onChange={(patch) => update(updateSettings(session.data, patch))}
           onBack={() => setView({name: 'vault'})}
+        >
+          <section className="grid gap-1">
+            <SettingsLink onClick={() => setView({name: 'bookmarkImport'})}>{t('bmImportTitle')}</SettingsLink>
+            <SettingsLink onClick={() => setView({name: 'backup'})}>{t('backupTitle')}</SettingsLink>
+            <SettingsLink onClick={() => setView({name: 'changePassphrase'})}>{t('changePassTitle')}</SettingsLink>
+            <SettingsLink onClick={() => setView({name: 'recoveryCode'})}>{t('recoveryTitle')}</SettingsLink>
+          </section>
+        </Settings>
+      )
+    case 'changePassphrase':
+      return (
+        <NewPassphrase
+          session={session}
+          title={t('changePassTitle')}
+          hint={t('changePassHint')}
+          onBack={() => setView({name: 'settings'})}
+          onDone={(saved) => {
+            setSession(saved)
+            setBoot({...boot, stored: saved.stored})
+            setView({name: 'settings'})
+          }}
+        />
+      )
+    case 'recoveryCode':
+      return (
+        <RecoveryCode
+          session={session}
+          onBack={() => setView({name: 'settings'})}
+          onDone={(saved) => {
+            setSession(saved)
+            setBoot({...boot, stored: saved.stored})
+            setView({name: 'settings'})
+          }}
+        />
+      )
+    case 'backup':
+      return (
+        <Backup
+          session={session}
+          onBack={() => setView({name: 'settings'})}
+          onImported={async (merged) => {
+            await update({...session.data, entries: merged.entries})
+            purgeFor(...merged.entries)
+          }}
+        />
+      )
+    case 'bookmarkImport':
+      return (
+        <BookmarkImport
+          data={session.data}
+          onBack={() => setView({name: 'settings'})}
+          onImport={async (next, added) => {
+            await update(next)
+            purgeFor(...added)
+          }}
         />
       )
     case 'resetPassphrase':

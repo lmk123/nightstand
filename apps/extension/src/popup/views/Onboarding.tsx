@@ -1,5 +1,4 @@
 import {useState} from 'react'
-import {Check, Copy} from 'lucide-react'
 import {
   buildMatchTable,
   checkPassphrase,
@@ -16,6 +15,7 @@ import {Label} from '@/components/ui/label'
 import {t} from '@/platform/i18n'
 import {saveInitialSetup} from '@/platform/storage'
 import {Field} from '../components/Field'
+import {RecoveryCodeBox} from '../components/RecoveryCodeBox'
 import type {Session} from '../session'
 
 type Step = 'intro' | 'passphrase' | 'code' | 'howto'
@@ -68,6 +68,7 @@ function Intro({onNext}: {onNext: () => void}) {
       <h1 className="text-base font-semibold">{t('onbIntroTitle')}</h1>
       <p className="text-sm leading-relaxed">{t('onbIntroBody')}</p>
       <p className="text-muted-foreground text-xs leading-relaxed">{t('onbIntroNote')}</p>
+      <p className="text-muted-foreground text-xs leading-relaxed">{t('onbIntroRestore')}</p>
       <Button onClick={onNext}>{t('onbStart')}</Button>
     </>
   )
@@ -113,27 +114,11 @@ function PassphraseStep({onCreated}: {onCreated: (vault: CreatedVault) => void})
 
 function RecoveryCodeStep({code, onNext}: {code: string; onNext: () => void}) {
   const [saved, setSaved] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  async function copy() {
-    await navigator.clipboard.writeText(code)
-    setCopied(true)
-  }
-
   return (
     <>
       <h1 className="text-base font-semibold">{t('onbCodeTitle')}</h1>
       <p className="text-sm leading-relaxed">{t('onbCodeBody')}</p>
-      <div className="bg-muted flex items-center gap-2 rounded-md p-3">
-        <code className="grid flex-1 grid-cols-4 gap-x-2 gap-y-1 font-mono text-sm tracking-wide select-all">
-          {code.split('-').map((group, i) => (
-            <span key={i}>{group}</span>
-          ))}
-        </code>
-        <Button variant="ghost" size="icon-sm" onClick={copy} aria-label={t('copy')} title={copied ? t('copied') : t('copy')}>
-          {copied ? <Check /> : <Copy />}
-        </Button>
-      </div>
+      <RecoveryCodeBox code={code} />
       <Label className="flex items-center gap-2 text-sm font-normal">
         <Checkbox checked={saved} onCheckedChange={(v) => setSaved(v === true)} />
         {t('onbCodeConfirm')}

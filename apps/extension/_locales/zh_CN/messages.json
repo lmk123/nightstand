@@ -348,5 +348,141 @@
   },
   "shortcutChangeFirefox": {
     "message": "修改方法：打开 about:addons，点齿轮菜单里的“管理扩展快捷键”。"
+  },
+  "done": {
+    "message": "完成"
+  },
+  "backupTitle": {
+    "message": "备份与恢复"
+  },
+  "backupExportSection": {
+    "message": "导出加密备份"
+  },
+  "backupExportHint": {
+    "message": "导出一个 .nightstand 文件，里面只有密文。导入时需要当时的口令或恢复码。"
+  },
+  "backupExport": {
+    "message": "导出备份"
+  },
+  "backupImportSection": {
+    "message": "导入备份"
+  },
+  "backupImportHint": {
+    "message": "备份中的条目会合并进当前列表，重复的网址保留较新的一条。当前的口令和恢复码不变。"
+  },
+  "backupChooseFile": {
+    "message": "选择备份文件"
+  },
+  "backupPasteLabel": {
+    "message": "粘贴备份内容"
+  },
+  "backupPasteHint": {
+    "message": "用文本编辑器打开 .nightstand 文件，全选并复制，然后粘贴到这里。"
+  },
+  "backupSecretLabel": {
+    "message": "备份的口令或恢复码"
+  },
+  "backupSecretHint": {
+    "message": "输入导出这份备份时使用的口令，或当时的恢复码。"
+  },
+  "backupImport": {
+    "message": "导入"
+  },
+  "backupImported": {
+    "message": "导入完成：新增 $ADDED$ 条，更新 $UPDATED$ 条。",
+    "placeholders": {
+      "added": {
+        "content": "$1",
+        "example": "3"
+      },
+      "updated": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "errBackupInvalid": {
+    "message": "这不是有效的 Nightstand 备份，或文件已损坏。"
+  },
+  "errBackupNewer": {
+    "message": "这份备份由更新版本的 Nightstand 导出，请先更新扩展。"
+  },
+  "errBackupSecret": {
+    "message": "口令或恢复码不正确。"
+  },
+  "plainExportSection": {
+    "message": "导出明文"
+  },
+  "plainExport": {
+    "message": "导出未加密的列表…"
+  },
+  "plainExportWarningTitle": {
+    "message": "注意：导出的文件没有加密"
+  },
+  "plainExportWarning": {
+    "message": "任何能打开这个文件的人都能看到你收藏的全部网址、标题和备注。文件还会出现在浏览器的下载记录里。只在确有需要时导出，用完请立即删除。"
+  },
+  "plainExportConfirm": {
+    "message": "我了解，仍然导出"
+  },
+  "recoveryTitle": {
+    "message": "重新生成恢复码"
+  },
+  "recoveryRotateBody": {
+    "message": "生成新的恢复码后，旧的恢复码立即失效。用旧恢复码导出的备份仍然可以用当时的口令打开。"
+  },
+  "recoveryRotate": {
+    "message": "生成新的恢复码"
+  },
+  "recoveryNewBody": {
+    "message": "这是新的恢复码，只显示这一次。请抄下来或存进密码管理器。"
+  },
+  "changePassTitle": {
+    "message": "修改口令"
+  },
+  "changePassHint": {
+    "message": "修改后，旧口令立即失效。恢复码不变。"
+  },
+  "bmImportTitle": {
+    "message": "从浏览器书签导入"
+  },
+  "bmImportPermission": {
+    "message": "需要授予读取书签的权限。授权时浏览器可能会关闭这个弹窗；授权后重新打开、解锁，再回到这里即可。"
+  },
+  "bmImportGrant": {
+    "message": "授予书签权限"
+  },
+  "bmImportEmpty": {
+    "message": "书签里没有网页链接。"
+  },
+  "bmUntitledFolder": {
+    "message": "（未命名文件夹）"
+  },
+  "matchSiteShort": {
+    "message": "整个站点"
+  },
+  "bmRemoveOriginals": {
+    "message": "导入后删除原书签"
+  },
+  "bmImported": {
+    "message": "已导入 $COUNT$ 条，并清理了这些站点的浏览记录。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bmImportButton": {
+    "message": "导入所选（$COUNT$）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "onbIntroRestore": {
+    "message": "要从备份恢复？先完成设置，再在“设置 → 备份与恢复”中导入。"
   }
 }
