@@ -18,5 +18,224 @@
   "popupTitle": {
     "message": "快捷链接",
     "description": "Popup document title."
+  },
+  "back": {
+    "message": "返回"
+  },
+  "settings": {
+    "message": "设置"
+  },
+  "lock": {
+    "message": "锁定"
+  },
+  "edit": {
+    "message": "编辑"
+  },
+  "delete": {
+    "message": "删除"
+  },
+  "confirmDelete": {
+    "message": "确认删除"
+  },
+  "cancel": {
+    "message": "取消"
+  },
+  "save": {
+    "message": "保存"
+  },
+  "next": {
+    "message": "下一步"
+  },
+  "copy": {
+    "message": "复制"
+  },
+  "copied": {
+    "message": "已复制"
+  },
+  "working": {
+    "message": "请稍候…"
+  },
+  "unlock": {
+    "message": "解锁"
+  },
+  "onbIntroTitle": {
+    "message": "欢迎使用 Nightstand"
+  },
+  "onbIntroBody": {
+    "message": "把不想被地址栏提示出来的网站收在这里，而不是书签栏。每次访问这些网站后，Nightstand 会自动清除对应的浏览记录。"
+  },
+  "onbIntroNote": {
+    "message": "这是唯一会说明用途的页面，最好在别人看不到屏幕时完成设置。"
+  },
+  "onbStart": {
+    "message": "开始设置"
+  },
+  "onbPassTitle": {
+    "message": "设置解锁口令"
+  },
+  "onbPassHint": {
+    "message": "以后要在“筛选”框里输入口令来解锁，所以口令最好是一个看起来像普通筛选词的单词。旁人看到你在筛选框里打字，也不会觉得奇怪。"
+  },
+  "onbPassLabel": {
+    "message": "口令"
+  },
+  "onbPassConfirmLabel": {
+    "message": "再输入一次"
+  },
+  "errPassTooShort": {
+    "message": "口令至少需要 4 个字符"
+  },
+  "errPassLooksLikeCode": {
+    "message": "口令不能和恢复码格式相同"
+  },
+  "errPassMismatch": {
+    "message": "两次输入的口令不一致"
+  },
+  "onbCreating": {
+    "message": "正在生成密钥…"
+  },
+  "onbCodeTitle": {
+    "message": "保存恢复码"
+  },
+  "onbCodeBody": {
+    "message": "忘记口令时，可以用恢复码重新设置口令。恢复码只显示这一次，请抄下来或存进密码管理器。"
+  },
+  "onbCodeConfirm": {
+    "message": "我已妥善保存恢复码"
+  },
+  "onbHowTitle": {
+    "message": "以后怎么用"
+  },
+  "onbHowBody": {
+    "message": "以后点开看到的是一个“快捷链接”工具。在筛选框里输入口令，再按回车即可解锁。关闭弹窗会自动上锁。"
+  },
+  "onbFinish": {
+    "message": "完成"
+  },
+  "lockTitle": {
+    "message": "输入口令"
+  },
+  "lockPlaceholder": {
+    "message": "口令"
+  },
+  "lockRecoveryTitle": {
+    "message": "使用恢复码"
+  },
+  "lockRecoveryHint": {
+    "message": "输入设置时保存的恢复码，然后设置新的口令。"
+  },
+  "lockRecoveryPlaceholder": {
+    "message": "XXXX-XXXX-…"
+  },
+  "lockWrong": {
+    "message": "口令不正确"
+  },
+  "lockForgot": {
+    "message": "忘记口令？"
+  },
+  "lockUsePassphrase": {
+    "message": "改用口令"
+  },
+  "errStorageUnreadable": {
+    "message": "无法读取已保存的数据，可能是由更新版本写入的。请先更新扩展。"
+  },
+  "vaultTitle": {
+    "message": "收藏"
+  },
+  "vaultSearchPlaceholder": {
+    "message": "搜索…"
+  },
+  "vaultEmpty": {
+    "message": "还没有收藏。可以添加当前标签页，或手动输入网址。"
+  },
+  "noMatches": {
+    "message": "没有匹配的条目"
+  },
+  "addCurrentTab": {
+    "message": "添加当前页"
+  },
+  "addManually": {
+    "message": "手动添加"
+  },
+  "currentTabUnsupported": {
+    "message": "当前标签页不是普通网页，无法添加。"
+  },
+  "entryAddTitle": {
+    "message": "添加链接"
+  },
+  "entryEditTitle": {
+    "message": "编辑链接"
+  },
+  "fieldUrl": {
+    "message": "网址"
+  },
+  "fieldTitle": {
+    "message": "标题"
+  },
+  "fieldMatchMode": {
+    "message": "清理范围"
+  },
+  "matchSite": {
+    "message": "整个站点（含所有子域名）"
+  },
+  "matchExact": {
+    "message": "仅此网址"
+  },
+  "fieldTags": {
+    "message": "标签"
+  },
+  "fieldTagsHint": {
+    "message": "用逗号分隔"
+  },
+  "fieldNote": {
+    "message": "备注"
+  },
+  "errInvalidUrl": {
+    "message": "请输入以 http 或 https 开头的网址"
+  },
+  "errDuplicate": {
+    "message": "已经收藏过：$TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "settingsTitle": {
+    "message": "设置"
+  },
+  "openModeLabel": {
+    "message": "打开方式"
+  },
+  "openCurrent": {
+    "message": "当前标签页"
+  },
+  "openNewTab": {
+    "message": "新标签页"
+  },
+  "openIncognito": {
+    "message": "无痕窗口"
+  },
+  "openPrivateFirefox": {
+    "message": "隐私窗口"
+  },
+  "incognitoNeeded": {
+    "message": "要用无痕窗口打开，需要在扩展详情页打开“在无痕模式下启用”。无痕窗口从根本上不会产生浏览记录，是最干净的方式。"
+  },
+  "privateNeededFirefox": {
+    "message": "要用隐私窗口打开，需要在“附加组件和主题”（about:addons）里找到 Nightstand，把“在隐私窗口中运行”设为“允许”。隐私窗口从根本上不会产生浏览记录，是最干净的方式。"
+  },
+  "incognitoOpenDetails": {
+    "message": "打开扩展详情页"
+  },
+  "newPassLabel": {
+    "message": "新口令"
+  },
+  "resetPassTitle": {
+    "message": "设置新口令"
+  },
+  "resetPassHint": {
+    "message": "已用恢复码解锁。请设置一个新的口令，旧口令将失效。"
   }
 }

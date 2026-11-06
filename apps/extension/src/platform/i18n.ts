@@ -6,6 +6,6 @@
  */
 export type MessageKey = keyof typeof import('../../_locales/zh_CN/messages.json')
 
-export function t(key: MessageKey, substitutions?: string | string[]): string {
+export function t(key: MessageKey, ...substitutions: string[]): string {
   return chrome.i18n.getMessage(key, substitutions)
 }
