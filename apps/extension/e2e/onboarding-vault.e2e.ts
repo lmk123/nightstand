@@ -1,4 +1,5 @@
-import {afterAll, beforeAll, describe, expect, it} from 'vitest'
+import type {Page} from 'puppeteer-core'
+import {afterAll, beforeAll, describe, expect, it, vi} from 'vitest'
 import {launchChrome, openPopup, storageSnapshot, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
 import {
@@ -215,5 +216,58 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
     await waitText(p, '添加当前页')
     expect(await hasText(p, 'renamed')).toBe(true)
     await p.close()
+  })
+
+  it('a click only selects a row; its Open button or Enter opens it', async () => {
+    // Tabs the vault opened. No test server here, so the visit fails and the
+    // tab's URL goes blank: count every tab that is neither a popup page nor
+    // the browser's start tab.
+    const siteTabs = () =>
+      s.sw.evaluate(
+        async () =>
+          (await chrome.tabs.query({})).filter((t) => {
+            const url = t.pendingUrl ?? t.url ?? ''
+            return !url.startsWith('chrome-extension://') && url !== 'about:blank'
+          }).length
+      )
+    const selectedRow = (page: Page) =>
+      page.$$eval('ul li', (items) => items.findIndex((li) => li.getAttribute('aria-current') === 'true'))
+    let p = await openPopup(s)
+    expect(await submitUnlock(p, 'shelf')).toBe(true)
+    const before = await siteTabs()
+    expect((await listItems(p)).length).toBeGreaterThanOrEqual(3)
+
+    // Enter with nothing selected opens nothing.
+    await p.keyboard.press('Enter')
+    await sleep(300)
+    expect(await selectedRow(p)).toBe(-1)
+
+    // Clicking a row, even twice, only selects it.
+    const rows = await p.$$('ul li > button:first-child')
+    await rows[1]?.click()
+    await rows[1]?.click()
+    await sleep(300)
+    expect(await selectedRow(p)).toBe(1)
+    expect(await siteTabs()).toBe(before)
+
+    // The arrow keys move the selection from the search box.
+    await p.focus('input[placeholder="搜索…"]')
+    await p.keyboard.press('ArrowDown')
+    expect(await selectedRow(p)).toBe(2)
+    await p.keyboard.press('ArrowUp')
+    await p.keyboard.press('ArrowUp')
+    expect(await selectedRow(p)).toBe(0)
+    expect(await siteTabs()).toBe(before)
+
+    await clickText(p, '打开')
+    await vi.waitFor(async () => expect(await siteTabs()).toBe(before + 1))
+
+    // While searching, the first match is selected and Enter opens it.
+    p = await openPopup(s)
+    expect(await submitUnlock(p, 'shelf')).toBe(true)
+    await p.type('input[placeholder="搜索…"]', 'info')
+    await p.waitForSelector('ul li[aria-current="true"]')
+    await p.keyboard.press('Enter')
+    await vi.waitFor(async () => expect(await siteTabs()).toBe(before + 2))
   })
 })

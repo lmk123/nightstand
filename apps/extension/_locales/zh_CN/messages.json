@@ -187,6 +187,9 @@
   "vaultTitle": {
     "message": "收藏"
   },
+  "vaultOpen": {
+    "message": "打开"
+  },
   "vaultSearchPlaceholder": {
     "message": "搜索…"
   },
