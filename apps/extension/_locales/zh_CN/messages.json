@@ -276,5 +276,77 @@
   },
   "bookmarkSection": {
     "message": "书签"
+  },
+  "decoyFilterPlaceholder": {
+    "message": "筛选…"
+  },
+  "decoyEmpty": {
+    "message": "没有匹配的链接"
+  },
+  "decoySettingsTitle": {
+    "message": "快捷链接设置"
+  },
+  "decoyLinksSection": {
+    "message": "链接"
+  },
+  "decoyLinkTitle": {
+    "message": "名称"
+  },
+  "decoyLinkUrl": {
+    "message": "网址"
+  },
+  "decoyAddLink": {
+    "message": "添加"
+  },
+  "decoyRestoreDefaults": {
+    "message": "恢复默认链接"
+  },
+  "iconSection": {
+    "message": "工具栏图标"
+  },
+  "iconNightstand": {
+    "message": "床头柜"
+  },
+  "iconBook": {
+    "message": "书本"
+  },
+  "iconStar": {
+    "message": "星形"
+  },
+  "iconGrid": {
+    "message": "网格"
+  },
+  "disguiseLabel": {
+    "message": "锁定时显示为快捷链接工具"
+  },
+  "disguiseOnHint": {
+    "message": "锁定时只显示快捷链接。在筛选框里输入口令再按回车即可解锁；口令错误不会有任何提示。忘记口令时，在筛选框里粘贴恢复码再按回车。"
+  },
+  "disguiseOffHint": {
+    "message": "锁定时显示普通的口令输入框。"
+  },
+  "shortcutSection": {
+    "message": "快速收起快捷键"
+  },
+  "shortcutCurrent": {
+    "message": "当前快捷键：$KEY$",
+    "placeholders": {
+      "key": {
+        "content": "$1",
+        "example": "Alt+Shift+Q"
+      }
+    }
+  },
+  "shortcutNone": {
+    "message": "当前没有设置快捷键。"
+  },
+  "shortcutHint": {
+    "message": "按下后会关闭受保护站点的标签页和 Nightstand 打开的无痕窗口，立即清理历史记录，并关闭弹窗（即上锁）。"
+  },
+  "shortcutChange": {
+    "message": "修改快捷键"
+  },
+  "shortcutChangeFirefox": {
+    "message": "修改方法：打开 about:addons，点齿轮菜单里的“管理扩展快捷键”。"
   }
 }

@@ -3,7 +3,9 @@
 // Cleans history for protected sites (also while the vault is locked, using
 // only the hashed match table), opens incognito windows for the popup, and
 // handles the panic shortcut. It never sees the vault key.
+import {applyIcon} from '@/platform/icons'
 import {isBackgroundRequest} from '@/platform/messages'
+import {loadLinks} from '@/platform/storage'
 import {fullScan, handleVisited, incrementalScan, purgeEntries} from './cleaner'
 import {openIncognito} from './incognito'
 import {panic} from './panic'
@@ -46,12 +48,20 @@ async function ensureAlarm(): Promise<void> {
   }
 }
 
+/** Re-applies the chosen toolbar icon (setIcon does not survive every restart). */
+async function restoreIcon(): Promise<void> {
+  const {icon} = await loadLinks()
+  if (icon !== 'nightstand') await applyIcon(icon)
+}
+
 chrome.runtime.onStartup.addListener(() => {
+  restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
   fullScan().catch(console.error)
 })
 
 chrome.runtime.onInstalled.addListener(() => {
+  restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
   fullScan().catch(console.error)
 })

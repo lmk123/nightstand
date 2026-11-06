@@ -18,6 +18,8 @@ import {getActiveTab, isIncognitoAllowed, openUrl} from '@/platform/tabs'
 import {BookmarkCheck} from './components/BookmarkCheck'
 import {IncognitoHelp} from './components/IncognitoHelp'
 import {commit, openSession, type Session, type UnlockResult} from './session'
+import {Decoy} from './views/Decoy'
+import {DecoySettings} from './views/DecoySettings'
 import {EntryForm} from './views/EntryForm'
 import {LockScreen} from './views/LockScreen'
 import {NewPassphrase} from './views/NewPassphrase'
@@ -29,6 +31,7 @@ type View =
   | {name: 'loading'}
   | {name: 'onboarding'}
   | {name: 'locked'}
+  | {name: 'decoySettings'}
   | {name: 'vault'; notice?: 'incognito' | 'unsupportedTab'; added?: VaultEntry}
   | {name: 'entry'; editing?: VaultEntry; prefill?: EntryInput}
   | {name: 'settings'}
@@ -133,8 +136,27 @@ export default function App() {
     )
   }
 
+  if (view.name === 'decoySettings') {
+    return (
+      <DecoySettings
+        config={boot.links}
+        onChange={(links) => setBoot({...boot, links})}
+        onBack={() => setView({name: 'locked'})}
+      />
+    )
+  }
+
   if (!session || view.name === 'locked') {
-    return <LockScreen stored={boot.stored} loadError={boot.loadError} onUnlocked={handleUnlocked} />
+    return boot.links.disguise ? (
+      <Decoy
+        links={boot.links.links}
+        stored={boot.stored}
+        onUnlocked={handleUnlocked}
+        onSettings={() => setView({name: 'decoySettings'})}
+      />
+    ) : (
+      <LockScreen stored={boot.stored} loadError={boot.loadError} onUnlocked={handleUnlocked} />
+    )
   }
 
   switch (view.name) {
@@ -185,6 +207,8 @@ export default function App() {
       return (
         <Settings
           settings={session.data.settings}
+          links={boot.links}
+          onLinksChange={(links) => setBoot({...boot, links})}
           onChange={(patch) => update(updateSettings(session.data, patch))}
           onBack={() => setView({name: 'vault'})}
         />
