@@ -1,11 +1,12 @@
 import {useMemo, useState} from 'react'
 import {Lock, Pencil, Plus, Settings, SquarePlus} from 'lucide-react'
-import {hostOf, searchEntries, type VaultEntry} from '@nightstand/core'
+import {searchEntries, type VaultEntry} from '@nightstand/core'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {t} from '@/platform/i18n'
 import {LetterAvatar} from '../components/Avatar'
 import {Header} from '../components/Header'
+import {entryTitle} from '../title'
 
 export function VaultList({
   entries,
@@ -69,20 +70,11 @@ export function VaultList({
               type="button"
               className="flex min-w-0 flex-1 items-center gap-2 rounded-md p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               onClick={() => onOpen(entry)}
-              title={entry.url}
             >
-              <LetterAvatar text={entry.title} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm">{entry.title}</span>
-                <span className="text-muted-foreground flex gap-1 text-xs">
-                  <span className="min-w-0 truncate">{entry.matchMode === 'site' ? hostOf(entry.url) : entry.url}</span>
-                  {entry.extraHosts.length > 0 && (
-                    <span className="shrink-0" title={entry.extraHosts.join('\n')}>
-                      {t('extraHostsBadge', String(entry.extraHosts.length))}
-                    </span>
-                  )}
-                </span>
-              </span>
+              {/* Title only: some domains are revealing on their own, so the
+                  list never shows the URL or the extra hosts, not even in a tooltip. */}
+              <LetterAvatar text={entryTitle(entry)} />
+              <span className="min-w-0 flex-1 truncate text-sm">{entryTitle(entry)}</span>
             </button>
             <Button
               variant="ghost"

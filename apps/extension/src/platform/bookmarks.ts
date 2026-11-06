@@ -48,7 +48,7 @@ export async function bookmarkRows(isWebUrl: (url: string) => boolean): Promise<
   const visit = (node: chrome.bookmarks.BookmarkTreeNode, depth: number): string[] => {
     if (node.url) {
       if (!isWebUrl(node.url)) return []
-      rows.push({id: node.id, title: node.title || node.url, url: node.url, depth, urlIds: [node.id]})
+      rows.push({id: node.id, title: node.title, url: node.url, depth, urlIds: [node.id]})
       return [node.id]
     }
     const index = rows.length

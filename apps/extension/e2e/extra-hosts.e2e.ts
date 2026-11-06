@@ -39,6 +39,7 @@ describe.skipIf(!hasChrome)('extra hosts (Chrome)', () => {
     await onboard(p, 'notes')
     await clickText(p, '手动添加')
     await p.type('#url', 'example.com')
+    await p.type('#title', 'Videos')
     await clickText(p, '附加域名（0）')
     // The FAQ explains where to find the hosts; going back keeps the form.
     await clickText(p, '附加域名是什么？怎么找？')
@@ -50,14 +51,16 @@ describe.skipIf(!hasChrome)('extra hosts (Chrome)', () => {
     await clearAndType(p, '#extra-hosts', 'video.example.net\nhttps://pay.example.org/checkout?o=1')
     await waitText(p, '附加域名（2）')
     await clickText(p, '保存')
-    await waitText(p, '会立即删除 example.com、video.example.net、pay.example.org（含所有子域名）的')
+    await waitText(p, '会立即删除这个网站和 2 个附加域名（都含所有子域名）的')
     await waitText(p, '1 个书签')
     await clickText(p, '确认保存')
     await waitText(p, '添加当前页')
-    expect((await listItems(p)).some((item) => item.includes('example.com+2'))).toBe(true)
+    // Domains are never shown, not even in a tooltip: some are revealing on their own.
+    expect(await listItems(p)).toEqual(['VVideos']) // letter avatar + title, nothing else
     // A save that protects something new asks for a look at the address bar.
     await waitText(p, '已保存。请马上检查一下地址栏')
-    await waitText(p, '输入 example.com 开头的几个字母（例如“exa”）')
+    await waitText(p, '输入这个网站域名开头的几个字母')
+    expect(await hasText(p, 'example')).toBe(false)
     await p.click('button[title="知道了"]')
     expect(await hasText(p, '请马上检查一下地址栏')).toBe(false)
     // Changing only the title protects nothing new: no notice, no check.

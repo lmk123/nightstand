@@ -47,11 +47,14 @@
     "message": "保存前请确认"
   },
   "saveNoticeSite": {
-    "message": "确认保存后，会立即删除 $HOST$（含所有子域名）的：",
+    "message": "确认保存后，会立即删除这个网站（含所有子域名）的："
+  },
+  "saveNoticeSiteExtra": {
+    "message": "确认保存后，会立即删除这个网站和 $COUNT$ 个附加域名（都含所有子域名）的：",
     "placeholders": {
-      "host": {
+      "count": {
         "content": "$1",
-        "example": "example.com"
+        "example": "2"
       }
     }
   },
@@ -59,11 +62,11 @@
     "message": "确认保存后，会立即删除这个网址的："
   },
   "saveNoticeExactExtra": {
-    "message": "确认保存后，会立即删除这个网址，以及 $HOSTS$（含所有子域名）的：",
+    "message": "确认保存后，会立即删除这个网址，以及 $COUNT$ 个附加域名（含所有子域名）的：",
     "placeholders": {
-      "hosts": {
+      "count": {
         "content": "$1",
-        "example": "pay.example.net"
+        "example": "2"
       }
     }
   },
@@ -92,17 +95,7 @@
     "message": "已保存。请马上检查一下地址栏"
   },
   "saveCheckHow": {
-    "message": "新开一个标签页，在地址栏输入 $HOST$ 开头的几个字母（例如“$PREFIX$”），也试试网站名称里的词，看下拉提示里还有没有这个网站。",
-    "placeholders": {
-      "host": {
-        "content": "$1",
-        "example": "example.com"
-      },
-      "prefix": {
-        "content": "$2",
-        "example": "exa"
-      }
-    }
+    "message": "新开一个标签页，在地址栏输入这个网站域名开头的几个字母，也试试网站名称里的词，看下拉提示里还有没有这个网站。"
   },
   "saveCheckOpenTab": {
     "message": "这个网站的标签页还开着时，“切换到这个标签页”的提示是正常的，关掉标签页再试。"
@@ -223,6 +216,9 @@
   },
   "fieldTitle": {
     "message": "标题"
+  },
+  "untitledEntry": {
+    "message": "未命名"
   },
   "fieldMatchMode": {
     "message": "清理范围"
@@ -686,14 +682,5 @@
   },
   "faqSecretWarn": {
     "message": "正因为哪里都没保存，忘了口令谁也找不回来，只能用恢复码打开。口令和恢复码都丢了，列表就再也打不开了。"
-  },
-  "extraHostsBadge": {
-    "message": "+$COUNT$",
-    "placeholders": {
-      "count": {
-        "content": "$1",
-        "example": "2"
-      }
-    }
   }
 }

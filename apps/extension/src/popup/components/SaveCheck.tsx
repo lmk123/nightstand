@@ -7,9 +7,10 @@ import {HelpLink} from '../help'
  * Shown on the list right after a save that protects something new: asks the
  * user to check the address bar themselves. Deleting history has missed
  * suggestions before (redirect hops, other domains the site uses), and only
- * a real look at the address bar tells.
+ * a real look at the address bar tells. It never names the domain: some are
+ * revealing on their own.
  */
-export function SaveCheck({host, onDismiss}: {host: string; onDismiss: () => void}) {
+export function SaveCheck({onDismiss}: {onDismiss: () => void}) {
   return (
     <div role="status" className="bg-accent text-accent-foreground grid gap-2 rounded-md p-3 text-xs leading-relaxed">
       <div className="flex items-start gap-2">
@@ -25,7 +26,7 @@ export function SaveCheck({host, onDismiss}: {host: string; onDismiss: () => voi
           <X />
         </Button>
       </div>
-      <p>{t('saveCheckHow', host, host.slice(0, 3))}</p>
+      <p>{t('saveCheckHow')}</p>
       <p>{t('saveCheckOpenTab')}</p>
       <p>{t('saveCheckIfStill')}</p>
       <HelpLink topic="extraHosts" label="faqExtraLink" />

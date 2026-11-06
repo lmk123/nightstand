@@ -11,6 +11,7 @@ export type OpenMode = 'current' | 'newTab' | 'incognito'
 export interface VaultEntry {
   id: string
   url: string
+  /** As the user typed it; empty means untitled (see `isUntitled`). */
   title: string
   matchMode: MatchMode
   /**
@@ -100,7 +101,9 @@ export function createEntry(
   const parsed = parseUserUrl(input.url)
   if (!parsed) throw new CoreError('invalid-url')
   const url = parsed.href
-  const title = input.title?.trim() || hostOf(url) || url
+  // No domain as a fallback: some are revealing on their own, and the title
+  // is what the list shows. The UI names untitled entries.
+  const title = input.title?.trim() ?? ''
   const matchMode = input.matchMode ?? 'site'
   const extra = parseExtraHosts(input.extraHosts ?? [])
   if (extra.invalid.length > 0) throw new CoreError('invalid-host', extra.invalid.join(' '))
@@ -115,6 +118,17 @@ export function createEntry(
     createdAt: now,
     openCount: 0
   }
+}
+
+/**
+ * Whether the UI should show its neutral "untitled" name instead of `title`.
+ * Entries saved before titles stopped defaulting to the domain carry the
+ * host (or the URL) as their title; those count as untitled too, so the list
+ * never shows a domain without needing a stored-data migration.
+ */
+export function isUntitled(entry: Pick<VaultEntry, 'url' | 'title'>): boolean {
+  const title = entry.title.trim()
+  return title === '' || title === entry.url || title === hostOf(entry.url)
 }
 
 /** Applies an edit; the URL is re-validated. Throws `invalid-url`. */

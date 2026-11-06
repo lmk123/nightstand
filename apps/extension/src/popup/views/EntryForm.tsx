@@ -4,8 +4,8 @@ import {
   createEntry,
   editEntry,
   findDuplicate,
-  hostOf,
   isCoreError,
+  isUntitled,
   parseExtraHosts,
   type EntryInput,
   type MatchMode,
@@ -24,6 +24,7 @@ import {t} from '@/platform/i18n'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
 import {HelpLink} from '../help'
+import {entryTitle} from '../title'
 
 /**
  * Short add/edit form. Unsaved changes are simply dropped when the popup
@@ -54,7 +55,7 @@ export function EntryForm({
 }) {
   const initial = editing ?? prefill
   const [url, setUrl] = useState(initial?.url ?? '')
-  const [title, setTitle] = useState(initial?.title ?? '')
+  const [title, setTitle] = useState(editing && isUntitled(editing) ? '' : (initial?.title ?? ''))
   const [matchMode, setMatchMode] = useState<MatchMode>(initial?.matchMode ?? 'site')
   const [extraHosts, setExtraHosts] = useState((initial?.extraHosts ?? []).join('\n'))
   const [extraOpen, setExtraOpen] = useState(false)
@@ -91,7 +92,7 @@ export function EntryForm({
       throw e
     }
     const duplicate = findDuplicate(entries, entry, editing?.id)
-    if (duplicate) return setError(t('errDuplicate', duplicate.title))
+    if (duplicate) return setError(t('errDuplicate', entryTitle(duplicate)))
     if (skipNotice) return save(entry, false)
     setBusy(true)
     let history: number
@@ -132,7 +133,13 @@ export function EntryForm({
             />
           </Field>
           <Field label={t('fieldTitle')} htmlFor="title">
-            <Input id="title" autoFocus={!!initial?.url} value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input
+              id="title"
+              autoFocus={!!initial?.url}
+              placeholder={t('untitledEntry')}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
           </Field>
           <Field label={t('fieldMatchMode')}>
             <RadioGroup value={matchMode} onValueChange={(v) => setMatchMode(v as MatchMode)} className="gap-2">
@@ -187,11 +194,13 @@ export function EntryForm({
               {t('saveNoticeTitle')}
             </p>
             <p>
-              {pending.entry.matchMode === 'site'
-                ? t('saveNoticeSite', [hostOf(pending.entry.url) ?? pending.entry.url, ...pending.entry.extraHosts].join('、'))
-                : pending.entry.extraHosts.length > 0
-                  ? t('saveNoticeExactExtra', pending.entry.extraHosts.join('、'))
-                  : t('saveNoticeExact')}
+              {/* No domains here: some are revealing on their own. */}
+              {pending.entry.extraHosts.length > 0
+                ? t(
+                    pending.entry.matchMode === 'site' ? 'saveNoticeSiteExtra' : 'saveNoticeExactExtra',
+                    String(pending.entry.extraHosts.length)
+                  )
+                : t(pending.entry.matchMode === 'site' ? 'saveNoticeSite' : 'saveNoticeExact')}
             </p>
             <ul className="list-disc pl-4">
               <li>{t('saveNoticeHistory', String(pending.history))}</li>

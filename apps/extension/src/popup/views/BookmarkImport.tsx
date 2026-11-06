@@ -93,9 +93,8 @@ export function BookmarkImport({
                   onCheckedChange={(v) => toggle(row, v === true)}
                 />
                 <span className={row.url ? 'min-w-0 flex-1 truncate' : 'min-w-0 flex-1 truncate font-medium'}>
-                  {row.title || t('bmUntitledFolder')}
+                  {row.title || (row.url ? t('untitledEntry') : t('bmUntitledFolder'))}
                 </span>
-                {row.url && <span className="text-muted-foreground max-w-28 truncate text-xs">{hostOf(row.url)}</span>}
               </Label>
             </li>
           )

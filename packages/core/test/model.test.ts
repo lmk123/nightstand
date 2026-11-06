@@ -7,6 +7,7 @@ import {
   emptyVaultData,
   findDuplicate,
   isCoreError,
+  isUntitled,
   migrateVaultData,
   parseExtraHosts,
   recordOpen,
@@ -25,7 +26,7 @@ describe('createEntry', () => {
     expect(e).toEqual({
       id: 'id1',
       url: 'https://example.com/foo',
-      title: 'example.com',
+      title: '',
       matchMode: 'site',
       extraHosts: [],
       createdAt: NOW,
@@ -59,6 +60,18 @@ describe('createEntry', () => {
     } catch (error) {
       expect(isCoreError(error, 'invalid-url')).toBe(true)
     }
+  })
+})
+
+describe('isUntitled', () => {
+  it('is true for a blank title and for the domain or URL old entries defaulted to', () => {
+    expect(isUntitled(createEntry({url: 'example.com', title: '  '}, NOW))).toBe(true)
+    expect(isUntitled({url: 'https://www.example.com/', title: 'example.com'})).toBe(true)
+    expect(isUntitled({url: 'https://example.com/a?b=1', title: 'https://example.com/a?b=1'})).toBe(true)
+  })
+  it('is false for a real title, even one that mentions the site', () => {
+    expect(isUntitled({url: 'https://example.com/', title: 'Example'})).toBe(false)
+    expect(isUntitled({url: 'https://example.com/', title: 'example.com docs'})).toBe(false)
   })
 })
 

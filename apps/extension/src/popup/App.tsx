@@ -39,7 +39,7 @@ type View =
   | {name: 'onboarding'}
   | {name: 'locked'}
   | {name: 'decoySettings'}
-  | {name: 'vault'; notice?: 'incognito' | 'unsupportedTab'; savedHost?: string}
+  | {name: 'vault'; notice?: 'incognito' | 'unsupportedTab' | 'saveCheck'}
   | {name: 'entry'; editing?: VaultEntry; prefill?: EntryInput}
   | {name: 'settings'}
   | {name: 'resetPassphrase'}
@@ -187,9 +187,9 @@ export default function App() {
               </div>
             ) : view.notice === 'unsupportedTab' ? (
               <p className="bg-accent text-accent-foreground m-2 mb-0 rounded-md p-2 text-xs">{t('currentTabUnsupported')}</p>
-            ) : view.savedHost ? (
+            ) : view.notice === 'saveCheck' ? (
               <div className="p-2 pb-0">
-                <SaveCheck host={view.savedHost} onDismiss={() => setView({name: 'vault'})} />
+                <SaveCheck onDismiss={() => setView({name: 'vault'})} />
               </div>
             ) : undefined
           }
@@ -219,8 +219,7 @@ export default function App() {
             // Cleaning has missed address-bar suggestions before (redirect
             // hops, other domains): ask the user to check it right away
             // whenever this save protects something new.
-            const host = widensScope(view.editing, entry) ? hostOf(entry.url) : null
-            setView(host ? {name: 'vault', savedHost: host} : {name: 'vault'})
+            setView(widensScope(view.editing, entry) ? {name: 'vault', notice: 'saveCheck'} : {name: 'vault'})
           }}
           onDelete={async (entry) => {
             await update(removeEntry(session.data, entry.id))

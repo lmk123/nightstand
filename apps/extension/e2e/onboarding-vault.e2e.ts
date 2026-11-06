@@ -96,6 +96,9 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
     await clickText(p, '取消')
     // …but the same host as an exact entry is not.
     await addEntry(p, 'example.org/page?q=1', 'exact')
+    // Saved without a title: the list shows a neutral name, never the domain.
+    expect(await listItems(p)).toEqual(['未未命名', '未未命名'])
+    expect(await hasText(p, 'example')).toBe(false)
 
     const stored = await storageSnapshot(s)
     expect(JSON.stringify(stored.shelf)).not.toContain('example')
@@ -171,7 +174,7 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
     await clickText(p, '手动添加')
     await p.type('#url', 'www.example.net/a')
     await clickText(p, '保存')
-    await waitText(p, '会立即删除 example.net（含所有子域名）的')
+    await waitText(p, '会立即删除这个网站（含所有子域名）的')
     // Backing out keeps the draft and saves nothing.
     await clickText(p, '返回修改')
     expect(await p.$eval('#url', (el) => (el as HTMLInputElement).value)).toBe('www.example.net/a')
