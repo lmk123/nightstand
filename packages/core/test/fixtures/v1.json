@@ -1,0 +1,98 @@
+{
+  "_comment": "Frozen v1 stored vault. Never regenerate or edit: future versions must keep opening it.",
+  "passphrase": "lantern",
+  "recoveryCode": "81YR-3WS2-P5QA-XE5J-JPKH-7B9R-G3BF-HKHP",
+  "expected": {
+    "version": 1,
+    "entries": [
+      {
+        "id": "e1",
+        "url": "https://example.com/",
+        "title": "Example",
+        "tags": [
+          "test"
+        ],
+        "matchMode": "site",
+        "createdAt": 1700000000000,
+        "openCount": 2,
+        "lastOpenedAt": 1700000500000
+      },
+      {
+        "id": "e2",
+        "url": "https://example.org/page?q=1",
+        "title": "Example page",
+        "note": "备注",
+        "tags": [],
+        "matchMode": "exact",
+        "createdAt": 1700000100000,
+        "openCount": 0
+      }
+    ],
+    "settings": {
+      "openMode": "incognito"
+    }
+  },
+  "vault": {
+    "version": 1,
+    "kdf": {
+      "pass": {
+        "algorithm": "PBKDF2-SHA256",
+        "iterations": 1000,
+        "salt": "Rse7Kmgx/hsTNtQ9TODr7g=="
+      },
+      "recovery": {
+        "algorithm": "PBKDF2-SHA256",
+        "iterations": 1000,
+        "salt": "F/E8Gn+jotqOd7clpSus6w=="
+      }
+    },
+    "wrapped": {
+      "pass": {
+        "iv": "f5te+idhT/hGLX2B",
+        "ct": "G55NoO7bbSbht0FYVzPrQTJWdLW2H0BO8V9W6dcqFe+By+Uj0Jh0vhck6uoquLcV"
+      },
+      "recovery": {
+        "iv": "4lbOKF2G1PvjAqIv",
+        "ct": "r3U+e5E87V/BcxZcV/l6HqlsP0xFlPRZpaOp/EdqSgFShzUcmM1GvzSf17yW4eCp"
+      }
+    },
+    "payload": {
+      "iv": "5cX4aqSZuZ7G+27l",
+      "ct": "CO7YiZkagv2mlwOEGSSI1bGRIwuCTadQ9EvCdXfgQKomqmV6qVpanOL4x3oCjf2T68sUnxfxAy+CwY/J2FLB5joK1KUbEecFg4chJHR5YcbsRfxizyICyYZEWK0XnHd2HU6AYkDyuDQms3WXeqkNYSTfkb7CrXMEQFjElE7xQlLmEazztLZ+igTIgouBgk/bd4rlVpzN9oswD1f1hmL0BjD8xHOgn+du+SOJTE/1ugoJ0zWa7qi0OvlqrD5hGUp3/mcpGfvIZYf/zAW+dMt9ZJ7BV0xyyb79SL0HMePf2dCdvC0S18Fpw1zQrLYabmkEOm5DENhE4JJGREWeA0CUxw+tnPHDdjK9f7TQv3WKfSJ/4gNa6gIA4WkSSY4CBBuZ7ThtZrUXayvwXDQqA7LVf0t7/6U3Q0avg3lWRhoNHpJT+nXEbsNB9i4FDO3ZLxfbe+8krjmOWL9TzEaXdX5mbJPjm77xWZrxgYck5csJRJiteDLMawiZSUlVJhLVHGrSGYyCWkJ/Nik4nMR2ceQ="
+    }
+  },
+  "backup": {
+    "format": "nightstand-backup",
+    "version": 1,
+    "createdAt": 1700001000000,
+    "vault": {
+      "version": 1,
+      "kdf": {
+        "pass": {
+          "algorithm": "PBKDF2-SHA256",
+          "iterations": 1000,
+          "salt": "Rse7Kmgx/hsTNtQ9TODr7g=="
+        },
+        "recovery": {
+          "algorithm": "PBKDF2-SHA256",
+          "iterations": 1000,
+          "salt": "F/E8Gn+jotqOd7clpSus6w=="
+        }
+      },
+      "wrapped": {
+        "pass": {
+          "iv": "f5te+idhT/hGLX2B",
+          "ct": "G55NoO7bbSbht0FYVzPrQTJWdLW2H0BO8V9W6dcqFe+By+Uj0Jh0vhck6uoquLcV"
+        },
+        "recovery": {
+          "iv": "4lbOKF2G1PvjAqIv",
+          "ct": "r3U+e5E87V/BcxZcV/l6HqlsP0xFlPRZpaOp/EdqSgFShzUcmM1GvzSf17yW4eCp"
+        }
+      },
+      "payload": {
+        "iv": "5cX4aqSZuZ7G+27l",
+        "ct": "CO7YiZkagv2mlwOEGSSI1bGRIwuCTadQ9EvCdXfgQKomqmV6qVpanOL4x3oCjf2T68sUnxfxAy+CwY/J2FLB5joK1KUbEecFg4chJHR5YcbsRfxizyICyYZEWK0XnHd2HU6AYkDyuDQms3WXeqkNYSTfkb7CrXMEQFjElE7xQlLmEazztLZ+igTIgouBgk/bd4rlVpzN9oswD1f1hmL0BjD8xHOgn+du+SOJTE/1ugoJ0zWa7qi0OvlqrD5hGUp3/mcpGfvIZYf/zAW+dMt9ZJ7BV0xyyb79SL0HMePf2dCdvC0S18Fpw1zQrLYabmkEOm5DENhE4JJGREWeA0CUxw+tnPHDdjK9f7TQv3WKfSJ/4gNa6gIA4WkSSY4CBBuZ7ThtZrUXayvwXDQqA7LVf0t7/6U3Q0avg3lWRhoNHpJT+nXEbsNB9i4FDO3ZLxfbe+8krjmOWL9TzEaXdX5mbJPjm77xWZrxgYck5csJRJiteDLMawiZSUlVJhLVHGrSGYyCWkJ/Nik4nMR2ceQ="
+      }
+    }
+  }
+}
