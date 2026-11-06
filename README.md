@@ -104,7 +104,10 @@ pnpm install
 pnpm dev            # Chromium；Firefox 用 pnpm dev:firefox
 pnpm build          # 产物在 apps/extension/dist/chromium（Firefox：pnpm build:firefox）
 pnpm lint && pnpm type-check && pnpm test
+pnpm test:e2e       # 端到端测试：先构建，再驱动本机安装的 Chrome / Firefox
 ```
+
+端到端测试在 `apps/extension/e2e/`，用 Vitest + puppeteer-core 驱动真实浏览器，覆盖引导、增删改查、历史清理、伪装界面、Panic、备份与书签导入。真实 popup 的焦点相关行为需要有界面的窗口，用 `E2E_HEADED=1 pnpm test:e2e` 运行。
 
 ### 目录结构
 

@@ -50,6 +50,7 @@
     "start": "extension start",
     "build": "extension build",
     "build:firefox": "extension build --browser firefox",
-    "preview": "extension preview"
+    "preview": "extension preview",
+    "test:e2e": "extension build && extension build --browser firefox && vitest run --config vitest.e2e.config.ts"
   }
 }

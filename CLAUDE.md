@@ -22,14 +22,16 @@ pnpm dev                # extension dev server + browser (Chromium); pnpm dev:fi
 pnpm build              # production build → apps/extension/dist/chromium (build:firefox too)
 pnpm lint               # ESLint in every package + manifest wording check
 pnpm type-check         # tsc --noEmit (TS 7) in every package — the build does NOT fail on type errors
-pnpm test               # Vitest (packages/core only)
+pnpm test               # Vitest unit tests (packages/core)
+pnpm test:e2e           # builds both targets, then drives real Chrome/Firefox (apps/extension/e2e)
+E2E_HEADED=1 pnpm test:e2e   # also runs the real-popup checks, which need a visible window
 pnpm --filter @nightstand/core test:watch
 pnpm --filter @nightstand/extension icons   # re-render icons-src/*.svg → public/icons/<set>/<size>.png
 ```
 
 Pass Extension.js flags straight after the script name inside the package, e.g. `pnpm --filter @nightstand/extension run dev --browser=firefox`. Do **not** insert `--`: pnpm forwards it literally and Extension.js then reads the flag as a project path ("Manifest file not found").
 
-Run `lint`, `type-check` and `test` after every non-trivial change. The extension package has no unit tests by design; correctness of anything testable belongs in `packages/core`.
+Run `lint`, `type-check` and `test` after every non-trivial change, and `test:e2e` after changes to the popup, background or manifest. The extension package has no unit tests by design: pure logic belongs in `packages/core` (unit-tested); browser behaviour is covered by the e2e suite.
 
 ### TypeScript 6 and 7 side by side (on purpose)
 
@@ -87,12 +89,15 @@ Walk through the relevant items in a real browser for every milestone that touch
 
 Also verify, and document under "Known limitations" in the README: whether the Chrome address bar still suggests protected sites from bookmarks, open tabs, search-engine suggestions (server side, tied to Google account activity) or the omnibox "shortcuts" database after history deletion; and whether `history.deleteUrl` also deletes on other devices when Chrome Sync is on.
 
-## Testing in a real browser (what has worked)
+## End-to-end tests (`apps/extension/e2e`)
 
-- **Chrome**: launch Google Chrome with `puppeteer-core` (`pipe: true`, `enableExtensions: [<dist/chromium>]`, a fresh `userDataDir`). The extension id comes from the service-worker target; `worker.evaluate()` reaches `chrome.*` in the background. Opening `chrome-extension://<id>/action/index.html` in a tab drives the popup UI headless. `--host-resolver-rules=MAP * 127.0.0.1:<port>` plus a local HTTP server makes `example.com` & co. real visits that land in history.
-- **The real popup** (needed for focus-related behaviour): run headed and call `chrome.action.openPopup({windowId})` from the service worker after focusing a normal window. Findings: a `permissions.request` prompt **closes** the popup; a file chooser does **not** (Chrome on macOS); a blob download completes after the popup closes.
-- **Firefox**: puppeteer's WebDriver BiDi can install the add-on (`browser.installExtension`) but refuses to navigate to or expose `moz-extension://` pages, so the popup UI can't be driven there. Background behaviour can be verified by seeding storage from a test-only copy of the build and reading `places.sqlite` with `sqlite3` after closing the browser. Popup-only Firefox branches (paste-based backup import, private-window wording) still need a manual pass with `pnpm dev:firefox`.
-- The bookmarks permission prompt can't be accepted headless; test the granted path with a copy of the build whose manifest lists `bookmarks` as a required permission.
+Vitest + `puppeteer-core` against the installed Google Chrome and Firefox (override with `CHROME_PATH` / `FIREFOX_PATH`; a suite skips itself when its browser or build is missing). Shared helpers live in `e2e/support/`; all temp profiles, downloads and patched build copies go under the OS temp dir and are removed after each file. What the suite relies on, and why:
+
+- **Chrome**: `puppeteer.launch({pipe: true, enableExtensions: [dist/chromium]})` with a fresh profile. The extension id comes from the service-worker target; `sw.evaluate()` reaches `chrome.*` in the background. The popup UI is driven as a tab at `chrome-extension://<id>/action/index.html` (closing the tab = closing the popup). `--host-resolver-rules=MAP * 127.0.0.1:<port>` plus `e2e/support/server.ts` makes `example.com` & co. real visits that land in history. Panic is fired with `chrome.commands.onCommand.dispatch('panic')`.
+- **Permission prompts can't be accepted by automation.** Tests that need `bookmarks` use `patchedCopy(dist, {manifest: grantBookmarks})`, a temp copy of the build with the permission made required.
+- **The real popup** (`e2e/real-popup.e2e.ts`, `E2E_HEADED=1` only): `chrome.action.openPopup({windowId})` from the service worker after focusing a normal window. It pins the findings the UI is designed around: a `permissions.request` prompt **closes** the popup; a file chooser does **not** (Chrome on macOS); a blob download completes after the popup closes.
+- **Firefox**: WebDriver BiDi installs the add-on (`browser.installExtension`) but refuses to navigate to or expose `moz-extension://` pages, so the popup UI can't be driven. `e2e/firefox-history.e2e.ts` checks the background instead: a patched copy seeds the match table, visits go through the test server as an HTTP proxy, and `places.sqlite` (read with the `sqlite3` CLI after closing the browser) shows what history is left. Popup-only Firefox branches (paste-based backup import, private-window wording) still need a manual pass with `pnpm dev:firefox`.
+- UI steps find buttons by their zh_CN label (`clickText`), so renaming copy in `_locales` can break e2e tests — update both.
 
 ## MCP servers
 

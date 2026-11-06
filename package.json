@@ -9,7 +9,8 @@
     "build:firefox": "pnpm --filter @nightstand/extension run build:firefox",
     "lint": "pnpm -r run lint",
     "type-check": "pnpm -r run type-check",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "test:e2e": "pnpm --filter @nightstand/extension run test:e2e"
   },
   "packageManager": "pnpm@12.18.0"
 }
