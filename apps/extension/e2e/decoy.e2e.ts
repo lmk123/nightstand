@@ -89,16 +89,16 @@ describe.skipIf(!hasChrome)('decoy launcher (Chrome)', () => {
     await p.close()
   })
 
-  it('turning the disguise off shows a classic passphrase screen', async () => {
-    let p = await openPopup(s)
-    expect(await submitUnlock(p, 'notes')).toBe(true)
-    await p.click('button[aria-label="设置"]')
-    await waitText(p, '快速收起快捷键')
-    await p.click('[data-slot=switch]')
-    await sleep(300)
-    await p.close()
-    p = await openPopup(s)
-    expect(await hasText(p, '忘记口令？')).toBe(true)
+  // Last on purpose: it leaves the stored vault unreadable.
+  it('an unreadable vault shows a neutral notice and never falls back to onboarding', async () => {
+    const shelf = (await storageSnapshot(s)).shelf as Record<string, unknown>
+    await s.sw.evaluate((shelf) => chrome.storage.local.set({shelf: {...shelf, version: 999}}), shelf)
+    const p = await openPopup(s)
+    await waitText(p, '请更新扩展，不要卸载')
+    expect(await hasText(p, '口令')).toBe(false)
+    expect(await listItems(p)).toHaveLength(5)
+    expect(await submitUnlock(p, 'notes')).toBe(false)
+    expect(((await storageSnapshot(s)).shelf as {version: number}).version).toBe(999)
     await p.close()
   })
 })

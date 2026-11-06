@@ -98,7 +98,7 @@
     "message": "保存恢复码"
   },
   "onbCodeBody": {
-    "message": "忘记口令时，可以用恢复码重新设置口令。恢复码只显示这一次，请抄下来或存进密码管理器。"
+    "message": "忘记口令时，在筛选框里粘贴恢复码再按回车，即可重新设置口令。恢复码只显示这一次，请抄下来或存进密码管理器。"
   },
   "onbCodeConfirm": {
     "message": "我已妥善保存恢复码"
@@ -111,33 +111,6 @@
   },
   "onbFinish": {
     "message": "完成"
-  },
-  "lockTitle": {
-    "message": "输入口令"
-  },
-  "lockPlaceholder": {
-    "message": "口令"
-  },
-  "lockRecoveryTitle": {
-    "message": "使用恢复码"
-  },
-  "lockRecoveryHint": {
-    "message": "输入设置时保存的恢复码，然后设置新的口令。"
-  },
-  "lockRecoveryPlaceholder": {
-    "message": "XXXX-XXXX-…"
-  },
-  "lockWrong": {
-    "message": "口令不正确"
-  },
-  "lockForgot": {
-    "message": "忘记口令？"
-  },
-  "lockUsePassphrase": {
-    "message": "改用口令"
-  },
-  "errStorageUnreadable": {
-    "message": "无法读取已保存的数据，可能是由更新版本写入的。请先更新扩展。"
   },
   "vaultTitle": {
     "message": "收藏"
@@ -283,6 +256,9 @@
   "decoyEmpty": {
     "message": "没有匹配的链接"
   },
+  "decoyDataUnreadable": {
+    "message": "部分数据无法读取，可能是由更新版本写入的。请更新扩展，不要卸载。"
+  },
   "decoySettingsTitle": {
     "message": "快捷链接设置"
   },
@@ -315,15 +291,6 @@
   },
   "iconGrid": {
     "message": "网格"
-  },
-  "disguiseLabel": {
-    "message": "锁定时显示为快捷链接工具"
-  },
-  "disguiseOnHint": {
-    "message": "锁定时只显示快捷链接。在筛选框里输入口令再按回车即可解锁；口令错误不会有任何提示。忘记口令时，在筛选框里粘贴恢复码再按回车。"
-  },
-  "disguiseOffHint": {
-    "message": "锁定时显示普通的口令输入框。"
   },
   "shortcutSection": {
     "message": "快速收起快捷键"

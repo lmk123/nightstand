@@ -2,11 +2,9 @@ import {useEffect, useState} from 'react'
 import type {DecoyConfig, OpenMode, VaultSettings} from '@nightstand/core'
 import {Label} from '@/components/ui/label'
 import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group'
-import {Switch} from '@/components/ui/switch'
 import {isFirefoxLike} from '@/lib/browser'
 import {t} from '@/platform/i18n'
 import {isIncognitoAllowed} from '@/platform/tabs'
-import {saveLinks} from '@/platform/storage'
 import {Header} from '../components/Header'
 import {IconPicker} from '../components/IconPicker'
 import {IncognitoHelp} from '../components/IncognitoHelp'
@@ -54,22 +52,6 @@ export function Settings({
             </Label>
           </RadioGroup>
           {settings.openMode === 'incognito' && incognitoAllowed === false && <IncognitoHelp />}
-        </section>
-        <section className="grid gap-2">
-          <Label className="flex items-center justify-between gap-3 text-xs font-medium">
-            {t('disguiseLabel')}
-            <Switch
-              checked={links.disguise}
-              onCheckedChange={async (disguise) => {
-                const next = {...links, disguise}
-                await saveLinks(next)
-                onLinksChange(next)
-              }}
-            />
-          </Label>
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            {links.disguise ? t('disguiseOnHint') : t('disguiseOffHint')}
-          </p>
         </section>
         <section className="grid gap-2">
           <h2 className="text-xs font-medium">{t('iconSection')}</h2>

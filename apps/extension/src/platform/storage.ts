@@ -16,7 +16,7 @@ import {
  *
  * - `shelf`    encrypted vault (absent until onboarding completes)
  * - `index`    hashed match table for the background
- * - `links`    decoy links + icon + disguise flag (plaintext, needed while locked)
+ * - `links`    decoy links + icon (plaintext, needed while locked)
  * - `throttle` failed-unlock back-off (written by the popup)
  * - `state`    background bookkeeping (written by the background)
  *

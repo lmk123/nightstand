@@ -13,10 +13,10 @@ import {
 } from '../src/index.ts'
 
 describe('decoy links', () => {
-  it('defaults to a handful of ordinary links with the disguise on', () => {
+  it('defaults to a handful of ordinary links', () => {
     const config = defaultDecoyConfig()
     expect(config.links.map((l) => l.title)).toEqual(['GitHub', 'MDN Web Docs', 'Google Docs', 'Gmail'])
-    expect(config).toMatchObject({icon: 'nightstand', disguise: true})
+    expect(config).toMatchObject({icon: 'nightstand'})
   })
   it('filters on title and url', () => {
     const {links} = defaultDecoyConfig()
@@ -29,10 +29,10 @@ describe('decoy links', () => {
     expect(makeDecoyLink('', 'example.com', 'i')).toEqual({id: 'i', title: 'example.com', url: 'https://example.com/'})
     expect(makeDecoyLink('x', 'ftp://example.com')).toBeNull()
   })
-  it('parseDecoyConfig falls back field by field', () => {
+  it('parseDecoyConfig falls back field by field and drops the old disguise flag', () => {
     expect(parseDecoyConfig(undefined)).toEqual(defaultDecoyConfig())
     const parsed = parseDecoyConfig({links: [{id: 'a', title: 'A', url: 'https://a.test/'}, {bad: 1}], icon: 'nope', disguise: false})
-    expect(parsed).toEqual({version: 1, links: [{id: 'a', title: 'A', url: 'https://a.test/'}], icon: 'nightstand', disguise: false})
+    expect(parsed).toEqual({version: 1, links: [{id: 'a', title: 'A', url: 'https://a.test/'}], icon: 'nightstand'})
   })
 })
 

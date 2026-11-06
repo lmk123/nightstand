@@ -25,7 +25,6 @@ import {BookmarkImport} from './views/BookmarkImport'
 import {Decoy} from './views/Decoy'
 import {DecoySettings} from './views/DecoySettings'
 import {EntryForm} from './views/EntryForm'
-import {LockScreen} from './views/LockScreen'
 import {NewPassphrase} from './views/NewPassphrase'
 import {Onboarding} from './views/Onboarding'
 import {RecoveryCode} from './views/RecoveryCode'
@@ -48,6 +47,7 @@ type View =
 
 interface Boot {
   stored: StoredVault | null
+  /** The stored vault exists but can't be read (damaged, or written by a newer build). */
   loadError: boolean
   links: DecoyConfig
 }
@@ -164,15 +164,14 @@ export default function App() {
   }
 
   if (!session || view.name === 'locked') {
-    return boot.links.disguise ? (
+    return (
       <Decoy
         links={boot.links.links}
         stored={boot.stored}
+        loadError={boot.loadError}
         onUnlocked={handleUnlocked}
         onSettings={() => setView({name: 'decoySettings'})}
       />
-    ) : (
-      <LockScreen stored={boot.stored} loadError={boot.loadError} onUnlocked={handleUnlocked} />
     )
   }
 

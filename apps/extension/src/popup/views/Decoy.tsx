@@ -12,15 +12,21 @@ import {attemptUnlock, type UnlockResult} from '../session'
  * launcher. The filter box filters as you type; only Enter tries the typed
  * text as a passphrase (or recovery code). A failed attempt is
  * indistinguishable from filtering — no message, no shake, no delay shown.
+ *
+ * If the stored vault can't be read, a neutral notice says so (no word about
+ * passphrases): otherwise the owner would think they forgot the passphrase and
+ * might uninstall, destroying data that an update could still read.
  */
 export function Decoy({
   links,
   stored,
+  loadError,
   onUnlocked,
   onSettings
 }: {
   links: DecoyLink[]
   stored: StoredVault | null
+  loadError: boolean
   onUnlocked: (result: UnlockResult) => void
   onSettings: () => void
 }) {
@@ -57,6 +63,11 @@ export function Decoy({
           <Settings />
         </Button>
       </div>
+      {loadError && (
+        <p role="status" className="bg-muted text-muted-foreground m-2 mb-0 rounded-md p-2 text-xs leading-relaxed">
+          {t('decoyDataUnreadable')}
+        </p>
+      )}
       <ul className="min-h-0 flex-1 overflow-y-auto p-1">
         {visible.length === 0 && (
           <li className="text-muted-foreground p-4 text-center text-sm">{t('decoyEmpty')}</li>

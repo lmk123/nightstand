@@ -3,7 +3,8 @@ import {parseUserUrl} from './url.ts'
 
 /**
  * The decoy "Quick Links" launcher shown while locked, plus the plaintext
- * preferences needed before unlocking (icon, whether the decoy is used).
+ * preferences needed before unlocking (icon). Locked, Nightstand always shows
+ * the launcher; there is no plain passphrase screen.
  */
 
 export interface DecoyLink {
@@ -19,8 +20,6 @@ export interface DecoyConfig {
   version: 1
   links: DecoyLink[]
   icon: IconSet
-  /** True: show the decoy launcher while locked. False: a classic passphrase screen. */
-  disguise: boolean
 }
 
 export const DEFAULT_DECOY_LINKS: readonly DecoyLink[] = [
@@ -34,8 +33,7 @@ export function defaultDecoyConfig(): DecoyConfig {
   return {
     version: 1,
     links: DEFAULT_DECOY_LINKS.map((l) => ({...l})),
-    icon: 'nightstand',
-    disguise: true
+    icon: 'nightstand'
   }
 }
 
@@ -78,7 +76,7 @@ export function parseDecoyConfig(raw: unknown): DecoyConfig {
   return {
     version: 1,
     links: Array.isArray(raw.links) ? raw.links.filter(isDecoyLink) : fallback.links,
-    icon: isIconSet(raw.icon) ? raw.icon : fallback.icon,
-    disguise: typeof raw.disguise === 'boolean' ? raw.disguise : fallback.disguise
+    // Builds before the decoy became mandatory also stored `disguise`; it is dropped here.
+    icon: isIconSet(raw.icon) ? raw.icon : fallback.icon
   }
 }
