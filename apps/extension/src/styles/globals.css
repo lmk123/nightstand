@@ -120,6 +120,20 @@
     * {
         @apply border-border outline-ring/50;
     }
+    /* Tailwind v4 no longer gives buttons a pointer cursor; restore it for
+       everything clickable (plain buttons, Base UI checkbox/radio/switch, and
+       labels that wrap one). Disabled controls keep the default cursor. */
+    button:not(:disabled),
+    [role="button"]:not([aria-disabled="true"]),
+    [role="checkbox"]:not([data-disabled]),
+    [role="radio"]:not([data-disabled]),
+    [role="switch"]:not([data-disabled]),
+    label:has([role="checkbox"]:not([data-disabled]), [role="radio"]:not([data-disabled]), [role="switch"]:not([data-disabled])),
+    a[href],
+    summary,
+    select:not(:disabled) {
+        cursor: pointer;
+    }
     body {
         @apply bg-background text-foreground;
         font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
