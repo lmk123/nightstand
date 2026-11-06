@@ -29,6 +29,15 @@ const TYPED_FROM_ADDRESS_BAR = 0x02000001
 const CHAIN_START = 0x10000000
 const SERVER_REDIRECT = 0x80000000
 
+/** Opens a test-server `/js-redirect` URL and waits until the script has moved on to `/landed`. */
+async function followRedirect(session: ChromeSession, url: string): Promise<void> {
+  const tab = await session.browser.newPage()
+  await tab.goto(url)
+  await tab.waitForFunction(() => location.pathname === '/landed')
+  await sleep(300)
+  await tab.close()
+}
+
 describe.skipIf(!hasChrome || !hasSqlite())('redirect hops hidden from history.search (Chrome)', () => {
   let s: ChromeSession | undefined
   let server: Awaited<ReturnType<typeof startTestServer>>
@@ -84,19 +93,29 @@ describe.skipIf(!hasChrome || !hasSqlite())('redirect hops hidden from history.s
 
   it('saving counts and deletes them; later visits leave no hops either', async () => {
     const session = s!
+    // Before saving: an unprotected page script-redirects to a protected one
+    // (a sign-in or payment hand-off). Deleting the landing page's visit by
+    // time also expires the hops that led to it, wherever they were.
+    await followRedirect(session, 'http://example.com/js-redirect?c=unguessable&to=http://example.org/landed')
     const p = await openPopup(session)
     await onboard(p, 'notes')
-    for (const url of ['https://example.cc/', 'example.org']) {
+    for (const [url, pages] of [
+      ['https://example.cc/', 2],
+      ['example.org', 3]
+    ] as const) {
       await clickText(p, '手动添加')
       await p.type('#url', url)
       await clickText(p, '保存')
-      await waitText(p, '2 个网页的浏览记录')
+      await waitText(p, `${pages} 个网页的浏览记录`)
       await clickText(p, '确认保存')
       await waitText(p, '添加当前页')
     }
     await p.close()
-    // Locked: the background alone cleans this visit and its https attempt.
+    // Locked: the background alone cleans this visit and its https attempt,
+    // and the first hop of a client (script) redirect — onVisited reports it
+    // even though no search returns it.
     await visit(session, 'http://example.org/b')
+    await followRedirect(session, 'http://example.org/js-redirect?c=unguessable')
     await sleep(1000)
     await session.browser.close()
     s = undefined

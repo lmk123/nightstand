@@ -1,4 +1,5 @@
 import {addressVariants, createMatcher, emptyMatchTable, hostOf, type UrlMatcher} from '@nightstand/core'
+import {isChromiumLike} from '@/lib/browser'
 import {historySince} from '@/platform/history'
 import {loadIndex, STORAGE_KEYS} from '@/platform/storage'
 import {readState, updateState} from './state'
@@ -32,9 +33,38 @@ function isOwnPage(url: string): boolean {
 }
 
 /**
+ * Half-width of the window around one visit, in ms (1 µs). History keeps
+ * microseconds; `visitTime` is a float in ms, so allow for its rounding.
+ */
+const VISIT_WINDOW_MS = 0.001
+
+/**
+ * Chromium only: deletes each visit of `url` by time instead of by address.
+ *
+ * Expiring a visit makes Chrome also expire the redirect chain that led to it
+ * (what deleting an entry on `chrome://history` does), while `deleteUrl` drops
+ * only the URL itself. Those hops never show up in `history.search` and often
+ * carry unguessable query strings or another domain — a script redirect from
+ * a sign-in or payment page, a `?reload=…` bounce — yet the address bar still
+ * suggests them. The window is a couple of microseconds wide, so in practice
+ * it only ever holds the visit itself and hops recorded at the same instant.
+ *
+ * Not on Firefox: its `deleteRange` works in whole milliseconds and has no
+ * redirect-parent rule to trigger.
+ */
+async function expireVisitsWithRedirectParents(url: string): Promise<void> {
+  const times = new Set((await chrome.history.getVisits({url})).map((v) => v.visitTime ?? 0))
+  times.delete(0)
+  for (const t of times) {
+    await chrome.history.deleteRange({startTime: t - VISIT_WINDOW_MS, endTime: t + VISIT_WINDOW_MS})
+  }
+}
+
+/**
  * Deletes each URL together with its scheme / `www.` variants: redirect hops
- * of the same visit that `history.search` can't see (see `addressVariants`).
- * Deleting an address that isn't in history is a no-op.
+ * of the same visit that `history.search` can't see (see `addressVariants`),
+ * and on Chromium the redirect chains that led to its visits. Deleting an
+ * address that isn't in history is a no-op.
  */
 async function deleteUrls(urls: Iterable<string>): Promise<void> {
   const doomed = new Set<string>()
@@ -42,7 +72,10 @@ async function deleteUrls(urls: Iterable<string>): Promise<void> {
     doomed.add(url)
     for (const variant of addressVariants(url)) doomed.add(variant)
   }
-  for (const url of doomed) await chrome.history.deleteUrl({url})
+  for (const url of doomed) {
+    if (isChromiumLike) await expireVisitsWithRedirectParents(url)
+    await chrome.history.deleteUrl({url})
+  }
 }
 
 /** Deletes every history item (optionally restricted to a text search) that matches. */
