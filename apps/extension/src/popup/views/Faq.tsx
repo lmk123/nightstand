@@ -56,7 +56,7 @@ export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void})
     extraHosts: <ExtraHostsAnswer />,
     passphrase: <PassphraseAnswer />,
     storage: <StorageAnswer onPassphrase={() => setOpen('passphrase')} />,
-    secrets: <SecretsAnswer />
+    secrets: <SecretsAnswer onPassphrase={() => setOpen('passphrase')} />
   }
 
   return (
@@ -124,6 +124,19 @@ function Table({head, children}: {head: ReactNode; children: ReactNode}) {
 
 function Tip({children}: {children: ReactNode}) {
   return <p className="bg-accent text-accent-foreground rounded-[10px] px-3 py-2.5">{children}</p>
+}
+
+/** Opens the "how long should the passphrase be" answer from inside another one. */
+function PassphraseLink({onClick}: {onClick: () => void}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="justify-self-start rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+    >
+      {t('faqPassQ')}
+    </button>
+  )
 }
 
 function MatchModeAnswer() {
@@ -206,28 +219,24 @@ function StorageAnswer({onPassphrase}: {onPassphrase: () => void}) {
       <p>{t('faqStore1')}</p>
       <p>{t('faqStore2')}</p>
       <p>{t('faqStore3')}</p>
-      <button
-        type="button"
-        onClick={onPassphrase}
-        className="justify-self-start rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-      >
-        {t('faqPassQ')}
-      </button>
+      <PassphraseLink onClick={onPassphrase} />
       <p>{t('faqStore4')}</p>
       <p>{t('faqStore5')}</p>
     </>
   )
 }
 
-function SecretsAnswer() {
+function SecretsAnswer({onPassphrase}: {onPassphrase: () => void}) {
   return (
     <>
       <p>{t('faqSecret1')}</p>
       <p>{t('faqSecret2')}</p>
       <p>{t('faqSecret3')}</p>
       <p>{t('faqSecret4')}</p>
+      <PassphraseLink onClick={onPassphrase} />
       <p>{t('faqSecret5')}</p>
       <p>{t('faqSecret6')}</p>
+      <p>{t('faqSecret7')}</p>
       <Tip>{t('faqSecretWarn')}</Tip>
     </>
   )
