@@ -13,7 +13,16 @@ export interface ChromeSession {
 export async function launchChrome(
   options: {extension?: string; serverPort?: number; headless?: boolean; userDataDir?: string} = {}
 ): Promise<ChromeSession> {
-  const args = ['--no-first-run', '--no-default-browser-check', '--lang=zh-CN']
+  const args = [
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--lang=zh-CN',
+    // Chrome 157 turns on balanced HTTPS-First by default: an http:// visit to a
+    // public name (example.com) is tried over https first, and when the test
+    // server (plain http) fails that, Chrome shows its warning page instead —
+    // puppeteer sees net::ERR_BLOCKED_BY_CLIENT and nothing reaches history.
+    '--disable-features=HttpsFirstBalancedModeAutoEnable'
+  ]
   if (options.serverPort) args.push(`--host-resolver-rules=MAP * 127.0.0.1:${options.serverPort}`)
   const browser = await puppeteer.launch({
     executablePath: CHROME_PATH,
