@@ -183,6 +183,7 @@ function SecretsAnswer() {
       <p>{t('faqSecret4')}</p>
       <p>{t('faqSecret5')}</p>
       <p>{t('faqSecret6')}</p>
+      <p>{t('faqSecret7')}</p>
       <Tip>{t('faqSecretWarn')}</Tip>
     </>
   )
