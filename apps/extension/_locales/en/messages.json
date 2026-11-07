@@ -1,0 +1,630 @@
+{
+  "extName": {
+    "message": "Nightstand",
+    "description": "Extension name shown on the extensions page. Must stay neutral."
+  },
+  "extDescription": {
+    "message": "Keep your everyday links close at hand",
+    "description": "Extension description shown on the extensions page. Must stay neutral."
+  },
+  "actionTitle": {
+    "message": "Quick Links",
+    "description": "Toolbar button tooltip. Must stay neutral."
+  },
+  "commandPanic": {
+    "message": "Quick close",
+    "description": "Keyboard shortcut description on the shortcuts page. Must stay neutral."
+  },
+  "popupTitle": {
+    "message": "Quick Links",
+    "description": "Popup document title."
+  },
+  "htmlLang": {
+    "message": "en",
+    "description": "BCP 47 language tag of this catalog, set as the popup's <html lang>."
+  },
+  "back": {
+    "message": "Back"
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "lock": {
+    "message": "Lock"
+  },
+  "edit": {
+    "message": "Edit"
+  },
+  "delete": {
+    "message": "Delete"
+  },
+  "confirmDelete": {
+    "message": "Confirm delete"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "save": {
+    "message": "Save"
+  },
+  "saveNoticeTitle": {
+    "message": "Please confirm before saving"
+  },
+  "saveNoticeSite": {
+    "message": "Once you confirm, this will immediately delete the following for this site (including all subdomains):"
+  },
+  "saveNoticeSiteExtra": {
+    "message": "Once you confirm, this will immediately delete the following for this site and its extra domains ($COUNT$), all including subdomains:",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "saveNoticeExact": {
+    "message": "Once you confirm, this will immediately delete the following for this URL:"
+  },
+  "saveNoticeExactExtra": {
+    "message": "Once you confirm, this will immediately delete the following for this URL and its extra domains ($COUNT$, including subdomains):",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "saveNoticeHistory": {
+    "message": "Pages in history: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "saveNoticeBookmarks": {
+    "message": "Bookmarks: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "saveNoticeAutoClean": {
+    "message": "After saving, the browsing history of every visit will be deleted automatically"
+  },
+  "saveNoticeEffects": {
+    "message": "This can't be undone, and address bar suggestions that came from them disappear too. Cookies, cache and download history are not affected."
+  },
+  "saveCheckTitle": {
+    "message": "Saved. Check the address bar right away"
+  },
+  "saveCheckHow": {
+    "message": "Open a new tab and type the first few letters of the site's domain into the address bar — try words from the site's name too — and see whether the site still shows up in the suggestions."
+  },
+  "saveCheckOpenTab": {
+    "message": "While a tab of this site is still open, a \"Switch to this tab\" suggestion is normal. Close the tab and try again."
+  },
+  "saveCheckIfStill": {
+    "message": "If it still shows up: look at that suggestion's URL. If the domain is different, add it to this entry's \"Extra domains\". You can also select it with the arrow keys and press Shift+Delete (Shift+Fn+Delete on a Mac) to remove it."
+  },
+  "saveCheckDismiss": {
+    "message": "Got it"
+  },
+  "saveNoticeSkip": {
+    "message": "Don't show again"
+  },
+  "saveNoticeBack": {
+    "message": "Go back"
+  },
+  "saveNoticeConfirm": {
+    "message": "Confirm and save"
+  },
+  "next": {
+    "message": "Next"
+  },
+  "copy": {
+    "message": "Copy"
+  },
+  "copied": {
+    "message": "Copied"
+  },
+  "working": {
+    "message": "Please wait…"
+  },
+  "unlock": {
+    "message": "Unlock"
+  },
+  "onbIntroTitle": {
+    "message": "Welcome to Nightstand"
+  },
+  "onbIntroBody": {
+    "message": "Keep sites you don't want the address bar to suggest here instead of in your bookmarks bar. After every visit to one of them, Nightstand clears the matching browsing history."
+  },
+  "onbIntroNote": {
+    "message": "This is the only screen that explains what Nightstand is for, so it's best to finish setup when no one else can see your screen."
+  },
+  "onbStart": {
+    "message": "Get started"
+  },
+  "onbPassTitle": {
+    "message": "Choose a passphrase"
+  },
+  "onbPassHint": {
+    "message": "You'll unlock by typing the passphrase into the \"Filter\" box, so it's best if it looks like an ordinary filter term — a few words separated by spaces, say. Anyone who sees you typing into a filter box won't think twice."
+  },
+  "onbPassLabel": {
+    "message": "Passphrase"
+  },
+  "onbPassConfirmLabel": {
+    "message": "Enter it again"
+  },
+  "errPassTooShort": {
+    "message": "The passphrase must be at least 4 characters"
+  },
+  "errPassLooksLikeCode": {
+    "message": "The passphrase can't have the same format as a recovery code"
+  },
+  "errPassMismatch": {
+    "message": "The passphrases don't match"
+  },
+  "onbCreating": {
+    "message": "Generating keys…"
+  },
+  "onbCodeTitle": {
+    "message": "Save your recovery code"
+  },
+  "onbCodeBody": {
+    "message": "If you forget your passphrase, paste the recovery code into the filter box and press Enter to set a new one. The recovery code is shown only this once — write it down or store it in a password manager."
+  },
+  "onbCodeConfirm": {
+    "message": "I've saved my recovery code"
+  },
+  "onbHowTitle": {
+    "message": "How to use it from now on"
+  },
+  "onbHowBody": {
+    "message": "From now on, clicking the icon opens a \"Quick Links\" tool. Type your passphrase into the filter box and press Enter to unlock. Closing the popup locks it again."
+  },
+  "onbFinish": {
+    "message": "Done"
+  },
+  "vaultTitle": {
+    "message": "Saved"
+  },
+  "vaultOpen": {
+    "message": "Open"
+  },
+  "vaultSearchPlaceholder": {
+    "message": "Search…"
+  },
+  "vaultEmpty": {
+    "message": "Nothing saved yet. Add the current tab, or enter a URL by hand."
+  },
+  "noMatches": {
+    "message": "No matching entries"
+  },
+  "vaultKeysHint": {
+    "message": "↑↓ select　↵ open",
+    "description": "Keyboard hint under the vault list."
+  },
+  "addCurrentTab": {
+    "message": "Add current page"
+  },
+  "addManually": {
+    "message": "Add manually"
+  },
+  "currentTabUnsupported": {
+    "message": "The current tab isn't a regular web page and can't be added."
+  },
+  "entryAddTitle": {
+    "message": "Add link"
+  },
+  "entryEditTitle": {
+    "message": "Edit link"
+  },
+  "fieldUrl": {
+    "message": "URL"
+  },
+  "fieldTitle": {
+    "message": "Title"
+  },
+  "untitledEntry": {
+    "message": "Untitled"
+  },
+  "fieldMatchMode": {
+    "message": "Clean up"
+  },
+  "matchSite": {
+    "message": "Whole site (including all subdomains)"
+  },
+  "matchExact": {
+    "message": "This URL only"
+  },
+  "fieldExtraHosts": {
+    "message": "Extra domains ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "fieldExtraHostsHint": {
+    "message": "One domain per line, including all subdomains; you can also paste a URL. Use this for other domains the site sends you to, such as a payment page or the domain that plays its videos — their history is deleted along with it."
+  },
+  "errInvalidUrl": {
+    "message": "Enter a URL that starts with http or https"
+  },
+  "errDuplicate": {
+    "message": "Already saved: $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "errExtraHost": {
+    "message": "Not a valid domain: $TEXT$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "ftp://x"
+      }
+    }
+  },
+  "settingsTitle": {
+    "message": "Settings"
+  },
+  "openModeLabel": {
+    "message": "Open in"
+  },
+  "openCurrent": {
+    "message": "Current tab"
+  },
+  "openNewTab": {
+    "message": "New tab"
+  },
+  "openIncognito": {
+    "message": "Incognito"
+  },
+  "openPrivateFirefox": {
+    "message": "Private"
+  },
+  "incognitoNeeded": {
+    "message": "To open links in an Incognito window, turn on \"Allow in Incognito\" on the extension's details page. An Incognito window never creates browsing history in the first place, so it's the cleanest option."
+  },
+  "privateNeededFirefox": {
+    "message": "To open links in a private window, find Nightstand under \"Add-ons and themes\" (about:addons) and set \"Run in Private Windows\" to \"Allow\". A private window never creates browsing history in the first place, so it's the cleanest option."
+  },
+  "incognitoOpenDetails": {
+    "message": "Open extension details"
+  },
+  "newPassLabel": {
+    "message": "New passphrase"
+  },
+  "resetPassTitle": {
+    "message": "Set a new passphrase"
+  },
+  "resetPassHint": {
+    "message": "Unlocked with the recovery code. Please set a new passphrase; the old one will stop working."
+  },
+  "decoyFilterPlaceholder": {
+    "message": "Filter…"
+  },
+  "decoyEmpty": {
+    "message": "No matching links"
+  },
+  "decoyDataUnreadable": {
+    "message": "Some data can't be read; it may have been written by a newer version. Please update the extension — don't uninstall it."
+  },
+  "decoySettingsTitle": {
+    "message": "Quick Links settings"
+  },
+  "decoyLinksSection": {
+    "message": "Links"
+  },
+  "decoyLinkTitle": {
+    "message": "Name"
+  },
+  "decoyLinkUrl": {
+    "message": "URL"
+  },
+  "decoyAddLink": {
+    "message": "Add"
+  },
+  "decoyRestoreDefaults": {
+    "message": "Restore default links"
+  },
+  "iconSection": {
+    "message": "Toolbar icon"
+  },
+  "iconNightstand": {
+    "message": "Nightstand"
+  },
+  "iconBook": {
+    "message": "Book"
+  },
+  "iconStar": {
+    "message": "Star"
+  },
+  "iconGrid": {
+    "message": "Grid"
+  },
+  "saveNoticeSection": {
+    "message": "Saving URLs"
+  },
+  "saveNoticeSetting": {
+    "message": "Before saving, show what history and bookmarks will be deleted"
+  },
+  "saveCheckSetting": {
+    "message": "After saving, remind me to check the address bar"
+  },
+  "shortcutSection": {
+    "message": "Quick close shortcut"
+  },
+  "shortcutCurrentLabel": {
+    "message": "Current shortcut"
+  },
+  "shortcutNone": {
+    "message": "No shortcut is set."
+  },
+  "shortcutHint": {
+    "message": "Closes tabs of protected sites and the Incognito windows Nightstand opened, cleans history right away, and closes the popup (which locks it)."
+  },
+  "shortcutChange": {
+    "message": "Change shortcut"
+  },
+  "shortcutChangeFirefox": {
+    "message": "To change it: open about:addons and choose \"Manage Extension Shortcuts\" from the gear menu."
+  },
+  "done": {
+    "message": "Done"
+  },
+  "backupTitle": {
+    "message": "Backup and restore"
+  },
+  "backupExportSection": {
+    "message": "Export encrypted backup"
+  },
+  "backupExportHint": {
+    "message": "Exports a .nightstand file that contains only ciphertext. Importing it requires the passphrase or recovery code in use at the time."
+  },
+  "backupExport": {
+    "message": "Export backup"
+  },
+  "backupImportSection": {
+    "message": "Import backup"
+  },
+  "backupImportHint": {
+    "message": "Entries in the backup are merged into the current list; for duplicate URLs the newer entry is kept. Your current passphrase and recovery code stay the same."
+  },
+  "backupChooseFile": {
+    "message": "Choose backup file"
+  },
+  "backupPasteLabel": {
+    "message": "Paste backup contents"
+  },
+  "backupPasteHint": {
+    "message": "Open the .nightstand file in a text editor, select all, copy, and paste it here."
+  },
+  "backupSecretLabel": {
+    "message": "Backup passphrase or recovery code"
+  },
+  "backupSecretHint": {
+    "message": "Enter the passphrase you used when you exported this backup, or the recovery code from that time."
+  },
+  "backupImport": {
+    "message": "Import"
+  },
+  "backupImported": {
+    "message": "Import complete: $ADDED$ added, $UPDATED$ updated.",
+    "placeholders": {
+      "added": {
+        "content": "$1",
+        "example": "3"
+      },
+      "updated": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "errBackupInvalid": {
+    "message": "This isn't a valid Nightstand backup, or the file is damaged."
+  },
+  "errBackupNewer": {
+    "message": "This backup was exported by a newer version of Nightstand. Please update the extension first."
+  },
+  "errBackupSecret": {
+    "message": "Incorrect passphrase or recovery code."
+  },
+  "plainExportSection": {
+    "message": "Export as plain text"
+  },
+  "plainExport": {
+    "message": "Export unencrypted list…"
+  },
+  "plainExportWarningTitle": {
+    "message": "Warning: the exported file is not encrypted"
+  },
+  "plainExportWarning": {
+    "message": "Anyone who can open this file can see every URL and title you've saved. The file also appears in the browser's download history. Export only when you really need to, and delete it as soon as you're done."
+  },
+  "plainExportConfirm": {
+    "message": "I understand, export anyway"
+  },
+  "recoveryTitle": {
+    "message": "Generate new recovery code"
+  },
+  "recoveryRotateBody": {
+    "message": "Once a new recovery code is generated, the old one stops working immediately. Backups exported with the old recovery code can still be opened with the passphrase from that time."
+  },
+  "recoveryRotate": {
+    "message": "Generate new recovery code"
+  },
+  "recoveryNewBody": {
+    "message": "This is your new recovery code, shown only this once. Write it down or store it in a password manager."
+  },
+  "changePassTitle": {
+    "message": "Change passphrase"
+  },
+  "changePassHint": {
+    "message": "Once changed, the old passphrase stops working immediately. Your recovery code stays the same."
+  },
+  "bmImportTitle": {
+    "message": "Import from browser bookmarks"
+  },
+  "bmImportEmpty": {
+    "message": "Your bookmarks contain no web page links."
+  },
+  "bmUntitledFolder": {
+    "message": "(Untitled folder)"
+  },
+  "matchSiteShort": {
+    "message": "Whole site"
+  },
+  "bmRemoveOriginals": {
+    "message": "Delete the original bookmarks after import"
+  },
+  "bmImported": {
+    "message": "Imported: $COUNT$. Browsing history for these sites has been cleaned.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bmImportButton": {
+    "message": "Import selected ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "onbIntroRestore": {
+    "message": "Restoring from a backup? Finish setup first, then import it under \"Settings → Backup and restore\"."
+  },
+  "faqTitle": {
+    "message": "FAQ"
+  },
+  "faqMatchLink": {
+    "message": "What's the difference between the two options?"
+  },
+  "faqMatchQ": {
+    "message": "What's the difference between \"Whole site\" and \"This URL only\"?"
+  },
+  "faqMatchIntro": {
+    "message": "Say the saved URL is example.com/docs/guide. Here's whether a later visit to each of these URLs gets deleted from history:"
+  },
+  "faqColUrl": {
+    "message": "URL visited"
+  },
+  "faqColSite": {
+    "message": "Whole site"
+  },
+  "faqColExact": {
+    "message": "URL only"
+  },
+  "faqMarkDeleted": {
+    "message": "Deleted",
+    "description": "FAQ match table cell: this visit's history is deleted."
+  },
+  "faqMarkKept": {
+    "message": "Kept",
+    "description": "FAQ match table cell: this visit's history is kept."
+  },
+  "faqMatchSite": {
+    "message": "Whole site: only the domain matters — path, protocol and port are ignored. Any page on this domain or any of its subdomains is deleted from history after you visit it. The parent domain (def.com for abc.def.com) and look-alike domains (such as evil-example.com) are not affected."
+  },
+  "faqMatchExact": {
+    "message": "This URL only: deletes just this one address. The protocol (http or https), a leading www., anything after # and a trailing slash don't matter, but the parameters after ? must match exactly. The site's home page and its other pages stay in history, so the browser may still suggest the site when you type its domain into the address bar."
+  },
+  "faqMatchWhen": {
+    "message": "When it cleans up: existing history is cleaned as soon as you add an entry; after that, each visit is deleted right away. On top of that, a catch-up sweep runs every 15 minutes and every time the browser starts. Cleaning works while locked too."
+  },
+  "faqMatchTip": {
+    "message": "If you want the address bar to never suggest the site at all, choose \"Whole site\"."
+  },
+  "faqExtraLink": {
+    "message": "What are extra domains, and how do I find them?"
+  },
+  "faqExtraQ": {
+    "message": "What are \"Extra domains\", and how do I find the ones to add?"
+  },
+  "faqExtra1": {
+    "message": "Some sites send you to other domains: a dedicated payment page when you pay, or the video server's own address when you play a video (for example video.twimg.com). Those domains aren't part of the site itself, so \"Whole site\" doesn't cover them; their history stays behind and the address bar still suggests them."
+  },
+  "faqExtra2": {
+    "message": "Add them to the entry's \"Extra domains\", one per line. Extra domains are always treated as \"Whole site\", including all subdomains, whichever option the entry itself uses: their existing browsing history and bookmarks are deleted when you save, and every later visit is deleted automatically, even while locked."
+  },
+  "faqExtraFindTitle": {
+    "message": "How to find these domains"
+  },
+  "faqExtraFind1": {
+    "message": "Open chrome://history in the address bar (in Firefox, the History window: Ctrl+Shift+H on Windows, ⌘⇧H on a Mac) and search for:"
+  },
+  "faqExtraFind2": {
+    "message": "the site's domain, for example example.com — finds entries whose URL contains it;"
+  },
+  "faqExtraFind3": {
+    "message": "words from the site's name or page titles — pages on another domain often still carry the site's name in their title, even though the URL is a different domain."
+  },
+  "faqExtraFind4": {
+    "message": "Look at the domain shown next to each result; any that differ from the site itself are the extra domains to add. You can also copy that entry's URL and paste it straight in — the domain is extracted when you save."
+  },
+  "faqExtraTip": {
+    "message": "It's best to look before you add the entry: once it's saved, the site's own history is gone and only words in titles are left to search for. And don't add big everyday sites (such as google.com): all history for them and every subdomain would be deleted."
+  },
+  "faqStoreQ": {
+    "message": "How is my data stored? Can it be cracked?"
+  },
+  "faqStore1": {
+    "message": "All data stays in this computer's browser and is never uploaded anywhere."
+  },
+  "faqStore2": {
+    "message": "Your list (URLs, titles, extra domains) is encrypted with AES-256-GCM. The key that decrypts it exists only in the memory of the unlocked popup; it's destroyed when the popup closes and is never written to disk."
+  },
+  "faqStore3": {
+    "message": "Your passphrase and recovery code are each turned into a key with PBKDF2 (600,000 iterations), and that key unlocks the list's key. The encryption itself can't realistically be broken; the only thing an attacker can go after is the passphrase."
+  },
+  "faqStore4": {
+    "message": "One thing to be aware of: so that history can be cleaned while locked, the extension also keeps a match table of which sites to clean. It stores only salted hashes, so the URLs can't be read directly — but someone with your browser data could hash a list of common sites and compare, to confirm whether you added a well-known site; they can also see how many entries there are. Titles are not exposed this way."
+  },
+  "faqStore5": {
+    "message": "Nightstand protects against bystanders: projecting, screen sharing, someone looking over your shoulder. It can't protect against someone with full control of this computer, and it has no effect on Google account activity, DNS or network-level records."
+  },
+  "faqSecretQ": {
+    "message": "Where are my passphrase and recovery code stored?"
+  },
+  "faqSecret1": {
+    "message": "Nowhere: neither the text itself nor a \"fingerprint\" (hash) of it is stored. Nightstand itself doesn't know what they are."
+  },
+  "faqSecret2": {
+    "message": "Think of it this way: all the browser stores is a locked safe with your list inside. Your passphrase and recovery code are the combinations to that safe — either one opens it."
+  },
+  "faqSecret3": {
+    "message": "The safe doesn't know its own combination. When you unlock, Nightstand tries to open it with what you typed: if it opens, the passphrase was right; if it doesn't, it was wrong. That's why it can't tell you what you got wrong — it only knows the safe didn't open."
+  },
+  "faqSecret4": {
+    "message": "Because your passphrase and recovery code aren't stored anywhere, they can't leak from Nightstand. The only way into the safe is to guess, one try at a time (brute force), so the longer the passphrase, the safer."
+  },
+  "faqSecret5": {
+    "message": "The safe stays open only while the popup is open. Closing the popup locks it again, so you enter your passphrase every time you open it."
+  },
+  "faqSecret6": {
+    "message": "Changing your passphrase just swaps one of the combinations; the recovery code keeps working. Generating a new recovery code makes the old one stop working immediately. The recovery code is shown only once, when it's generated."
+  },
+  "faqSecret7": {
+    "message": "An exported backup file is a copy of this safe and opens with the passphrase or recovery code from when it was exported."
+  },
+  "faqSecretWarn": {
+    "message": "Precisely because nothing is stored, no one can recover a forgotten passphrase — only the recovery code can open the safe. Lose both, and the list can never be opened again."
+  }
+}

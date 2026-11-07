@@ -1,143 +1,146 @@
 # Nightstand
 
-一个浏览器扩展（优先支持 Chrome，兼容 Firefox）。有些网站，你不希望在上台分享、屏幕共享或同事凑过来看屏幕时，被地址栏自动提示出来。Nightstand 把这些网站收在扩展内部的加密列表里，而不是书签栏；每次访问后自动删除对应的浏览记录，让地址栏输入几个字母时不再提示它们。
+English | [简体中文](README.zh-CN.md)
 
-扩展本身也很低调：锁定时点开图标，看到的只是一个普通、可用的“快捷链接”小工具。
+A browser extension (Chrome first, Firefox compatible). Some sites you'd rather the address bar didn't suggest while you're giving a talk, sharing your screen, or a colleague is looking over your shoulder. Nightstand keeps those sites in an encrypted list inside the extension instead of in your bookmarks bar, and deletes the matching browsing history after every visit, so typing a few letters into the address bar no longer brings them up.
 
-## 功能
+The extension itself keeps a low profile too: click its icon while it's locked and all you see is an ordinary, working "Quick Links" launcher.
 
-- **加密收藏**：添加当前标签页或手动输入网址；支持搜索、编辑、删除。为了防止误点，单击一行只会选中它，要点这一行的“打开”按钮或按回车才会打开；搜索时第一条结果自动选中，可以用 ↑↓ 切换。每个条目可以选择清理范围：
-  - **整个站点**（默认）：只看域名，包括所有子域名；路径、协议、端口都不管。
-  - **仅此网址**：只匹配这一个地址。协议、开头的 `www.`、`#` 之后的部分和末尾的斜杠不影响匹配，`?` 之后的参数必须完全一致。同一网站的其他页面会留在历史里。
-  - **附加域名**：每个条目还可以填几个其他域名，按“整个站点”处理（含所有子域名），和条目本身选哪种范围无关。适合网站会跳去的其他域名，比如付款页、播放视频用的域名（如 `video.twimg.com`）：保存时、以后每次访问时，它们的记录和书签会和条目本身一起删除。列表里条目后面的“+N”表示有 N 个附加域名。不知道该填哪些域名时，可以在 `chrome://history` 里搜网站的域名或标题里的词，看结果里哪些记录在别的域名上（表单里的“附加域名是什么？怎么找？”有说明）。
-  - 表单里的“两种范围有什么区别？”会打开弹窗内的常见问题，用示例逐条说明。
-- **自动清理浏览记录**
-  - 访问受保护站点后立即删除，同一站点的其他记录（重定向、子页面）也一并删除。
-  - 新增条目时，立刻清理该站点已有的历史。
-  - 浏览器启动时做一次全量扫描，之后每 15 分钟做一次增量扫描。
-  - **锁定状态下照样会清理。**
-- **伪装界面**：锁定时显示一个普通的快捷链接启动器，默认链接是 GitHub、MDN、Google Docs、Gmail，可以自定义。在“筛选…”框里输入口令后按回车即可解锁。口令输错时没有任何提示。
-- **关闭即上锁**：解锁状态只存在于弹窗的内存里。弹窗一关就锁上，没有“保持解锁 N 分钟”之类的选项。
-- **快速收起**：默认快捷键 `Alt+Shift+Q`（Mac 上是 ⌥⇧Q）。按下后会关闭受保护站点的标签页和 Nightstand 打开的无痕窗口，立即清理历史，并关闭弹窗。
-- **三种打开方式**：当前标签页、新标签页、无痕窗口（Firefox 上是隐私窗口）。无痕窗口从根本上不会留下浏览记录，是最干净的方式，但需要先在扩展详情页允许 Nightstand 在无痕模式下运行。
-- **书签**：保存条目时会一并删除指向这个站点（或网址）的书签，免得它们继续出现在地址栏提示里；也可以从书签批量导入，可选择导入后删除原书签。
-- **保存前确认**：保存前会列出马上要删除的内容——多少个网页的浏览记录、多少个书签——确认后才保存。可以勾选“不再提示”，之后在设置里重新打开。
-- **保存后自查**：新增条目、或者改了网址 / 清理范围 / 加了附加域名之后，列表顶部会提示你马上新开一个标签页，在地址栏输入域名开头的几个字母试一试，看提示里是否还有这个网站；还有的话通常是网站跳去了别的域名，把它加进“附加域名”即可。
-- **常见问题**：解锁后的“设置”里有一个“常见问题”页，解释两种清理范围、附加域名是什么以及怎么在 `chrome://history` 里按域名或标题关键词找到它们，以及数据怎么保存、能否被破解。它是弹窗里的一个视图，不会打开新标签页。
-- **备份与恢复**
-  - 导出加密的 `.nightstand` 备份，用当时的口令或恢复码导入，导入时和现有条目合并去重。
-  - 可以导出明文列表，导出前会给出醒目警告。
-- **口令管理**：口令至少 4 个字符，不评价强弱。可以修改口令、重新生成恢复码。忘记口令时，在筛选框里粘贴恢复码再按回车，即可设置新口令。
-- **外观**：工具栏图标可以在床头柜、书本、星形、网格之间切换（在解锁后的“设置”里，锁定时改不了）。扩展管理页上的名称和描述都是中性的：Nightstand，“把常用链接放在手边”。
+## Features
 
-## 使用方法
+- **Encrypted list**: add the current tab or type a URL by hand; search, edit, delete. To prevent misclicks, a single click on a row only selects it — open it with that row's "Open" button or Enter. While searching, the first result is selected automatically and ↑↓ moves the selection. Each entry has a clean-up scope:
+  - **Whole site** (default): only the domain counts, including all subdomains; path, protocol and port are ignored.
+  - **This URL only**: matches just this one address. The protocol, a leading `www.`, anything after `#` and a trailing slash don't affect the match; the parameters after `?` must match exactly. The site's other pages stay in history.
+  - **Extra domains**: each entry can also list a few other domains, always treated as "Whole site" (including all subdomains) whichever scope the entry itself uses. Meant for other domains the site sends you to, such as a payment page or the domain that plays its videos (e.g. `video.twimg.com`): their history and bookmarks are deleted together with the entry's, both when you save and on every later visit. A "+N" after an entry in the list means it has N extra domains. If you don't know which domains to add, search `chrome://history` for the site's domain or for words in its titles and see which results are on other domains (the form's "What are extra domains, and how do I find them?" explains how).
+  - The form's "What's the difference between the two options?" opens the in-popup FAQ, which walks through examples.
+- **Automatic history cleaning**
+  - History is deleted right after you visit a protected site, along with the site's related records (redirects, subpages).
+  - Adding an entry immediately cleans the site's existing history.
+  - A full sweep runs when the browser starts, then an incremental sweep every 15 minutes.
+  - **Cleaning keeps working while locked.**
+- **Decoy screen**: while locked, the popup shows an ordinary Quick Links launcher. The default links are GitHub, MDN, Google Docs and Gmail, and you can change them. Type your passphrase into the "Filter…" box and press Enter to unlock. A wrong passphrase gives no hint at all.
+- **Closing locks it**: the unlocked state exists only in the popup's memory. Close the popup and it's locked; there is no "stay unlocked for N minutes" option.
+- **Quick close**: default shortcut `Alt+Shift+Q` (⌥⇧Q on a Mac). It closes tabs of protected sites and the Incognito windows Nightstand opened, cleans history right away, and closes the popup.
+- **Three ways to open links**: current tab, new tab, Incognito window (a private window on Firefox). An Incognito window never creates browsing history in the first place, so it's the cleanest option, but you first have to allow Nightstand to run in Incognito on the extension's details page.
+- **Bookmarks**: saving an entry also deletes bookmarks pointing to that site (or URL), so they stop showing up in address bar suggestions. You can also bulk-import from bookmarks and optionally delete the originals afterwards.
+- **Confirm before saving**: before saving, the popup lists what's about to be deleted — how many pages of browsing history and how many bookmarks — and saves only once you confirm. You can tick "Don't show again" and turn it back on in Settings.
+- **Check after saving**: after you add an entry, or change its URL / scope / extra domains, a note at the top of the list asks you to open a new tab right away and type the first few letters of the domain into the address bar to see whether the site still shows up. If it does, the site usually sent you to another domain; add that domain to "Extra domains".
+- **FAQ**: the unlocked Settings view has an FAQ that explains the two scopes, what extra domains are and how to find them in `chrome://history` by domain or title keywords, and how data is stored and whether it can be cracked. It's a view inside the popup and never opens a new tab.
+- **Backup and restore**
+  - Export an encrypted `.nightstand` backup and import it with the passphrase or recovery code in use at the time; imports are merged with existing entries and de-duplicated.
+  - You can export a plain-text list, behind a prominent warning.
+- **Passphrase management**: the passphrase needs at least 4 characters; its strength isn't rated. You can change the passphrase and generate a new recovery code. If you forget the passphrase, paste the recovery code into the filter box and press Enter to set a new one.
+- **Appearance**: the toolbar icon can be a nightstand, book, star or grid (in the unlocked Settings; it can't be changed while locked). The name and description on the extensions page are neutral: Nightstand, "Keep your everyday links close at hand".
+- **Languages**: English and Simplified Chinese, following the browser's language.
 
-1. 安装后第一次点开图标，会进入设置引导：设置口令，保存恢复码。这是唯一一个会说明用途的界面，最好在别人看不到屏幕时完成。
-2. 口令最好**看起来像普通的筛选词**，因为以后要在筛选框里输入它。几个互不相关的词用空格隔开，既不显眼又足够长；单个单词很容易被离线猜出。
-3. 以后点开图标看到的是“快捷链接”。在筛选框里输入口令再按回车，就能进入真正的列表。锁定时始终是这个样子，没有单独的口令输入界面。
+## How to use
 
-## 威胁模型
+1. The first time you click the icon after installing, a setup guide asks you to choose a passphrase and save a recovery code. It's the only screen that explains what Nightstand is for, so it's best to finish it when no one else can see your screen.
+2. The passphrase should **look like an ordinary filter term**, because you'll be typing it into a filter box. A few unrelated words separated by spaces are inconspicuous and long enough; a single word is easy to guess offline.
+3. From then on, clicking the icon shows "Quick Links". Type the passphrase into the filter box and press Enter to get to the real list. While locked it always looks like this; there is no separate passphrase screen.
 
-**Nightstand 防的是旁观者**，包括：
+## Threat model
 
-- 投影或屏幕共享时，地址栏的自动提示；
-- 新标签页上的“常去网站”；
-- `chrome://history` 历史记录页；
-- 书签栏；
-- 扩展管理页上的名称、描述和图标；
-- 有人好奇点开扩展图标。
+**Nightstand protects against bystanders**, including:
 
-**Nightstand 不防**：
+- address bar suggestions while projecting or screen sharing;
+- the "most visited" tiles on the new tab page;
+- the `chrome://history` page;
+- the bookmarks bar;
+- the name, description and icon on the extensions page;
+- someone curiously clicking the extension's icon.
 
-- 拿到电脑完全控制权、做取证分析的人；
-- Google 账户里的“网络与应用活动”等服务端记录；
-- DNS、代理、路由器等网络层日志；
-- 操作系统层面的记录，例如缓存、交换分区、DNS 缓存。
+**Nightstand does not protect against**:
 
-### 加密设计
+- someone with full control of the computer doing forensic analysis;
+- server-side records such as Google account "Web & App Activity";
+- network-level logs: DNS, proxies, routers;
+- operating-system records such as caches, swap and the DNS cache.
 
-- 整个收藏列表用随机生成的数据密钥（AES-256-GCM）加密，存在 `storage.local` 里，**从不使用 `storage.sync`**。
-- 数据密钥被包裹两份：
-  - 一份用口令通过 PBKDF2-SHA256 派生的密钥包裹，迭代 600,000 次，随机盐；
-  - 一份用恢复码派生的密钥包裹，恢复码含 160 bit 随机数。
-- 解锁后，数据密钥只存在于弹窗页面的内存里，不写入任何存储，也不发给后台；弹窗关闭，密钥随之销毁。
-- 只使用浏览器自带的 Web Crypto API，不引入第三方加密库。
-- 存储格式和备份格式都带版本号。仓库里有一份固定的 v1 测试数据，以后每个版本都必须能解开它，防止出现“更新后口令失效、数据丢失”。列表内容（解密后的数据）目前是第 4 版：第 2 版加了附加域名，第 3 版去掉了备注和标签，第 4 版加了网站图标；读到旧版本时自动升级。
+### Encryption design
 
-### 锁定状态下怎么清理：哈希匹配表
+- The whole list is encrypted with a randomly generated data key (AES-256-GCM) and kept in `storage.local`; **`storage.sync` is never used**.
+- The data key is wrapped twice:
+  - once with a key derived from the passphrase via PBKDF2-SHA256, 600,000 iterations, random salt;
+  - once with a key derived from the recovery code, which carries 160 bits of randomness.
+- Once unlocked, the data key exists only in the popup page's memory. It's never written to any storage or sent to the background, and it's destroyed when the popup closes.
+- Only the browser's built-in Web Crypto API is used; no third-party crypto libraries.
+- Both the storage format and the backup format are versioned. The repository has a fixed v1 test fixture that every future version must still decrypt, so an update can never make a passphrase stop working or lose data. The list contents (the decrypted data) are currently at version 4: version 2 added extra domains, version 3 removed notes and tags, version 4 added site icons. Older versions are upgraded automatically when read.
 
-锁定时列表是解不开的，所以后台另外保存一份明文的“匹配表”：每个受保护的主机名（包括附加域名）或网址，加上本机随机生成的盐值，再做 SHA-256，只保存结果。
+### How cleaning works while locked: the hashed match table
 
-**这只能挡住随手翻看扩展存储的人。** 能读到匹配表和盐值的人，可以拿常见域名逐个算哈希来比对，从而还原出部分站点。这在威胁模型之外，但请知悉。
+While locked the list can't be decrypted, so the background keeps a separate plaintext "match table": each protected host name (extra domains included) or URL, combined with a salt generated randomly on this device, hashed with SHA-256 — only the result is stored.
 
-## 权限说明
+**This only stops someone casually browsing the extension's storage.** Anyone who can read the match table and the salt can hash a list of common domains and compare, recovering some of the sites. That's outside the threat model, but you should know about it.
 
-| 权限 | 用途 |
+## Permissions
+
+| Permission | Purpose |
 |---|---|
-| `storage` | 保存加密的收藏列表、哈希匹配表和快捷链接设置（只用本地存储） |
-| `history` | 删除受保护站点的浏览记录，这是核心功能 |
-| `tabs` | 读取当前标签页的网址和标题以便添加；快速收起时找出并关闭受保护站点的标签页 |
-| `alarms` | 定期做增量扫描 |
-| `bookmarks` | 保存条目时统计并删除这个站点的书签；从书签导入 |
-| `favicon`（仅 Chrome） | 从浏览器本地的图标缓存读取网站图标，显示在列表里 |
+| `storage` | Keeps the encrypted list, the hashed match table and the Quick Links settings (local storage only) |
+| `history` | Deletes the browsing history of protected sites — the core feature |
+| `tabs` | Reads the current tab's URL and title so it can be added; finds and closes protected sites' tabs on quick close |
+| `alarms` | Runs the periodic incremental sweep |
+| `bookmarks` | Counts and deletes a site's bookmarks when an entry is saved; imports from bookmarks |
+| `favicon` (Chrome only) | Reads site icons from the browser's local icon cache for the list |
 
-不申请任何网站权限（host permissions），不注入任何网页脚本，不发起任何网络请求，完全离线运行。网站图标也不例外：只读 Chrome 本地已缓存的图标，不会去网站上下载。
+No host permissions, no scripts injected into web pages, no network requests: it runs entirely offline. Site icons are no exception — only icons Chrome has already cached locally are read; nothing is downloaded from the sites.
 
-### 网站图标
+### Site icons
 
-- Chrome 删除一个网页的浏览记录时，会连同它缓存的图标一起删掉（已实测）。所以收藏条目的图标在**保存那一刻**（删除历史之前）截取一份 32×32 的 PNG，和条目一起加密保存。之前从没访问过、浏览器里没有图标缓存的网站，显示标题首字。
-- 保存时没拿到图标的条目，之后访问一次这个网站，**下次解锁时**会再从本地缓存找一次，找到就存进去（弹窗在点开网站时就关闭了，所以只能等下次解锁）。这依赖一个时序：后台在访问被记录时就删掉历史，而图标通常要等网络下载完才写入缓存，晚于删除，于是能留下来（已实测）。如果图标先写入（例如已经在浏览器缓存里、瞬间加载），它会随历史一起被删，这次就找不到，下次访问再试。
-- 也就是说，访问过的受保护网站，图标可能会留在 Chrome 的图标缓存文件里。它不会出现在地址栏、历史记录页或新标签页，只有直接读取浏览器数据文件才能看到，属于威胁模型之外。
-- 快捷链接是普通网站，历史不会被删，每次打开弹窗时直接读本地缓存；没有缓存就显示首字。
-- Firefox 没有读取本地图标缓存的接口，一律显示首字。
-- 明文导出不包含图标。
+- When Chrome deletes a page's browsing history, it deletes the page's cached icon with it (verified). So an entry's icon is captured as a 32×32 PNG **at the moment it's saved** (before the history is deleted) and stored encrypted with the entry. Sites you've never visited, with no icon in the browser's cache, show the title's first letter.
+- For an entry saved without an icon, visit the site once and it will be looked up in the local cache again **the next time you unlock**, and stored if found (the popup closes as soon as you open a site, so this has to wait for the next unlock). This relies on timing: the background deletes the history as soon as the visit is recorded, while the icon is usually written to the cache only after it has been downloaded, so it survives (verified). If the icon is written first (e.g. it was already in the browser cache and loaded instantly), it's deleted together with the history; it won't be found this time, and the next visit tries again.
+- In other words, icons of protected sites you've visited may remain in Chrome's icon cache file. They don't appear in the address bar, the history page or the new tab page — only someone reading the browser's data files directly could see them, which is outside the threat model.
+- Quick Links are ordinary sites whose history isn't deleted, so their icons are read straight from the local cache each time the popup opens; without a cached icon they show the first letter.
+- Firefox has no API for reading the local icon cache, so it always shows first letters.
+- The plain-text export doesn't include icons.
 
-## 已知限制
+## Known limitations
 
-| 事项 | 状态 |
+| Item | Status |
 |---|---|
-| 访问后清理、锁定时清理、新增时清理已有历史、子域名匹配、`evil-example.com` 这类外观相似的域名不会被误删 | Chrome 已实测；Firefox 已用真实的 `places.sqlite` 验证后台清理 |
-| Chrome 会把跳转链中间的网址（例如在地址栏输入域名后 http→https 的自动升级）记成 `history.search` 搜不到的记录，但地址栏仍会提示它们 | 清理时会按网址直接删除这些记录：每个被删网址的 http/https、带不带 `www.` 的写法，以及保存条目时该站点首页（或精确网址）的这些写法。跳到其他路径或其他域名的中间网址无法列举，所以删不到 |
-| 网站用脚本跳转（`location.replace` 等，常见于登录、验证码、付款、刷新页面的流程）时，跳转前的那一页同样是 `history.search` 搜不到的记录，网址往往带随机参数（如 `/chat?c=…`），也可能在别的域名上 | 添加之后再访问：后台会收到这次访问并当场删除（Chrome 已实测）。添加之前留下的：Chrome 上删除每条记录时按访问时间删（`history.deleteRange`，窗口约 2 微秒），Chrome 会顺带删掉跳转到这次访问的整条跳转链，和在 `chrome://history` 里删除一样（已实测，包括从其他域名跳来的）。**删不到的情况**：跳转链的终点不在保护范围内（例如从受保护网站跳到另一个域名的付款页）——把那个域名也加进来，或在 `chrome://history` 里删掉终点那条；地址栏若仍提示，也可选中该提示按 Shift+Delete（Mac 上是 Shift+Fn+Delete）。Firefox 不做按时间删除（它只精确到毫秒） |
-| 扩展自己的页面（弹窗）不会留在历史记录里 | Chrome 已实测（后台也会主动删除扩展自身页面的记录） |
-| 新标签页“常去网站”：它由浏览历史生成，历史删除后理应随之消失 | 待手动确认 |
-| 地址栏的**书签**提示：书签不受历史清理影响 | 保存条目时会删除这个站点的书签；之后新加的书签不会自动删除，再次保存该条目时会删除 |
-| 地址栏的**已打开标签页**提示（“切换到这个标签页”）：标签页开着时无法避免 | 用快速收起关闭这些标签页 |
-| 地址栏的**搜索联想**：由搜索引擎在服务端生成，和账户活动有关，扩展无法控制 | 不在防护范围内 |
-| 地址栏的**快捷方式数据库**（曾经从地址栏选中过的条目）：Chrome 删除历史时理应一并清掉对应的快捷方式 | 待手动确认 |
-| 开启 Chrome 同步时，`history.deleteUrl` 是否会同步删除其他设备上的记录 | 待手动确认；建议不要依赖这一点 |
-| 导出的备份文件名会出现在浏览器的下载记录里 | 文件名是中性的 `nightstand-日期.nightstand` |
-| Firefox 上在弹窗里打开文件选择器通常会关掉弹窗，所以 Firefox 上导入备份改为粘贴文件内容 | Firefox 用粘贴，Chrome 用文件选择器（已实测弹窗不会关闭） |
-| 输错口令没有次数限制，也没有延迟 | 有意为之：限流同样会挡住主人自己（在筛选框里多按几次回车后，正确口令也会被静默忽略），而旁观者手动猜口令时它帮助不大。防猜测只靠口令强度和 PBKDF2 |
+| Cleaning after a visit, while locked, and of existing history when adding; subdomain matching; look-alike domains such as `evil-example.com` are not deleted by mistake | Verified in Chrome; in Firefox the background cleaning is verified against a real `places.sqlite` |
+| Chrome records the intermediate URLs of a redirect chain (e.g. the automatic http→https upgrade after typing a domain into the address bar) as entries `history.search` can't find, yet the address bar still suggests them | Cleaning deletes these by URL directly: the http/https and with/without `www.` forms of each deleted URL, plus those forms of the site's home page (or the exact URL) when an entry is saved. Intermediate URLs that hop to other paths or domains can't be enumerated, so they aren't deleted |
+| When a site redirects by script (`location.replace` and the like, common in sign-in, CAPTCHA, payment and refresh flows), the page before the redirect is likewise an entry `history.search` can't find; its URL often carries random parameters (e.g. `/chat?c=…`) and may be on another domain | Visits after the entry is added: the background sees the visit and deletes it on the spot (verified in Chrome). Records left before adding: in Chrome, each record is deleted by visit time (`history.deleteRange`, a window of about 2 microseconds), and Chrome then also deletes the whole redirect chain leading to that visit, just like deleting it in `chrome://history` (verified, including chains coming from other domains). **What can't be deleted**: chains that end outside the protected scope (e.g. a protected site sending you to a payment page on another domain) — add that domain too, or delete the final record in `chrome://history`; if the address bar still suggests it, select the suggestion and press Shift+Delete (Shift+Fn+Delete on a Mac). Firefox doesn't delete by time (it's only precise to the millisecond) |
+| The extension's own pages (the popup) don't stay in history | Verified in Chrome (the background also actively deletes records of the extension's own pages) |
+| New tab "most visited": generated from browsing history, so it should disappear once the history is deleted | To be confirmed manually |
+| Address bar **bookmark** suggestions: bookmarks aren't affected by history cleaning | Saving an entry deletes the site's bookmarks; bookmarks added later aren't deleted automatically, but are deleted the next time the entry is saved |
+| Address bar **open tab** suggestions ("Switch to this tab"): unavoidable while the tab is open | Use quick close to close those tabs |
+| Address bar **search suggestions**: generated server-side by the search engine and tied to account activity; the extension can't control them | Outside the scope of protection |
+| The address bar's **shortcuts database** (entries you once picked from the address bar): Chrome should clear the matching shortcuts when deleting history | To be confirmed manually |
+| With Chrome Sync on, whether `history.deleteUrl` also deletes records on other devices | To be confirmed manually; don't rely on it |
+| An exported backup's file name appears in the browser's download history | The file name is a neutral `nightstand-<date>.nightstand` |
+| On Firefox, opening a file chooser from the popup usually closes the popup, so on Firefox you import a backup by pasting the file's contents | Firefox pastes, Chrome uses the file chooser (verified that the popup stays open) |
+| No limit or delay on wrong passphrases | On purpose: throttling would block the owner too (after pressing Enter in the filter box a few times, even the right passphrase would be silently ignored), and it does little against a bystander guessing by hand. Guessing is countered only by passphrase strength and PBKDF2 |
 
-## 开发
+## Development
 
-需要 Node 24 和 pnpm 12。
+Requires Node 24 and pnpm 12.
 
 ```bash
 pnpm install
-pnpm dev            # Chromium；Firefox 用 pnpm dev:firefox
-pnpm build          # 产物在 apps/extension/dist/chromium（Firefox：pnpm build:firefox）
+pnpm dev            # Chromium; for Firefox use pnpm dev:firefox
+pnpm build          # output in apps/extension/dist/chromium (Firefox: pnpm build:firefox)
 pnpm lint && pnpm type-check && pnpm test
-pnpm test:e2e       # 端到端测试：先构建，再驱动本机安装的 Chrome / Firefox
+pnpm test:e2e       # end-to-end tests: builds first, then drives the locally installed Chrome / Firefox
 ```
 
-端到端测试在 `apps/extension/e2e/`，用 Vitest + puppeteer-core 驱动真实浏览器，覆盖引导、增删改查、历史清理、伪装界面、Panic、备份与书签导入。真实 popup 的焦点相关行为需要有界面的窗口，用 `E2E_HEADED=1 pnpm test:e2e` 运行。
+The end-to-end tests live in `apps/extension/e2e/` and drive real browsers with Vitest + puppeteer-core, covering onboarding, adding/editing/deleting entries, history cleaning, the decoy screen, panic, backups, bookmark import and which UI language each browser language gets. The real popup's focus-related behaviour needs a visible window; run it with `E2E_HEADED=1 pnpm test:e2e`.
 
-### 目录结构
+### Layout
 
 ```
-apps/extension/   浏览器扩展（@nightstand/extension）：Extension.js + React 19 + Tailwind v4 + shadcn/ui
-packages/core/    纯 TypeScript 核心（@nightstand/core）：数据模型、网址匹配、加密、备份格式
+apps/extension/   the browser extension (@nightstand/extension): Extension.js + React 19 + Tailwind v4 + shadcn/ui
+packages/core/    pure TypeScript core (@nightstand/core): data model, URL matching, crypto, backup format
 ```
 
-`packages/core` 不依赖任何浏览器扩展 API、DOM 或 React，单元测试用 Vitest 运行。
+`packages/core` doesn't depend on any browser-extension API, the DOM or React; its unit tests run on Vitest.
 
-以后计划加入：
+Planned for later:
 
-- `apps/web`：官网；
-- `apps/server`：后端，例如端到端加密同步。
+- `apps/web`: the website;
+- `apps/server`: a backend, e.g. for end-to-end-encrypted sync.
 
-它们可以直接复用 `packages/core`。
+Both can reuse `packages/core` directly.
 
-界面文案全部来自 `apps/extension/_locales/`，目前只有简体中文。
+All UI text comes from `apps/extension/_locales/`: English (`en`, the default) and Simplified Chinese (`zh_CN`). Browsers set to Simplified Chinese get Chinese; every other language, Traditional Chinese included, gets English. `pnpm lint` checks that both catalogs have the same entries and placeholders.

@@ -42,7 +42,7 @@
     "vitest": "catalog:"
   },
   "scripts": {
-    "lint": "eslint . && node tools/check-manifest-words.mjs",
+    "lint": "eslint . && node tools/check-manifest-words.mjs && node tools/check-locales.mjs",
     "type-check": "tsc --noEmit",
     "icons": "node tools/gen-icons.mjs",
     "dev": "extension dev",

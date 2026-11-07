@@ -1,6 +1,7 @@
+import {existsSync} from 'node:fs'
 import puppeteer, {type Browser, type Page, type WebWorker} from 'puppeteer-core'
 import {CHROME_PATH, DIST_CHROMIUM} from './env'
-import {tempDir} from './temp'
+import {patchedCopy, tempDir} from './temp'
 
 export interface ChromeSession {
   browser: Browser
@@ -10,13 +11,48 @@ export interface ChromeSession {
   downloads: string
 }
 
+let zhBuild: string | undefined
+
+/**
+ * The suite finds buttons by their zh_CN labels, so it runs a copy of the
+ * build whose only (and default) catalog is zh_CN: the machine's language
+ * can't switch it to English. One copy per test file, so a relaunch with the
+ * same profile gets the same extension id.
+ */
+function zhOnlyBuild(): string {
+  if (!zhBuild || !existsSync(zhBuild)) zhBuild = patchedCopy(DIST_CHROMIUM, {onlyLocale: 'zh_CN'})
+  return zhBuild
+}
+
+/**
+ * Chrome on macOS ignores --lang and follows the system languages; the Cocoa
+ * argument domain overrides them for this process. Chrome also takes the
+ * "(xx)" value for a startup URL and opens a stray tab, which is why only the
+ * language checks set `lang`. Linux reads LANGUAGE (set in `launchChrome`).
+ */
+function languageArgs(lang: string | undefined): string[] {
+  if (!lang) return []
+  return process.platform === 'darwin' ? ['-AppleLanguages', `(${lang})`] : [`--lang=${lang}`]
+}
+
 export async function launchChrome(
-  options: {extension?: string; serverPort?: number; headless?: boolean; userDataDir?: string} = {}
+  options: {
+    extension?: string
+    serverPort?: number
+    headless?: boolean
+    userDataDir?: string
+    /**
+     * Browser UI language, for checking which catalog the real build picks.
+     * Without it the build is pinned to zh_CN (see `zhOnlyBuild`).
+     */
+    lang?: string
+  } = {}
 ): Promise<ChromeSession> {
+  const {lang} = options
   const args = [
     '--no-first-run',
     '--no-default-browser-check',
-    '--lang=zh-CN',
+    ...languageArgs(lang),
     // Chrome 157 turns on balanced HTTPS-First by default: an http:// visit to a
     // public name (example.com) is tried over https first, and when the test
     // server (plain http) fails that, Chrome shows its warning page instead —
@@ -28,9 +64,10 @@ export async function launchChrome(
     executablePath: CHROME_PATH,
     headless: options.headless ?? true,
     pipe: true,
-    enableExtensions: [options.extension ?? DIST_CHROMIUM],
+    enableExtensions: [options.extension ?? (lang ? DIST_CHROMIUM : zhOnlyBuild())],
     userDataDir: options.userDataDir ?? tempDir('chrome'),
-    args
+    args,
+    env: lang ? {...process.env, LANGUAGE: lang.replace('-', '_')} : process.env
   })
   const target = await browser.waitForTarget(
     (t) => t.type() === 'service_worker' && t.url().startsWith('chrome-extension://')

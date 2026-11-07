@@ -4,6 +4,9 @@ import {HelpProvider} from './help'
 import {t} from '@/platform/i18n'
 import '../styles/globals.css'
 
+// The catalog the browser picked, not its UI language: a zh-TW browser falls
+// back to the English catalog, and `lang` should say so.
+document.documentElement.lang = t('htmlLang')
 document.title = t('popupTitle')
 
 // Follow the system light/dark preference.

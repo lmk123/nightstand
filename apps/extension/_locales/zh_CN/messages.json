@@ -19,6 +19,10 @@
     "message": "快捷链接",
     "description": "Popup document title."
   },
+  "htmlLang": {
+    "message": "zh-CN",
+    "description": "BCP 47 language tag of this catalog, set as the popup's <html lang>."
+  },
   "back": {
     "message": "返回"
   },
