@@ -88,8 +88,11 @@
       }
     }
   },
+  "saveNoticeAutoClean": {
+    "message": "保存后，以后每次访问都会自动删除浏览记录"
+  },
   "saveNoticeEffects": {
-    "message": "删除后无法恢复，地址栏里来自它们的提示也会随之消失；以后每次访问，浏览记录也会自动删除。Cookie、缓存和下载记录不受影响。"
+    "message": "删除后无法恢复，地址栏里来自它们的提示也会随之消失。Cookie、缓存和下载记录不受影响。"
   },
   "saveCheckTitle": {
     "message": "已保存。请马上检查一下地址栏"

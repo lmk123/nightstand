@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import {ChevronDown, ChevronUp, Trash2} from 'lucide-react'
+import {ChevronDown, ChevronUp, RefreshCw, Trash2} from 'lucide-react'
 import {cn} from 'cn'
 import {
   createEntry,
@@ -252,6 +252,11 @@ export function EntryForm({
               <li className="bg-muted rounded-xl p-3 text-[12.5px] leading-snug">{t('saveNoticeHistory', String(pending.history))}</li>
               <li className="bg-muted rounded-xl p-3 text-[12.5px] leading-snug">{t('saveNoticeBookmarks', String(pending.bookmarks))}</li>
             </ul>
+            {/* The ongoing clean-up is the feature itself: keep it out of the small print. */}
+            <p className="text-foreground flex items-start gap-2 text-[13px] leading-snug font-semibold">
+              <RefreshCw className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+              {t('saveNoticeAutoClean')}
+            </p>
             <p className="text-muted-foreground text-xs leading-relaxed">{t('saveNoticeEffects')}</p>
             <Label className="text-subtle-foreground flex min-h-8 items-center gap-2 text-[13px] font-normal">
               <Checkbox checked={dontShowAgain} onCheckedChange={(v) => setDontShowAgain(v === true)} />
