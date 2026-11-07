@@ -6,7 +6,6 @@ import {Input} from '@/components/ui/input'
 import {t} from '@/platform/i18n'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
-import {PassphraseStrength} from '../components/PassphraseStrength'
 import {fieldClass, mainButtonClass} from '../components/styles'
 import {commitStored, type Session} from '../session'
 
@@ -73,7 +72,6 @@ export function NewPassphrase({
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
             />
-            <PassphraseStrength passphrase={passphrase} />
           </Field>
           <Field label={t('onbPassConfirmLabel')} htmlFor="np2" error={error}>
             <Input
