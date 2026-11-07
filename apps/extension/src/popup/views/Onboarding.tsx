@@ -17,7 +17,6 @@ import {Label} from '@/components/ui/label'
 import {t} from '@/platform/i18n'
 import {saveInitialSetup} from '@/platform/storage'
 import {Field} from '../components/Field'
-import {PassphraseStrength} from '../components/PassphraseStrength'
 import {RecoveryCodeBox} from '../components/RecoveryCodeBox'
 import {fieldClass, mainButtonClass, outlineButtonClass} from '../components/styles'
 import type {Session} from '../session'
@@ -173,7 +172,6 @@ function PassphraseStep({onBack, onCreated}: {onBack: () => void; onCreated: (va
           value={passphrase}
           onChange={(e) => setPassphrase(e.target.value)}
         />
-        <PassphraseStrength passphrase={passphrase} />
       </Field>
       <Field label={t('onbPassConfirmLabel')} htmlFor="pass2" error={error}>
         <Input
