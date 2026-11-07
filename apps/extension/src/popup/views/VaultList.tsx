@@ -37,6 +37,7 @@ export function VaultList({
   // selected, so Enter opens exactly the row that is highlighted.
   const selected = visible.find((e) => e.id === selectedId) ?? (query.trim() ? visible[0] : undefined)
   const listRef = useRef<HTMLUListElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     listRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView({block: 'nearest'})
@@ -90,6 +91,7 @@ export function VaultList({
           <label className="bg-card focus-within:border-ring focus-within:ring-ring/25 flex h-10 items-center gap-2 rounded-[10px] border px-3 focus-within:ring-3">
             <Search className="text-muted-foreground size-4 shrink-0" aria-hidden />
             <input
+              ref={searchRef}
               autoFocus
               aria-label={t('vaultSearchPlaceholder')}
               placeholder={t('vaultSearchPlaceholder')}
@@ -103,7 +105,9 @@ export function VaultList({
                 if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                   e.preventDefault()
                   moveSelection(e.key === 'ArrowDown' ? 1 : -1)
-                } else if (e.key === 'Enter' && selected) {
+                } else if (e.key === 'Enter' && !e.nativeEvent.isComposing && selected) {
+                  // isComposing: Enter that confirms an IME candidate must not open anything.
+                  e.preventDefault()
                   onOpen(selected)
                 }
               }}
@@ -130,7 +134,19 @@ export function VaultList({
               <button
                 type="button"
                 className="focus-visible:ring-ring/50 flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-[10px] px-2 text-left outline-none focus-visible:ring-2"
-                onClick={() => setSelectedId(entry.id)}
+                onClick={(e) => {
+                  setSelectedId(entry.id)
+                  // A mouse click hands focus back to the search box, where ↑↓ and ↵
+                  // work (detail 0 = a keyboard "click": keep focus on the row).
+                  if (e.detail > 0) searchRef.current?.focus()
+                }}
+                onKeyDown={(e) => {
+                  // A row reached with Tab: the first Enter selects it, the next opens it.
+                  if (e.key === 'Enter' && isSelected) {
+                    e.preventDefault()
+                    onOpen(entry)
+                  }
+                }}
               >
                 {/* Title only: some domains are revealing on their own, so the
                     list never shows the URL or the extra hosts, not even in a tooltip. */}

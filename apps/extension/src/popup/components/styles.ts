@@ -17,5 +17,10 @@ export const mainButtonClass = 'h-11 rounded-[10px] px-4 text-sm'
 /** A button with a light border on a card background. */
 export const outlineButtonClass = 'border-input bg-card dark:bg-card dark:border-input dark:hover:bg-muted'
 
-/** A scrolling view body that fits the popup's height limit. */
+/**
+ * A view that fits the popup's height limit. Its scrolling body (min-h-0
+ * overflow-y-auto) needs `*:shrink-0`: a flex child with its own overflow
+ * (e.g. an `overflow-hidden` panel) would otherwise shrink and clip its
+ * content instead of making the body scroll.
+ */
 export const viewClass = 'flex max-h-[580px] flex-col'

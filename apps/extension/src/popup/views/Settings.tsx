@@ -47,7 +47,7 @@ export function Settings({
   return (
     <div className={viewClass}>
       <Header title={t('settingsTitle')} onBack={onBack} />
-      <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4">
+      <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4 *:shrink-0">
         <section className="grid gap-2">
           <h2 className="section-label">{t('openModeLabel')}</h2>
           <Segmented

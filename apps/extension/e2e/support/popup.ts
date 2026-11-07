@@ -16,6 +16,10 @@ export async function clickText(page: Page, text: string): Promise<void> {
       const label = await button.evaluate((el) => el.textContent?.trim()).catch(() => undefined)
       if (label !== text) continue
       try {
+        // Puppeteer only scrolls the window: a button below the edge of a
+        // scrolling view body (inside the 600px-high page) would be clicked
+        // where it is hidden, so bring it into view within its scroller first.
+        await button.evaluate((el) => el.scrollIntoView({block: 'nearest'}))
         await button.click()
         return
       } catch (error) {

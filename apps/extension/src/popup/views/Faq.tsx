@@ -52,7 +52,7 @@ export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void})
   return (
     <div className={viewClass}>
       <Header title={t('faqTitle')} onBack={onBack} />
-      <div className="flex min-h-0 flex-col gap-2 overflow-y-auto p-3">
+      <div className="flex min-h-0 flex-col gap-2 overflow-y-auto p-3 *:shrink-0">
         {TOPICS.map(({id, question}) => {
           const expanded = open === id
           return (

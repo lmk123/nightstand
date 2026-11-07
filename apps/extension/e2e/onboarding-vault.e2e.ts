@@ -255,5 +255,40 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
     await p.waitForSelector('ul li[aria-current="true"]')
     await p.keyboard.press('Enter')
     await vi.waitFor(async () => expect(await siteTabs()).toBe(before + 2))
+
+    // Enter right after a click opens the clicked row (focus goes back to the search box).
+    p = await openPopup(s)
+    expect(await submitUnlock(p, 'shelf')).toBe(true)
+    const [, , third] = await p.$$('ul li > button:first-child')
+    await third?.click()
+    expect(await selectedRow(p)).toBe(2)
+    expect(await siteTabs()).toBe(before + 2)
+    await p.keyboard.press('Enter')
+    await vi.waitFor(async () => expect(await siteTabs()).toBe(before + 3))
+  })
+
+  it('settings scroll down to their last link, nothing squeezed or cut off', async () => {
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'shelf')).toBe(true)
+    await openSettings(p)
+    await waitText(p, '从浏览器书签导入')
+    const layout = await p.$eval('header + div', (body) => ({
+      scrolls: body.scrollHeight > body.clientHeight,
+      // A child shorter than its own content has been squeezed by the flex column.
+      clipped: [...body.children].filter((el) => el.scrollHeight > el.clientHeight + 1).map((el) => el.textContent?.slice(0, 20))
+    }))
+    expect(layout.clipped).toEqual([])
+    expect(layout.scrolls).toBe(true)
+    // The last link can be scrolled to and is fully inside the scroll area.
+    const lastVisible = await p.$eval('header + div', (body) => {
+      const links = body.querySelectorAll('nav button')
+      const last = links[links.length - 1]!
+      last.scrollIntoView({block: 'end'})
+      const a = body.getBoundingClientRect()
+      const b = last.getBoundingClientRect()
+      return links.length === 5 && b.top >= a.top && b.bottom <= a.bottom + 0.5
+    })
+    expect(lastVisible).toBe(true)
+    await p.close()
   })
 })

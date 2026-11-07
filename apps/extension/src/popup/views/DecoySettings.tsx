@@ -46,7 +46,7 @@ export function DecoySettings({
   return (
     <div className={viewClass}>
       <Header title={t('decoySettingsTitle')} onBack={onBack} />
-      <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4">
+      <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4 *:shrink-0">
         <section className="grid gap-2">
           <h2 className="section-label">{t('decoyLinksSection')}</h2>
           {config.links.length > 0 && (
