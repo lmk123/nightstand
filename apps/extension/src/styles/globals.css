@@ -38,8 +38,6 @@
     --color-warn-solid-foreground: var(--warn-solid-foreground);
     --color-ok: var(--ok);
     --color-ok-foreground: var(--ok-foreground);
-    --color-fair: var(--fair);
-    --color-fair-foreground: var(--fair-foreground);
     --color-scrim: var(--scrim);
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
@@ -91,8 +89,6 @@
     --warn-solid-foreground: #ffffff;
     --ok: #2f7a55;
     --ok-foreground: #1f5c3e;
-    --fair: #c58a1a;
-    --fair-foreground: #7a5410;
     --scrim: rgb(28 29 33 / 0.38);
 
     /* Letter tiles for sites without an icon. */
@@ -141,8 +137,6 @@
     --warn-solid-foreground: #2b2417;
     --ok: #5bbe8c;
     --ok-foreground: #7fd3a8;
-    --fair: #e0b252;
-    --fair-foreground: #ebcb86;
     --scrim: rgb(0 0 0 / 0.55);
 
     --tile-gray: #2e2f35; --tile-gray-fg: #d6d5d0;

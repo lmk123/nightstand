@@ -5,12 +5,11 @@ import {t, type MessageKey} from '@/platform/i18n'
 import {Header} from '../components/Header'
 import {viewClass} from '../components/styles'
 
-export type FaqTopic = 'matchMode' | 'extraHosts' | 'passphrase' | 'storage' | 'secrets'
+export type FaqTopic = 'matchMode' | 'extraHosts' | 'storage' | 'secrets'
 
 const TOPICS: {id: FaqTopic; question: MessageKey}[] = [
   {id: 'matchMode', question: 'faqMatchQ'},
   {id: 'extraHosts', question: 'faqExtraQ'},
-  {id: 'passphrase', question: 'faqPassQ'},
   {id: 'storage', question: 'faqStoreQ'},
   {id: 'secrets', question: 'faqSecretQ'}
 ]
@@ -25,14 +24,6 @@ const MATCH_EXAMPLES: [string, boolean, boolean][] = [
   ['blog.example.com/', true, false],
   ['evil-example.com/', false, false],
   ['example.org/', false, false]
-]
-
-const PASS_EXAMPLES: [MessageKey, MessageKey][] = [
-  ['faqPassRow1', 'faqPassTime1'],
-  ['faqPassRow2', 'faqPassTime2'],
-  ['faqPassRow3', 'faqPassTime3'],
-  ['faqPassRow4', 'faqPassTime4'],
-  ['faqPassRow5', 'faqPassTime5']
 ]
 
 /** FAQ: a view inside the popup (never an extension tab). Opened from settings and from "?" links. */
@@ -54,9 +45,8 @@ export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void})
   const body: Record<FaqTopic, ReactNode> = {
     matchMode: <MatchModeAnswer />,
     extraHosts: <ExtraHostsAnswer />,
-    passphrase: <PassphraseAnswer />,
-    storage: <StorageAnswer onPassphrase={() => setOpen('passphrase')} />,
-    secrets: <SecretsAnswer onPassphrase={() => setOpen('passphrase')} />
+    storage: <StorageAnswer />,
+    secrets: <SecretsAnswer />
   }
 
   return (
@@ -126,19 +116,6 @@ function Tip({children}: {children: ReactNode}) {
   return <p className="bg-accent text-accent-foreground rounded-[10px] px-3 py-2.5">{children}</p>
 }
 
-/** Opens the "how long should the passphrase be" answer from inside another one. */
-function PassphraseLink({onClick}: {onClick: () => void}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="justify-self-start rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-    >
-      {t('faqPassQ')}
-    </button>
-  )
-}
-
 function MatchModeAnswer() {
   return (
     <>
@@ -185,55 +162,25 @@ function ExtraHostsAnswer() {
   )
 }
 
-function PassphraseAnswer() {
-  return (
-    <>
-      <p>{t('faqPass1')}</p>
-      <p>{t('faqPass2')}</p>
-      <Table
-        head={
-          <tr>
-            <th className="p-2 text-left font-semibold">{t('faqColPassExample')}</th>
-            <th className="p-2 text-right font-semibold">{t('faqColPassTime')}</th>
-          </tr>
-        }
-      >
-        {PASS_EXAMPLES.map(([row, time]) => (
-          <tr key={row}>
-            <td className="text-foreground p-2">{t(row)}</td>
-            <td className="text-foreground p-2 text-right whitespace-nowrap">{t(time)}</td>
-          </tr>
-        ))}
-      </Table>
-      <p className="text-muted-foreground">{t('faqPassNote')}</p>
-      <p>{t('faqPassChoose')}</p>
-      <p>{t('faqPassMeter')}</p>
-      <p>{t('faqPassRecovery')}</p>
-    </>
-  )
-}
-
-function StorageAnswer({onPassphrase}: {onPassphrase: () => void}) {
+function StorageAnswer() {
   return (
     <>
       <p>{t('faqStore1')}</p>
       <p>{t('faqStore2')}</p>
       <p>{t('faqStore3')}</p>
-      <PassphraseLink onClick={onPassphrase} />
       <p>{t('faqStore4')}</p>
       <p>{t('faqStore5')}</p>
     </>
   )
 }
 
-function SecretsAnswer({onPassphrase}: {onPassphrase: () => void}) {
+function SecretsAnswer() {
   return (
     <>
       <p>{t('faqSecret1')}</p>
       <p>{t('faqSecret2')}</p>
       <p>{t('faqSecret3')}</p>
       <p>{t('faqSecret4')}</p>
-      <PassphraseLink onClick={onPassphrase} />
       <p>{t('faqSecret5')}</p>
       <p>{t('faqSecret6')}</p>
       <p>{t('faqSecret7')}</p>

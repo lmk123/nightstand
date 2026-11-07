@@ -42,28 +42,14 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
     expect(await vaultKeys(s)).toEqual([])
   })
 
-  it('rates the passphrase and opens the FAQ without losing onboarding input or writing anything', async () => {
-    const p = await openPopup(s)
-    await clickText(p, '开始设置')
-    await p.type('#pass', 'notes')
-    await waitText(p, '口令强度：弱')
-    await clearAndType(p, '#pass', 'tide lamp quiver 47')
-    await waitText(p, '口令强度：强')
-    await clickText(p, '口令长度有什么影响？')
-    await waitText(p, '全部猜一遍约需')
-    await p.click('button[aria-label="返回"]')
-    expect(await hasText(p, '全部猜一遍约需')).toBe(false)
-    expect(await p.$eval('#pass', (el) => (el as HTMLInputElement).value)).toBe('tide lamp quiver 47')
-    await p.close()
-    expect(await vaultKeys(s)).toEqual([])
-  })
-
   it('validates the passphrase, then writes everything only at the last step', async () => {
     const p = await openPopup(s)
     expect(await hasText(p, '欢迎使用 Nightstand')).toBe(true)
     await clickText(p, '开始设置')
     await p.type('#pass', 'abc')
     await p.type('#pass2', 'abc')
+    // Only the length is checked; no strength rating is shown.
+    expect(await hasText(p, '口令强度')).toBe(false)
     await clickText(p, '下一步')
     await waitText(p, '口令至少需要 4 个字符')
     await clearAndType(p, '#pass', 'notes')
