@@ -12,6 +12,7 @@ Works in Chrome, Edge and Firefox.
 
 - **Runs entirely on your device**: no account, no server, no network requests. Your list of sites is encrypted with your passphrase and stays in this computer's browser.
 - **Looks like an ordinary tool**: click the icon and all you see is a working "Quick Links" launcher; type your passphrase into its filter box to get to the real list. Close the popup and it locks itself. The name, description and icon on the extensions page are just as unremarkable.
+- **Open source**: the code is public under the MIT license, so anyone can check that Nightstand does what it says and nothing more.
 
 ## What it does and doesn't protect against
 
@@ -29,7 +30,8 @@ It doesn't protect against:
 - someone with full control of your computer who goes digging through its data. For example, anyone who can read the extension's storage can check it against a list of common sites and work out which of them you saved;
 - cloud-side records such as Google account "Web & App Activity" and search engine suggestions;
 - network-level records: your workplace network, router, DNS;
-- operating-system records.
+- operating-system records;
+- the extension's page in the Chrome Web Store, which the extension's details page links to: it says what Nightstand does.
 
 ## Development
 

@@ -11,6 +11,8 @@
 ```
 apps/extension/   @nightstand/extension — Extension.js + React 19 + Tailwind v4 + shadcn/ui
 packages/core/    @nightstand/core — 纯 TypeScript：数据模型、网址匹配、加密、备份格式
+apps/extension/store/  Chrome 网上应用店的商店说明、隐私权表单答案和图片生成脚本
+PRIVACY.md        隐私政策（商店的隐私政策链接指向它）
 docs/design.md    功能的具体行为、加密设计、权限、网站图标、已知限制（开发者文档）
 ```
 
@@ -28,6 +30,7 @@ pnpm test:e2e           # 构建两个目标，然后驱动真实的 Chrome/Fire
 E2E_HEADED=1 pnpm test:e2e   # 额外运行真实 popup 的检查，需要可见窗口
 pnpm --filter @nightstand/core test:watch
 pnpm --filter @nightstand/extension icons   # 重新渲染 icons-src/*.svg → public/icons/<set>/<size>.png
+pnpm store              # 构建并打 zip，再生成 Chrome 网上应用店的截图和宣传图（apps/extension/dist/store）
 ```
 
 在包内给 Extension.js 传参时，直接跟在脚本名后面，例如 `pnpm --filter @nightstand/extension run dev --browser=firefox`。**不要**加 `--`：pnpm 会原样转发它，Extension.js 就会把后面的参数当成项目路径（报 "Manifest file not found"）。
@@ -67,7 +70,7 @@ pnpm --filter @nightstand/extension icons   # 重新渲染 icons-src/*.svg → p
 
 ## README 与开发者文档
 
-- README 面向普通用户，保持简短：一句话 slogan、几句说明适用场景的简介、少数几个大亮点（第一是纯本地运行，第二是伪装）、“能防住什么，防不住什么”，以及简短的开发命令。不要写成说明书：不列功能细节、不写使用步骤（首次打开有设置向导），也不要出现“威胁模型”“哈希”这类术语。
+- README 面向普通用户，保持简短：一句话 slogan、几句说明适用场景的简介、少数几个大亮点（第一是纯本地运行，第二是伪装，第三是开源）、“能防住什么，防不住什么”，以及简短的开发命令。不要写成说明书：不列功能细节、不写使用步骤（首次打开有设置向导），也不要出现“威胁模型”“哈希”这类术语。
 - 加密设计、哈希匹配表、权限说明、网站图标、已知限制、功能的具体行为都写在 `docs/design.md`（中文）。改了相关行为时同步更新它。
 
 ## 扩展架构说明
