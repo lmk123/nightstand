@@ -11,6 +11,7 @@ import {
   onboard,
   openSettings,
   recoveryCodeOnScreen,
+  scrollsSideways,
   sleep,
   submitUnlock,
   waitText
@@ -97,12 +98,12 @@ describe.skipIf(!hasChrome)('backup, passphrase management, bookmarks (Chrome)',
     const [chooser] = await Promise.all([p.waitForFileChooser(), clickText(p, '选择备份文件')])
     await chooser.accept([longName])
     await waitText(p, '备份的口令或恢复码')
-    const widths = await p.evaluate(() => {
-      const name = [...document.querySelectorAll('span')].find((el) => el.textContent?.endsWith('.nightstand'))!
-      const scroller = name.closest('.overflow-y-auto')!
-      return {nameFits: name.scrollWidth <= name.clientWidth, viewFits: scroller.scrollWidth <= scroller.clientWidth}
+    const nameTruncated = await p.evaluate(() => {
+      const name = document.querySelector('input[type=file] ~ span')
+      return name ? name.scrollWidth > name.clientWidth : null
     })
-    expect(widths).toEqual({nameFits: false, viewFits: true})
+    expect.soft(nameTruncated).toBe(true)
+    expect.soft(await scrollsSideways(p)).toBe(false)
     await p.type('#secret', 'wrong')
     await clickText(p, '导入')
     await waitText(p, '口令或恢复码不正确')
@@ -152,13 +153,15 @@ describe.skipIf(!hasChrome)('backup, passphrase management, bookmarks (Chrome)',
       const folder = await chrome.bookmarks.create({parentId: '1', title: 'Reading'})
       await chrome.bookmarks.create({parentId: folder.id, title: 'Alpha', url: 'https://alpha.example/'})
       await chrome.bookmarks.create({parentId: folder.id, title: 'Beta', url: 'https://beta.example/x'})
-      await chrome.bookmarks.create({parentId: '1', title: 'Keep me', url: 'https://keep.example/'})
+      await chrome.bookmarks.create({parentId: '1', title: 'https://keep.example/' + 'a-long-path-segment/'.repeat(8), url: 'https://keep.example/'})
       await chrome.history.addUrl({url: 'https://alpha.example/old'})
     })
     const p = await openPopup(s)
     expect(await submitUnlock(p, 'other')).toBe(true)
     await openSettings(p, '从浏览器书签导入')
     await waitText(p, 'Reading')
+    // A long unbroken title (a URL used as the title) is truncated instead of widening the list.
+    expect.soft(await scrollsSideways(p)).toBe(false)
     const rows = await p.$$('ul li label')
     const titles = await Promise.all(rows.map((r) => r.evaluate((el) => el.textContent)))
     await rows[titles.findIndex((t) => t?.startsWith('Reading'))]?.click()

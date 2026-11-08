@@ -3,7 +3,7 @@ import {ChevronRight} from 'lucide-react'
 
 /** A group of rows that each lead to another view. */
 export function SettingsLinks({children}: {children: ReactNode}) {
-  return <nav className="panel divide-line grid divide-y overflow-hidden">{children}</nav>
+  return <nav className="panel divide-line stack divide-y overflow-hidden">{children}</nav>
 }
 
 export function SettingsLink({onClick, children}: {onClick: () => void; children: ReactNode}) {

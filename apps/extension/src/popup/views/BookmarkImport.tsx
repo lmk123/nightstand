@@ -96,7 +96,7 @@ export function BookmarkImport({
   return (
     <div className={viewClass}>
       <Header title={t('bmImportTitle')} onBack={onBack} />
-      <ul className="panel mx-3 mt-3 grid min-h-0 flex-1 content-start overflow-y-auto p-1">
+      <ul className="panel mx-3 mt-3 stack min-h-0 flex-1 content-start overflow-y-auto p-1">
         {rows.length === 0 && <li className="text-muted-foreground p-4 text-center text-[13px]">{t('bmImportEmpty')}</li>}
         {rows.map((row) => {
           const count = row.urlIds.filter((id) => selected.has(id)).length
@@ -124,8 +124,8 @@ export function BookmarkImport({
           )
         })}
       </ul>
-      <div className="grid gap-3 p-3 pt-3.5">
-        <div className="grid gap-1.5">
+      <div className="stack gap-3 p-3 pt-3.5">
+        <div className="stack gap-1.5">
           <div className="flex items-center gap-2.5">
             <span className="text-subtle-foreground text-xs font-semibold">{t('fieldMatchMode')}</span>
             <div className="flex-1">

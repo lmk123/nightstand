@@ -1,7 +1,18 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {launchChrome, openPopup, storageSnapshot, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {clearAndType, clickText, hasText, listItems, onboard, sleep, submitUnlock, waitIcons, waitText} from './support/popup'
+import {
+  clearAndType,
+  clickText,
+  hasText,
+  listItems,
+  onboard,
+  scrollsSideways,
+  sleep,
+  submitUnlock,
+  waitIcons,
+  waitText
+} from './support/popup'
 import {cleanupTemp} from './support/temp'
 
 describe.skipIf(!hasChrome)('decoy launcher (Chrome)', () => {
@@ -71,6 +82,16 @@ describe.skipIf(!hasChrome)('decoy launcher (Chrome)', () => {
     const links = (await storageSnapshot(s)).links as {icon: string; links: {title: string}[]}
     expect(links.links.map((l) => l.title)).toContain('Wiki')
     expect(links.icon).toBe('star')
+    // A long unbroken name is truncated instead of widening the view; removed again for the tests below.
+    await p.type('input[placeholder="名称"]', 'a-very-long-quick-link-name-'.repeat(4))
+    await p.type('input[placeholder="网址"]', 'example.org')
+    await clickText(p, '添加')
+    await waitText(p, 'a-very-long-quick-link-name-')
+    expect.soft(await scrollsSideways(p)).toBe(false)
+    const removeButtons = await p.$$('button[aria-label="删除"]')
+    await removeButtons.at(-1)?.click()
+    await sleep(300)
+    expect((await storageSnapshot(s)).links).toMatchObject({links: expect.not.arrayContaining([expect.objectContaining({url: 'https://example.org/'})])})
     await p.close()
   })
 

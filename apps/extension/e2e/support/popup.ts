@@ -56,6 +56,20 @@ export async function rowIcons(page: Page): Promise<(string | null)[]> {
   return page.$$eval('ul li', (items) => items.map((li) => li.querySelector('img')?.getAttribute('src') ?? null))
 }
 
+/**
+ * Whether any scrolling area of the view also scrolls sideways — what a long
+ * unbroken string (file name, URL title) does when it widens a layout past
+ * the 360px popup instead of being truncated.
+ */
+export function scrollsSideways(page: Page): Promise<boolean> {
+  return page.evaluate(() =>
+    [...document.body.querySelectorAll('*')].some((el) => {
+      const {overflowX} = getComputedStyle(el)
+      return (overflowX === 'auto' || overflowX === 'scroll') && el.scrollWidth > el.clientWidth
+    })
+  )
+}
+
 export function listItems(page: Page): Promise<string[]> {
   return page.$$eval('ul li', (items) => items.map((li) => li.textContent ?? ''))
 }

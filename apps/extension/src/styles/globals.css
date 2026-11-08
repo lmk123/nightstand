@@ -192,3 +192,15 @@
     .tile-amber { background: var(--tile-amber); color: var(--tile-amber-fg); }
     .tile-teal { background: var(--tile-teal); color: var(--tile-teal-fg); }
 }
+
+/*
+ * A vertical stack: `display: grid` with one minmax(0, 1fr) column. Use it
+ * instead of a bare `grid` for single-column layouts. A bare grid's implicit
+ * `auto` column grows to its content's min-content width, so a long unbroken
+ * string (a file name, a URL used as a title) would widen the stack past the
+ * 360px popup even inside a `truncate` element.
+ */
+@utility stack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+}

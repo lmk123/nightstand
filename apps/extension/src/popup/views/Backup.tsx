@@ -96,6 +96,7 @@ export function Backup({
       setBackup(null)
       setSecret('')
       setPasted('')
+      setFileName(null)
       setError(null)
     } finally {
       setBusy(false)
@@ -106,9 +107,9 @@ export function Backup({
     <div className={viewClass}>
       <Header title={t('backupTitle')} onBack={onBack} />
       <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4 *:shrink-0">
-        <section className="grid gap-2">
+        <section className="stack gap-2">
           <h2 className="section-label">{t('backupExportSection')}</h2>
-          <div className="panel grid gap-3 p-3.5">
+          <div className="panel stack gap-3 p-3.5">
             <p className="text-subtle-foreground text-[12.5px] leading-relaxed">{t('backupExportHint')}</p>
             <Button className={cn(buttonClass, 'justify-self-start')} onClick={exportEncrypted}>
               <Download />
@@ -117,10 +118,9 @@ export function Backup({
           </div>
         </section>
 
-        {/* grid-cols-1 (minmax(0, 1fr)) instead of the implicit auto column, which a long file name would widen past the popup. */}
-        <section className="grid grid-cols-1 gap-2">
+        <section className="stack gap-2">
           <h2 className="section-label">{t('backupImportSection')}</h2>
-          <div className="panel grid grid-cols-1 gap-3 p-3.5">
+          <div className="panel stack gap-3 p-3.5">
             <p className="text-subtle-foreground text-[12.5px] leading-relaxed">{t('backupImportHint')}</p>
             {isFirefoxLike ? (
               <Field label={t('backupPasteLabel')} htmlFor="paste" hint={t('backupPasteHint')}>
@@ -166,7 +166,7 @@ export function Backup({
               </div>
             )}
             {backup && (
-              <form className="grid gap-3" onSubmit={importBackup}>
+              <form className="stack gap-3" onSubmit={importBackup}>
                 <Field label={t('backupSecretLabel')} htmlFor="secret" hint={t('backupSecretHint')}>
                   <Input
                     id="secret"
@@ -192,10 +192,10 @@ export function Backup({
           </div>
         </section>
 
-        <section className="grid gap-2">
+        <section className="stack gap-2">
           <h2 className="section-label">{t('plainExportSection')}</h2>
           {confirmPlain ? (
-            <div role="alert" className="bg-destructive-soft border-destructive-line grid gap-2 rounded-xl border p-3.5">
+            <div role="alert" className="bg-destructive-soft border-destructive-line stack gap-2 rounded-xl border p-3.5">
               <p className="text-destructive flex items-center gap-2 text-[13px] font-semibold">
                 <TriangleAlert className="size-[18px] shrink-0" aria-hidden />
                 {t('plainExportWarningTitle')}
