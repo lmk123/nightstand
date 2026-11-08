@@ -13,7 +13,7 @@ export function ChoiceCards<T extends string>({
   onChange: (value: T) => void
 }) {
   return (
-    <RadioGroup value={value} onValueChange={(v) => onChange(v as T)} className="gap-1.5">
+    <RadioGroup value={value} onValueChange={(v) => onChange(v as T)} className="grid-cols-1 gap-1.5">
       {options.map((option) => (
         <Label
           key={option.value}

@@ -1,5 +1,5 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
-import {launchChrome, openPopup, storageSnapshot, type ChromeSession} from './support/chrome'
+import {launchChrome, openPopup, storageSnapshot, waitStorage, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
 import {
   clearAndType,
@@ -88,10 +88,15 @@ describe.skipIf(!hasChrome)('decoy launcher (Chrome)', () => {
     await clickText(p, '添加')
     await waitText(p, 'a-very-long-quick-link-name-')
     expect.soft(await scrollsSideways(p)).toBe(false)
-    const removeButtons = await p.$$('button[aria-label="删除"]')
-    await removeButtons.at(-1)?.click()
-    await sleep(300)
-    expect((await storageSnapshot(s)).links).toMatchObject({links: expect.not.arrayContaining([expect.objectContaining({url: 'https://example.org/'})])})
+    const remove = (await p.$$('button[aria-label="删除"]')).at(-1)
+    if (!remove) throw new Error('no remove button')
+    // Inside the scrolling view body: bring it into view first (see clickText).
+    await remove.evaluate((el) => el.scrollIntoView({block: 'nearest'}))
+    await remove.click()
+    await waitStorage(s, (snapshot) => {
+      const links = snapshot.links as {links: {url: string}[]}
+      return !links.links.some((l) => l.url === 'https://example.org/')
+    })
     await p.close()
   })
 

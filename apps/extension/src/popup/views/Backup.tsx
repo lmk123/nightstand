@@ -49,7 +49,12 @@ export function Backup({
   const [busy, setBusy] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
-  const filePick = useRef(0)
+  /**
+   * Bumped whenever a new source (a picked file, pasted text) replaces the
+   * backup: a file read or an import still running for the old one then
+   * leaves the view to the new one.
+   */
+  const source = useRef(0)
 
   function exportEncrypted() {
     const text = serializeBackup(createBackup(session.stored, Date.now()))
@@ -75,25 +80,32 @@ export function Backup({
   async function importBackup(event: React.FormEvent) {
     event.preventDefault()
     if (!backup) return
+    const started = source.current
+    const current = () => started === source.current
     setBusy(true)
     try {
       let merged: MergeResult
       try {
         const data = await openBackup(backup, secret)
+        if (!current()) return
         if (!data) return setError(t('errBackupSecret'))
         merged = mergeEntries(session.data.entries, data.entries)
       } catch (e) {
         // The file itself parsed, so a newer payload only shows up here, after decrypting.
-        return setError(isCoreError(e, 'unsupported-version') ? t('errBackupNewer') : t('errBackupInvalid'))
+        if (current()) setError(isCoreError(e, 'unsupported-version') ? t('errBackupNewer') : t('errBackupInvalid'))
+        return
       }
       try {
         await onImported(merged)
       } catch (e) {
         // The backup is fine; writing the merged vault failed.
         console.error(e)
-        return setError(t('errSaveFailed'))
+        if (current()) setError(t('errSaveFailed'))
+        return
       }
+      // Imported either way; only the form still belongs to this backup if no new one replaced it.
       setResult(merged)
+      if (!current()) return
       setBackup(null)
       setSecret('')
       setPasted('')
@@ -132,6 +144,7 @@ export function Backup({
                   className="bg-background dark:bg-background rounded-lg font-mono text-xs md:text-xs"
                   value={pasted}
                   onChange={(e) => {
+                    source.current++
                     setPasted(e.target.value)
                     if (e.target.value.trim()) load(e.target.value)
                     else setBackup(null)
@@ -149,20 +162,23 @@ export function Backup({
                     const file = e.target.files?.[0]
                     e.target.value = ''
                     if (!file) return
-                    // Drop the previous file's backup at once, and ignore a read that a later pick overtook.
-                    const pick = ++filePick.current
+                    // Drop the previous file's backup, passphrase and message at once,
+                    // and ignore a read that a later pick overtook.
+                    const pick = ++source.current
                     setFileName(file.name)
                     setBackup(null)
+                    setSecret('')
+                    setError(null)
                     setResult(null)
                     let text: string
                     try {
                       text = await file.text()
                     } catch (err) {
                       console.error(err)
-                      if (pick === filePick.current) setError(t('errBackupInvalid'))
+                      if (pick === source.current) setError(t('errBackupInvalid'))
                       return
                     }
-                    if (pick === filePick.current) load(text)
+                    if (pick === source.current) load(text)
                   }}
                 />
                 <FileText className="text-subtle-foreground size-[18px] shrink-0" aria-hidden />

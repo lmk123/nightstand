@@ -111,3 +111,18 @@ export async function historyUrls(session: ChromeSession, settleMs = 800): Promi
 export function storageSnapshot(session: ChromeSession): Promise<Record<string, unknown>> {
   return session.sw.evaluate(() => chrome.storage.local.get(null))
 }
+
+/** Waits (polling the background) until the stored data satisfies `done`. */
+export async function waitStorage(
+  session: ChromeSession,
+  done: (snapshot: Record<string, unknown>) => boolean,
+  timeout = 5000
+): Promise<Record<string, unknown>> {
+  const deadline = Date.now() + timeout
+  for (;;) {
+    const snapshot = await storageSnapshot(session)
+    if (done(snapshot)) return snapshot
+    if (Date.now() > deadline) throw new Error(`storage did not reach the expected state: ${JSON.stringify(snapshot)}`)
+    await new Promise((r) => setTimeout(r, 100))
+  }
+}
