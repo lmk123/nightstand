@@ -2,7 +2,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-A browser extension (Chrome first, Firefox compatible). Some sites you'd rather the address bar didn't suggest while you're giving a talk, sharing your screen, or a colleague is looking over your shoulder. Nightstand keeps those sites in an encrypted list inside the extension instead of in your bookmarks bar, and deletes the matching browsing history after every visit, so typing a few letters into the address bar no longer brings them up.
+A browser extension for Chrome, Edge and Firefox. Some sites you'd rather the address bar didn't suggest while you're giving a talk, sharing your screen, or a colleague is looking over your shoulder. Nightstand keeps those sites in an encrypted list inside the extension instead of in your bookmarks bar, and deletes the matching browsing history after every visit, so typing a few letters into the address bar no longer brings them up.
 
 The extension itself keeps a low profile too: click its icon while it's locked and all you see is an ordinary, working "Quick Links" launcher.
 
