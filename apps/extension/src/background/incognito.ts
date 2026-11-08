@@ -12,6 +12,11 @@ export async function openIncognito(url: string): Promise<void> {
   await updateState((s) => ({...s, incognitoWindows: [...s.incognitoWindows, id]}))
 }
 
+/** Drops every recorded window (a new browser session reuses window ids). */
+export async function forgetIncognitoWindows(): Promise<void> {
+  await updateState((s) => (s.incognitoWindows.length ? {...s, incognitoWindows: []} : s))
+}
+
 chrome.windows.onRemoved.addListener((windowId) => {
   updateState((s) =>
     s.incognitoWindows.includes(windowId)

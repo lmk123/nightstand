@@ -76,6 +76,8 @@ export interface MergeResult {
   added: number
   updated: number
   unchanged: number
+  /** The added and updated entries, as they are in `entries`: what the import newly protects. */
+  changed: VaultEntry[]
 }
 
 function recency(entry: VaultEntry): number {
@@ -102,6 +104,7 @@ export function mergeEntries(
   let added = 0
   let updated = 0
   let unchanged = 0
+  const changedAt = new Set<number>()
   for (const entry of incoming) {
     const key = entryKey(entry)
     const existingIndex = key ? indexByKey.get(key) : undefined
@@ -110,6 +113,7 @@ export function mergeEntries(
       usedIds.add(id)
       entries.push({...entry, id})
       if (key) indexByKey.set(key, entries.length - 1)
+      changedAt.add(entries.length - 1)
       added++
       continue
     }
@@ -124,12 +128,14 @@ export function mergeEntries(
       // where no icon was cached) shouldn't wipe it.
       const icon = entry.icon ?? existing.icon
       if (icon !== undefined) entries[existingIndex].icon = icon
+      changedAt.add(existingIndex)
       updated++
     } else {
       unchanged++
     }
   }
-  return {entries, added, updated, unchanged}
+  const changed = [...changedAt].sort((a, b) => a - b).map((i) => entries[i]!)
+  return {entries, added, updated, unchanged, changed}
 }
 
 /**

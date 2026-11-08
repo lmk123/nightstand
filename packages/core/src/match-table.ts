@@ -67,18 +67,38 @@ export interface UrlMatcher {
   readonly isEmpty: boolean
 }
 
+/**
+ * Most host candidates whose answer a matcher remembers. A full history scan
+ * sees the same few thousand hosts (and far fewer parent domains) over and
+ * over; the bound only keeps a long-lived matcher from growing without limit.
+ */
+const MAX_REMEMBERED_HOSTS = 10_000
+
 /** Precomputes lookup sets for repeated matching (background listeners). */
 export function createMatcher(table: MatchTable): UrlMatcher {
   const salt = base64ToBytes(table.salt)
   const site = new Set(table.site)
   const exact = new Set(table.exact)
+  // The table never changes for this matcher, so each candidate's answer
+  // can be kept instead of hashing it again for every history item.
+  const siteAnswers = new Map<string, boolean>()
+
+  async function isProtectedSite(candidate: string): Promise<boolean> {
+    let answer = siteAnswers.get(candidate)
+    if (answer === undefined) {
+      answer = site.has(await hashWith(salt, 'site', candidate))
+      if (siteAnswers.size >= MAX_REMEMBERED_HOSTS) siteAnswers.clear()
+      siteAnswers.set(candidate, answer)
+    }
+    return answer
+  }
 
   async function matchesHost(rawHost: string): Promise<boolean> {
     if (site.size === 0) return false
     const host = normalizeHost(rawHost)
     if (!host) return false
     for (const candidate of hostCandidates(host)) {
-      if (site.has(await hashWith(salt, 'site', candidate))) return true
+      if (await isProtectedSite(candidate)) return true
     }
     return false
   }

@@ -63,6 +63,21 @@ describe('mergeEntries', () => {
     const result = mergeEntries(current, incoming)
     expect(result.entries.map((e) => e.id)).toEqual(['a', 'y'])
     expect(result).toMatchObject({added: 1, updated: 0, unchanged: 1})
+    expect(result.changed.map((e) => e.id)).toEqual(['y'])
+  })
+
+  it('reports added and updated entries (not unchanged ones) as changed, in list order', () => {
+    const current = [base('a', 'https://example.com/'), base('b', 'https://example.net/', {lastOpenedAt: 900})]
+    const incoming = [
+      base('y', 'https://example.org/'),
+      base('x', 'https://example.com/', {title: 'New', lastOpenedAt: 500}),
+      base('z', 'https://example.net/', {lastOpenedAt: 200})
+    ]
+    const result = mergeEntries(current, incoming)
+    expect(result.changed.map((e) => [e.id, e.title])).toEqual([
+      ['a', 'New'],
+      ['y', '']
+    ])
   })
 
   it('the more recent duplicate wins but keeps the current id and max open count', () => {

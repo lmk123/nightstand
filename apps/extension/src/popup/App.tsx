@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState} from 'react'
+import {useCallback, useEffect, useRef, useState} from 'react'
 import {
   entrySiteHosts,
   hostOf,
@@ -12,6 +12,7 @@ import {
   type DecoyConfig,
   type EntryInput,
   type StoredVault,
+  type VaultData,
   type VaultEntry
 } from '@nightstand/core'
 import {removeBookmarksFor} from '@/platform/bookmarks'
@@ -68,11 +69,31 @@ function purgeFor(...entries: VaultEntry[]) {
   if (hosts.length || urls.length) sendToBackground({type: 'purge', hosts, urls}).catch(console.error)
 }
 
+/**
+ * Wipes what newly protected entries left behind: their history (in the
+ * background) and their bookmarks, which would keep them in address-bar
+ * suggestions.
+ */
+async function protect(entries: readonly VaultEntry[]) {
+  if (entries.length === 0) return
+  purgeFor(...entries)
+  await removeBookmarksFor(entries).catch(console.error)
+}
+
 export default function App() {
   const [boot, setBoot] = useState<Boot | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [session, setSessionState] = useState<Session | null>(null)
   const [view, setView] = useState<View>({name: 'loading'})
   const openHelp = useOpenHelp()
+  // The latest session, for `update`: a render's `session` is stale as soon
+  // as another commit lands.
+  const sessionRef = useRef<Session | null>(null)
+  const updates = useRef<Promise<unknown>>(Promise.resolve())
+
+  const setSession = useCallback((next: Session | null) => {
+    sessionRef.current = next
+    setSessionState(next)
+  }, [])
 
   useEffect(() => {
     ;(async () => {
@@ -104,11 +125,21 @@ export default function App() {
   const lock = useCallback(() => {
     setSession(null)
     setView({name: 'locked'})
-  }, [])
+  }, [setSession])
 
   async function handleUnlocked(result: UnlockResult) {
     if (!boot?.stored) return
-    let opened = await openSession(boot.stored, result.dek)
+    let opened: Session
+    try {
+      opened = await openSession(boot.stored, result.dek)
+    } catch (error) {
+      // The secret was right but the contents can't be read (damaged, or
+      // written by a newer build). Show the unreadable-data notice instead
+      // of looking exactly like a wrong passphrase.
+      console.error(error)
+      setBoot((b) => (b ? {...b, loadError: true} : b))
+      return
+    }
     // Entries saved without an icon may have one cached by now (a visit
     // since). Done before the list shows, so no edit can race this commit.
     const icons = await findMissingIcons(opened.data.entries)
@@ -124,11 +155,25 @@ export default function App() {
     setView(result.via === 'recovery' ? {name: 'resetPassphrase'} : {name: 'vault'})
   }
 
-  async function update(next: Session['data']) {
-    if (!session) return
-    const saved = await commit(session, next)
-    setSession(saved)
-    setBoot((b) => (b ? {...b, stored: saved.stored} : b))
+  /**
+   * Applies `change` to the latest vault data and commits it. Updates run one
+   * at a time, each on the result of the one before, so two quick changes
+   * (two switches in settings, say) can't overwrite each other. Resolves to
+   * the new session, or null when the vault was locked meanwhile.
+   */
+  function update(change: (data: VaultData) => VaultData): Promise<Session | null> {
+    const run = updates.current.then(async () => {
+      const current = sessionRef.current
+      if (!current) return null
+      const saved = await commit(current, change(current.data))
+      // Locked (or replaced) while this was being written: don't bring it back.
+      if (sessionRef.current !== current) return null
+      setSession(saved)
+      setBoot((b) => (b ? {...b, stored: saved.stored} : b))
+      return saved
+    })
+    updates.current = run.catch(() => undefined)
+    return run
   }
 
   async function openEntry(entry: VaultEntry) {
@@ -138,7 +183,7 @@ export default function App() {
       setView({name: 'vault', notice: 'incognito'})
       return
     }
-    await update(recordOpen(session.data, entry.id, Date.now()))
+    await update((data) => recordOpen(data, entry.id, Date.now()))
     await openUrl(entry.url, mode)
     window.close()
   }
@@ -205,7 +250,7 @@ export default function App() {
             ) : view.notice === 'saveCheck' ? (
               <SaveCheck
                 onDismiss={async (skipFromNow) => {
-                  if (skipFromNow) await update(updateSettings(session.data, {skipSaveCheck: true}))
+                  if (skipFromNow) await update((data) => updateSettings(data, {skipSaveCheck: true}))
                   setView({name: 'vault'})
                 }}
               />
@@ -230,20 +275,20 @@ export default function App() {
           onSave={async (saved, isNew, skipNoticeFromNow) => {
             // Before the purge below: Chrome drops a site's cached icon with its history.
             const entry = await withIcon(saved)
-            let next = isNew ? addEntry(session.data, entry) : replaceEntry(session.data, entry)
-            if (skipNoticeFromNow) next = updateSettings(next, {skipSaveNotice: true})
-            await update(next)
-            purgeFor(entry)
-            // Bookmarks would keep the site in address-bar suggestions.
-            await removeBookmarksFor(entry).catch(console.error)
+            const savedSession = await update((data) => {
+              const next = isNew ? addEntry(data, entry) : replaceEntry(data, entry)
+              return skipNoticeFromNow ? updateSettings(next, {skipSaveNotice: true}) : next
+            })
+            if (!savedSession) return
+            await protect([entry])
             // Cleaning has missed address-bar suggestions before (redirect
             // hops, other domains): ask the user to check it right away
             // whenever this save protects something new, unless they opted out.
-            const check = widensScope(view.editing, entry) && next.settings.skipSaveCheck !== true
+            const check = widensScope(view.editing, entry) && savedSession.data.settings.skipSaveCheck !== true
             setView(check ? {name: 'vault', notice: 'saveCheck'} : {name: 'vault'})
           }}
           onDelete={async (entry) => {
-            await update(removeEntry(session.data, entry.id))
+            await update((data) => removeEntry(data, entry.id))
             setView({name: 'vault'})
           }}
         />
@@ -252,7 +297,7 @@ export default function App() {
       return (
         <Settings
           settings={session.data.settings}
-          onChange={(patch) => update(updateSettings(session.data, patch))}
+          onChange={async (patch) => void (await update((data) => updateSettings(data, patch)))}
           onBack={() => setView({name: 'vault'})}
         >
           <SettingsLinks>
@@ -296,8 +341,9 @@ export default function App() {
           session={session}
           onBack={() => setView({name: 'settings'})}
           onImported={async (merged) => {
-            await update({...session.data, entries: merged.entries})
-            purgeFor(...merged.entries)
+            // Merged against this screen's data; nothing else changes the vault meanwhile.
+            await update((data) => ({...data, entries: merged.entries}))
+            await protect(merged.changed)
           }}
         />
       )
@@ -307,7 +353,9 @@ export default function App() {
           data={session.data}
           onBack={() => setView({name: 'settings'})}
           onImport={async (next, added) => {
-            await update(next)
+            // Built from this screen's data; nothing else changes the vault meanwhile.
+            await update(() => next)
+            // Bookmarks are left alone: the screen has its own "delete originals" choice.
             purgeFor(...added)
           }}
         />

@@ -60,6 +60,9 @@ async function expireVisitsWithRedirectParents(url: string): Promise<void> {
   }
 }
 
+/** Addresses deleted at the same time (each is a few history API round trips). */
+const DELETE_CONCURRENCY = 8
+
 /**
  * Deletes each URL together with its scheme / `www.` variants: redirect hops
  * of the same visit that `history.search` can't see (see `addressVariants`),
@@ -72,10 +75,16 @@ async function deleteUrls(urls: Iterable<string>): Promise<void> {
     doomed.add(url)
     for (const variant of addressVariants(url)) doomed.add(variant)
   }
-  for (const url of doomed) {
-    if (isChromiumLike) await expireVisitsWithRedirectParents(url)
-    await chrome.history.deleteUrl({url})
+  // Addresses are independent of each other, so several are in flight at
+  // once; each one's visits are still expired before the address goes.
+  const queue = [...doomed]
+  const worker = async () => {
+    for (let url = queue.pop(); url !== undefined; url = queue.pop()) {
+      if (isChromiumLike) await expireVisitsWithRedirectParents(url)
+      await chrome.history.deleteUrl({url})
+    }
   }
+  await Promise.all(Array.from({length: Math.min(DELETE_CONCURRENCY, queue.length)}, worker))
 }
 
 /** Deletes every history item (optionally restricted to a text search) that matches. */

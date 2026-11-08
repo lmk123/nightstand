@@ -400,7 +400,7 @@
     "message": "Import backup"
   },
   "backupImportHint": {
-    "message": "Entries in the backup are merged into the current list; for duplicate URLs the newer entry is kept. Your current passphrase and recovery code stay the same."
+    "message": "Entries in the backup are merged into the current list; for duplicate URLs the newer entry is kept. Your current passphrase and recovery code stay the same. As when saving an entry, the imported sites' history and bookmarks are deleted."
   },
   "backupChooseFile": {
     "message": "Choose backup file"

@@ -7,7 +7,7 @@ import {applyIcon} from '@/platform/icons'
 import {isBackgroundRequest} from '@/platform/messages'
 import {loadLinks, removeRetiredKeys} from '@/platform/storage'
 import {fullScan, handleVisited, incrementalScan, purgeEntries} from './cleaner'
-import {openIncognito} from './incognito'
+import {forgetIncognitoWindows, openIncognito} from './incognito'
 import {panic} from './panic'
 
 const SCAN_ALARM = 'scan'
@@ -55,6 +55,10 @@ async function restoreIcon(): Promise<void> {
 }
 
 chrome.runtime.onStartup.addListener(() => {
+  // Window ids start over with every browser session, and windows still open
+  // when the browser quit never reported being closed: forget them all, so
+  // panic can't close an ordinary window that now has one of those ids.
+  forgetIncognitoWindows().catch(console.error)
   restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
   fullScan().catch(console.error)

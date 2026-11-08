@@ -73,9 +73,16 @@ function samePixels(a: Uint8ClampedArray, b: Uint8ClampedArray): boolean {
 
 /** The site's own cached icon as a PNG `data:` URL, or null when Chrome only has its placeholder. */
 async function cachedIcon(pageUrl: string): Promise<string | null> {
-  placeholder ??= render(NO_ICON_PAGE)
-  const [icon, none] = await Promise.all([render(pageUrl), placeholder])
-  if (!icon || (none && samePixels(icon.pixels, none.pixels))) return null
+  const pending = (placeholder ??= render(NO_ICON_PAGE))
+  const [icon, none] = await Promise.all([render(pageUrl), pending])
+  if (!none) {
+    // Without the placeholder, Chrome's grey globe can't be told from a real
+    // icon, and a stored icon is never looked up again. Answer "none" and try
+    // the placeholder afresh next time instead of remembering the failure.
+    if (placeholder === pending) placeholder = undefined
+    return null
+  }
+  if (!icon || samePixels(icon.pixels, none.pixels)) return null
   return isEntryIcon(icon.dataUrl) ? icon.dataUrl : null
 }
 

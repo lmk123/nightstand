@@ -1,15 +1,16 @@
 import {entryCoversUrl, type VaultEntry} from '@nightstand/core'
 
 /**
- * Bookmarks pointing at the entry's site (or exact URL). They would keep
- * showing up in address-bar suggestions, so saving an entry deletes them.
+ * Bookmarks pointing at any of the entries' sites (or exact URLs). They would
+ * keep showing up in address-bar suggestions, so saving an entry deletes them.
  */
-export async function findBookmarksFor(entry: VaultEntry): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
+async function findBookmarksCovered(entries: readonly VaultEntry[]): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
   const tree = await chrome.bookmarks.getTree()
   const found: chrome.bookmarks.BookmarkTreeNode[] = []
   const walk = (nodes: chrome.bookmarks.BookmarkTreeNode[]) => {
     for (const node of nodes) {
-      if (node.url && entryCoversUrl(entry, node.url)) found.push(node)
+      const url = node.url
+      if (url && entries.some((entry) => entryCoversUrl(entry, url))) found.push(node)
       if (node.children) walk(node.children)
     }
   }
@@ -17,13 +18,18 @@ export async function findBookmarksFor(entry: VaultEntry): Promise<chrome.bookma
   return found
 }
 
+/** Bookmarks the entry covers: what saving it is about to delete. */
+export function findBookmarksFor(entry: VaultEntry): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
+  return findBookmarksCovered([entry])
+}
+
 export async function removeBookmarks(ids: string[]): Promise<void> {
   for (const id of ids) await chrome.bookmarks.remove(id)
 }
 
-/** Deletes every bookmark the entry covers; returns how many. */
-export async function removeBookmarksFor(entry: VaultEntry): Promise<number> {
-  const found = await findBookmarksFor(entry)
+/** Deletes every bookmark any of the entries covers (one pass over the tree); returns how many. */
+export async function removeBookmarksFor(entries: readonly VaultEntry[]): Promise<number> {
+  const found = await findBookmarksCovered(entries)
   await removeBookmarks(found.map((b) => b.id))
   return found.length
 }

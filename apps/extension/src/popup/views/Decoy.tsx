@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react'
+import {useMemo, useRef, useState} from 'react'
 import {Search, SlidersHorizontal} from 'lucide-react'
 import {filterDecoyLinks, hostOf, type DecoyLink, type StoredVault} from '@nightstand/core'
 import {Button} from '@/components/ui/button'
@@ -26,17 +26,27 @@ export function Decoy({
   links: DecoyLink[]
   stored: StoredVault | null
   loadError: boolean
-  onUnlocked: (result: UnlockResult) => void
+  onUnlocked: (result: UnlockResult) => Promise<void>
   onSettings: () => void
 }) {
   const [query, setQuery] = useState('')
   const visible = useMemo(() => filterDecoyLinks(links, query), [links, query])
+  /** A successful attempt is being handled; later ones that also succeed are dropped. */
+  const unlocking = useRef(false)
 
   async function tryUnlock() {
     const input = query
     if (!stored || !input.trim()) return
+    // Attempts themselves may overlap (a wrong one must never swallow the
+    // owner's next Enter), but only the first success opens the vault.
     const result = await attemptUnlock(stored, input)
-    if (result) onUnlocked(result)
+    if (!result || unlocking.current) return
+    unlocking.current = true
+    try {
+      await onUnlocked(result)
+    } finally {
+      unlocking.current = false
+    }
   }
 
   async function open(link: DecoyLink) {
