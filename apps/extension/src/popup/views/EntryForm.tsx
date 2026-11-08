@@ -68,11 +68,18 @@ export function EntryForm({
   /** Validated entry waiting for the user to confirm the notice, with what saving it deletes. */
   const [pending, setPending] = useState<{entry: VaultEntry; history: number; bookmarks: number} | null>(null)
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  const [saveFailed, setSaveFailed] = useState(false)
 
   async function save(entry: VaultEntry, skipNoticeFromNow: boolean) {
     setBusy(true)
+    setSaveFailed(false)
     try {
       await onSave(entry, !editing, skipNoticeFromNow)
+    } catch (e) {
+      // Nothing was protected: say so instead of leaving the form as it was.
+      console.error(e)
+      setPending(null)
+      setSaveFailed(true)
     } finally {
       setBusy(false)
     }
@@ -200,10 +207,25 @@ export function EntryForm({
             <HelpLink topic="extraHosts" label="faqExtraLink" />
           </div>
         </fieldset>
+        {saveFailed && (
+          <p role="alert" className="text-destructive px-4 pb-3 text-xs">
+            {t('errSaveFailed')}
+          </p>
+        )}
         <footer className="border-line flex items-center gap-2 border-t p-3">
           {editing &&
             (confirmingDelete ? (
-              <Button type="button" variant="destructive" className={buttonClass} onClick={() => onDelete(editing)}>
+              <Button
+                type="button"
+                variant="destructive"
+                className={buttonClass}
+                onClick={() =>
+                  onDelete(editing).catch((e: unknown) => {
+                    console.error(e)
+                    setSaveFailed(true)
+                  })
+                }
+              >
                 <Trash2 />
                 {t('confirmDelete')}
               </Button>

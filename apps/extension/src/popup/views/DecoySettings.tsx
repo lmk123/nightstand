@@ -3,7 +3,7 @@ import {X} from 'lucide-react'
 import {DEFAULT_DECOY_LINKS, hostOf, makeDecoyLink, type DecoyConfig} from '@nightstand/core'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
-import {t} from '@/platform/i18n'
+import {t, type MessageKey} from '@/platform/i18n'
 import {saveLinks} from '@/platform/storage'
 import {SiteAvatar} from '../components/Avatar'
 import {Header} from '../components/Header'
@@ -25,18 +25,26 @@ export function DecoySettings({
 }) {
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<MessageKey | null>(null)
 
-  async function save(next: DecoyConfig) {
-    await saveLinks(next)
+  /** Writes and adopts `next`; false (with a message) when the write failed. */
+  async function save(next: DecoyConfig): Promise<boolean> {
+    try {
+      await saveLinks(next)
+    } catch (e) {
+      console.error(e)
+      setError('errSaveFailed')
+      return false
+    }
     onChange(next)
+    return true
   }
 
   async function addLink(event: React.FormEvent) {
     event.preventDefault()
     const link = makeDecoyLink(title, url)
-    if (!link) return setError(true)
-    await save({...config, links: [...config.links, link]})
+    if (!link) return setError('errInvalidUrl')
+    if (!(await save({...config, links: [...config.links, link]}))) return
     setTitle('')
     setUrl('')
   }
@@ -87,14 +95,14 @@ export function DecoySettings({
                 placeholder={t('decoyLinkUrl')}
                 spellCheck={false}
                 value={url}
-                aria-invalid={error || undefined}
+                aria-invalid={error === 'errInvalidUrl' || undefined}
                 onChange={(e) => {
                   setUrl(e.target.value)
-                  setError(false)
+                  setError(null)
                 }}
               />
             </div>
-            {error && <p className="text-destructive text-xs">{t('errInvalidUrl')}</p>}
+            {error && <p className="text-destructive text-xs">{t(error)}</p>}
             <div className="flex items-center justify-between">
               <Button
                 type="button"

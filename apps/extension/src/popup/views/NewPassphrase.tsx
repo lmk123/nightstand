@@ -1,30 +1,27 @@
 import {useState} from 'react'
 import {KeyRound} from 'lucide-react'
-import {changePassphrase, checkPassphrase} from '@nightstand/core'
+import {checkPassphrase} from '@nightstand/core'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {t} from '@/platform/i18n'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
 import {fieldClass, mainButtonClass} from '../components/styles'
-import {commitStored, type Session} from '../session'
 
 /**
  * Sets a new passphrase for an unlocked vault. Used after unlocking with the
  * recovery code (forgotten passphrase, no way back: `onBack` absent) and from
- * real settings.
+ * real settings. `onSubmit` writes it (through App's update queue).
  */
 export function NewPassphrase({
-  session,
   title,
   hint,
-  onDone,
+  onSubmit,
   onBack
 }: {
-  session: Session
   title: string
   hint?: string
-  onDone: (session: Session) => void
+  onSubmit: (passphrase: string) => Promise<void>
   onBack?: () => void
 }) {
   const [passphrase, setPassphrase] = useState('')
@@ -38,10 +35,13 @@ export function NewPassphrase({
     if (problem === 'too-short') return setError(t('errPassTooShort'))
     if (problem === 'looks-like-recovery-code') return setError(t('errPassLooksLikeCode'))
     if (passphrase !== confirm) return setError(t('errPassMismatch'))
+    setError(null)
     setBusy(true)
     try {
-      const stored = await changePassphrase(session.stored, session.dek, passphrase)
-      onDone(await commitStored(session, stored))
+      await onSubmit(passphrase)
+    } catch (e) {
+      console.error(e)
+      setError(t('errSaveFailed'))
     } finally {
       setBusy(false)
     }

@@ -3,13 +3,15 @@ import {
   looksLikeRecoveryCode,
   newMatchSalt,
   openVault,
+  sameMatchTable,
   sealVault,
   unlockWithPassphrase,
   unlockWithRecoveryCode,
+  type MatchTable,
   type StoredVault,
   type VaultData
 } from '@nightstand/core'
-import {loadIndex, saveShelfAndIndex} from '@/platform/storage'
+import {loadIndex, saveIndex, saveShelfAndIndex} from '@/platform/storage'
 
 /**
  * An unlocked vault. Lives only in the popup's memory: closing the popup
@@ -21,26 +23,49 @@ export interface Session {
   data: VaultData
   /** Match-table salt, kept stable across rebuilds. */
   salt: string
+  /** The match table as stored (null: none, or unreadable), to skip writes that change nothing. */
+  index: MatchTable | null
 }
 
 export async function openSession(stored: StoredVault, dek: CryptoKey): Promise<Session> {
   const [data, index] = await Promise.all([openVault(stored, dek), loadIndex()])
-  return {stored, dek, data, salt: index?.salt ?? newMatchSalt()}
+  return {stored, dek, data, salt: index?.salt ?? newMatchSalt(), index}
 }
 
-/** Encrypts `data`, rebuilds the match table and writes both. */
+/** The match table for `data`, and whether it differs from what is stored. */
+async function rebuildIndex(session: Session, data: VaultData): Promise<{index: MatchTable; changed: boolean}> {
+  const index = await buildMatchTable(data.entries, session.salt)
+  return {index, changed: !session.index || !sameMatchTable(session.index, index)}
+}
+
+/**
+ * Encrypts `data` and writes it, together with the rebuilt match table when
+ * that changed. Most commits (opening an entry, a setting) don't change it,
+ * and rewriting it would drop the background's matcher cache for nothing.
+ */
 export async function commit(session: Session, data: VaultData): Promise<Session> {
-  const [stored, index] = await Promise.all([
+  const [stored, {index, changed}] = await Promise.all([
     sealVault(session.stored, session.dek, data),
-    buildMatchTable(data.entries, session.salt)
+    rebuildIndex(session, data)
   ])
-  await saveShelfAndIndex(stored, index)
-  return {...session, stored, data}
+  await saveShelfAndIndex(stored, changed ? index : null)
+  return {...session, stored, data, index}
 }
 
 /** Same as `commit` but for a vault whose key wraps changed (passphrase or recovery code). */
 export async function commitStored(session: Session, stored: StoredVault): Promise<Session> {
   return commit({...session, stored}, session.data)
+}
+
+/**
+ * Brings the stored match table in line with the vault (on unlock). It can
+ * only be rebuilt while unlocked, so one that is missing, unreadable or
+ * hashed under older rules would otherwise stay until the next edit.
+ */
+export async function syncIndex(session: Session): Promise<Session> {
+  const {index, changed} = await rebuildIndex(session, session.data)
+  if (changed) await saveIndex(index)
+  return {...session, index}
 }
 
 export interface UnlockResult {

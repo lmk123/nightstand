@@ -439,6 +439,9 @@
   "errBackupNewer": {
     "message": "This backup was exported by a newer version of Nightstand. Please update the extension first."
   },
+  "errSaveFailed": {
+    "message": "Couldn't save. Please try again."
+  },
   "errBackupSecret": {
     "message": "Incorrect passphrase or recovery code."
   },

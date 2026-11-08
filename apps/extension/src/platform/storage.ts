@@ -51,9 +51,20 @@ export async function loadIndex(): Promise<MatchTable | null> {
   }
 }
 
-/** Vault and its match table are always written together. */
-export async function saveShelfAndIndex(shelf: StoredVault, index: MatchTable): Promise<void> {
-  await chrome.storage.local.set({[KEY.shelf]: shelf, [KEY.index]: index})
+/**
+ * Vault and its match table, in one write. The popup leaves the table out
+ * (`index` null) when the change can't affect it — opening an entry, a
+ * setting, a new key wrap — so the background keeps its matcher cache.
+ */
+export async function saveShelfAndIndex(shelf: StoredVault, index: MatchTable | null): Promise<void> {
+  const items: Record<string, unknown> = {[KEY.shelf]: shelf}
+  if (index) items[KEY.index] = index
+  await chrome.storage.local.set(items)
+}
+
+/** Just the match table: the popup re-syncs it with the vault on unlock. */
+export async function saveIndex(index: MatchTable): Promise<void> {
+  await chrome.storage.local.set({[KEY.index]: index})
 }
 
 /** Onboarding's single write: nothing is stored before this call. */

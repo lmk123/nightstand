@@ -1,5 +1,14 @@
 import {describe, expect, it} from 'vitest'
-import {buildMatchTable, createMatcher, emptyMatchTable, hashMatchValue, newMatchSalt, parseMatchTable, isCoreError} from '../src/index.ts'
+import {
+  buildMatchTable,
+  createMatcher,
+  emptyMatchTable,
+  hashMatchValue,
+  newMatchSalt,
+  parseMatchTable,
+  sameMatchTable,
+  isCoreError
+} from '../src/index.ts'
 
 async function matcherFor(entries: {url: string; matchMode: 'site' | 'exact'}[]) {
   return createMatcher(await buildMatchTable(entries))
@@ -132,7 +141,15 @@ describe('table', () => {
   it('parseMatchTable round-trips and rejects garbage', async () => {
     const table = await buildMatchTable([{url: 'https://example.com/', matchMode: 'site'}])
     expect(parseMatchTable(JSON.parse(JSON.stringify(table)))).toEqual(table)
-    for (const bad of [null, {}, {version: 2, salt: 'x', site: [], exact: []}, {version: 1, salt: 1, site: [], exact: []}]) {
+    for (const bad of [
+      null,
+      {},
+      {version: 2, salt: 'x', site: [], exact: []},
+      {version: 1, salt: 1, site: [], exact: []},
+      // A salt that isn't base64 would make every lookup throw.
+      {version: 1, salt: 'not base64!', site: [], exact: []},
+      {version: 1, salt: '', site: [], exact: []}
+    ]) {
       try {
         parseMatchTable(bad)
         expect.unreachable()
@@ -140,5 +157,14 @@ describe('table', () => {
         expect(isCoreError(error, 'invalid-data')).toBe(true)
       }
     }
+  })
+  it('sameMatchTable compares salt and hashes', async () => {
+    const salt = newMatchSalt()
+    const a = await buildMatchTable([{url: 'https://example.com/', matchMode: 'site'}], salt)
+    const b = await buildMatchTable([{url: 'https://www.example.com/x', matchMode: 'site'}], salt)
+    expect(sameMatchTable(a, b)).toBe(true)
+    expect(sameMatchTable(a, await buildMatchTable([{url: 'https://example.org/', matchMode: 'site'}], salt))).toBe(false)
+    expect(sameMatchTable(a, await buildMatchTable([{url: 'https://example.com/', matchMode: 'site'}]))).toBe(false)
+    expect(sameMatchTable(a, emptyMatchTable(salt))).toBe(false)
   })
 })

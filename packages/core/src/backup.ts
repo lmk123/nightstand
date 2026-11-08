@@ -1,6 +1,6 @@
 import {CoreError} from './errors.ts'
 import {isFiniteNumber, isRecord} from './guards.ts'
-import {entryKey, type VaultData, type VaultEntry} from './model.ts'
+import {entryKey, entrySiteHosts, type VaultData, type VaultEntry} from './model.ts'
 import {migrateStoredVault, type StoredVault} from './storage-format.ts'
 import {openVault, unlockWithPassphrase, unlockWithRecoveryCode} from './crypto/envelope.ts'
 import {looksLikeRecoveryCode} from './crypto/recovery-code.ts'
@@ -84,10 +84,17 @@ function recency(entry: VaultEntry): number {
   return Math.max(entry.createdAt, entry.lastOpenedAt ?? 0)
 }
 
+/** Both entries' extra hosts, current ones first, without the entry's own host. */
+function unionHosts(existing: VaultEntry, incoming: VaultEntry): string[] {
+  const own = new Set(entrySiteHosts({...existing, extraHosts: []}))
+  return [...new Set([...existing.extraHosts, ...incoming.extraHosts])].filter((h) => !own.has(h))
+}
+
 /**
  * Merges imported entries into the current ones. Duplicates are matched by
  * `entryKey` (match mode + normalized host or URL); the more recent of the
- * two wins, keeping the current entry's id and the higher open count.
+ * two wins, keeping the current entry's id and the higher open count. Extra
+ * hosts are the union of both, so an older copy can still add hosts.
  * Imported entries that are new are appended in their original order.
  */
 export function mergeEntries(
@@ -118,16 +125,25 @@ export function mergeEntries(
       continue
     }
     const existing = entries[existingIndex]!
+    // Edits don't change `createdAt` / `lastOpenedAt`, so recency can't tell
+    // which copy has the newer extra hosts: keep both sides' (a merge never
+    // drops protection).
+    const extraHosts = unionHosts(existing, entry)
     if (recency(entry) > recency(existing)) {
       entries[existingIndex] = {
         ...entry,
         id: existing.id,
+        extraHosts,
         openCount: Math.max(existing.openCount, entry.openCount)
       }
       // Same host, so the icon still fits; a newer entry without one (saved
       // where no icon was cached) shouldn't wipe it.
       const icon = entry.icon ?? existing.icon
       if (icon !== undefined) entries[existingIndex].icon = icon
+      changedAt.add(existingIndex)
+      updated++
+    } else if (extraHosts.length > existing.extraHosts.length) {
+      entries[existingIndex] = {...existing, extraHosts}
       changedAt.add(existingIndex)
       updated++
     } else {

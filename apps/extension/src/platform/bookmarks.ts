@@ -3,6 +3,7 @@ import {entryCoversUrl, type VaultEntry} from '@nightstand/core'
 /**
  * Bookmarks pointing at any of the entries' sites (or exact URLs). They would
  * keep showing up in address-bar suggestions, so saving an entry deletes them.
+ * Bookmarks set by policy (`unmodifiable`) are left out: nothing can delete them.
  */
 async function findBookmarksCovered(entries: readonly VaultEntry[]): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
   const tree = await chrome.bookmarks.getTree()
@@ -10,7 +11,7 @@ async function findBookmarksCovered(entries: readonly VaultEntry[]): Promise<chr
   const walk = (nodes: chrome.bookmarks.BookmarkTreeNode[]) => {
     for (const node of nodes) {
       const url = node.url
-      if (url && entries.some((entry) => entryCoversUrl(entry, url))) found.push(node)
+      if (url && !node.unmodifiable && entries.some((entry) => entryCoversUrl(entry, url))) found.push(node)
       if (node.children) walk(node.children)
     }
   }
@@ -23,15 +24,27 @@ export function findBookmarksFor(entry: VaultEntry): Promise<chrome.bookmarks.Bo
   return findBookmarksCovered([entry])
 }
 
-export async function removeBookmarks(ids: string[]): Promise<void> {
-  for (const id of ids) await chrome.bookmarks.remove(id)
+/**
+ * Deletes each bookmark on its own, so one that can't go (set by policy, or
+ * already deleted elsewhere) doesn't keep the rest. Returns how many went.
+ */
+export async function removeBookmarks(ids: readonly string[]): Promise<number> {
+  let removed = 0
+  for (const id of ids) {
+    try {
+      await chrome.bookmarks.remove(id)
+      removed++
+    } catch (error) {
+      console.error(error)
+    }
+  }
+  return removed
 }
 
 /** Deletes every bookmark any of the entries covers (one pass over the tree); returns how many. */
 export async function removeBookmarksFor(entries: readonly VaultEntry[]): Promise<number> {
   const found = await findBookmarksCovered(entries)
-  await removeBookmarks(found.map((b) => b.id))
-  return found.length
+  return removeBookmarks(found.map((b) => b.id))
 }
 
 export interface BookmarkRow {

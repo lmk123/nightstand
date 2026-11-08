@@ -76,17 +76,27 @@ export function Backup({
     if (!backup) return
     setBusy(true)
     try {
-      const data = await openBackup(backup, secret)
-      if (!data) return setError(t('errBackupSecret'))
-      const merged = mergeEntries(session.data.entries, data.entries)
-      await onImported(merged)
+      let merged: MergeResult
+      try {
+        const data = await openBackup(backup, secret)
+        if (!data) return setError(t('errBackupSecret'))
+        merged = mergeEntries(session.data.entries, data.entries)
+      } catch (e) {
+        // The file itself parsed, so a newer payload only shows up here, after decrypting.
+        return setError(isCoreError(e, 'unsupported-version') ? t('errBackupNewer') : t('errBackupInvalid'))
+      }
+      try {
+        await onImported(merged)
+      } catch (e) {
+        // The backup is fine; writing the merged vault failed.
+        console.error(e)
+        return setError(t('errSaveFailed'))
+      }
       setResult(merged)
       setBackup(null)
       setSecret('')
       setPasted('')
       setError(null)
-    } catch {
-      setError(t('errBackupInvalid'))
     } finally {
       setBusy(false)
     }

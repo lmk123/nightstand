@@ -18,9 +18,14 @@ const ICON_LABEL: Record<IconSet, MessageKey> = {
 export function IconPicker({links, onChange}: {links: DecoyConfig; onChange: (links: DecoyConfig) => void}) {
   async function choose(icon: IconSet) {
     const next = {...links, icon}
-    await saveLinks(next)
-    onChange(next)
-    await applyIcon(icon)
+    try {
+      await saveLinks(next)
+      onChange(next)
+      await applyIcon(icon)
+    } catch (error) {
+      // Not saved: the picker keeps showing the icon that is still in use.
+      console.error(error)
+    }
   }
 
   return (

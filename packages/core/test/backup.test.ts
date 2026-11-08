@@ -99,6 +99,29 @@ describe('mergeEntries', () => {
     expect(replaced.entries[0]?.icon).toBe(newer)
   })
 
+  it('a newer duplicate keeps the current extra hosts too', () => {
+    const current = [base('a', 'https://example.com/', {extraHosts: ['cdn.example.net']})]
+    const incoming = [base('x', 'https://example.com/', {lastOpenedAt: 500, extraHosts: ['pay.example.org']})]
+    const result = mergeEntries(current, incoming)
+    expect(result.entries[0]?.extraHosts).toEqual(['cdn.example.net', 'pay.example.org'])
+    expect(result.updated).toBe(1)
+  })
+
+  it('an older duplicate still adds its extra hosts, and counts as updated', () => {
+    const current = [base('a', 'https://example.com/', {title: 'Mine', lastOpenedAt: 900, extraHosts: ['cdn.example.net']})]
+    const incoming = [base('x', 'https://example.com/', {title: 'Old', extraHosts: ['pay.example.org', 'cdn.example.net']})]
+    const result = mergeEntries(current, incoming)
+    expect(result.entries[0]).toMatchObject({id: 'a', title: 'Mine', extraHosts: ['cdn.example.net', 'pay.example.org']})
+    expect(result).toMatchObject({added: 0, updated: 1, unchanged: 0})
+    expect(result.changed.map((e) => e.id)).toEqual(['a'])
+  })
+
+  it('an older duplicate with no new extra hosts is unchanged', () => {
+    const current = [base('a', 'https://example.com/', {lastOpenedAt: 900, extraHosts: ['cdn.example.net']})]
+    const incoming = [base('x', 'https://example.com/', {extraHosts: ['cdn.example.net']})]
+    expect(mergeEntries(current, incoming)).toMatchObject({updated: 0, unchanged: 1, changed: []})
+  })
+
   it('site and exact entries for the same host are different entries', () => {
     const current = [base('a', 'https://example.com/')]
     const incoming = [{...base('b', 'https://example.com/'), matchMode: 'exact' as const}]

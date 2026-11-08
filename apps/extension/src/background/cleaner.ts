@@ -11,9 +11,19 @@ import {readState, updateState} from './state'
 
 let matcherPromise: Promise<UrlMatcher> | null = null
 
-/** Cached matcher; dropped whenever the popup rewrites the match table. */
+/**
+ * Cached matcher; dropped whenever the popup rewrites the match table. A
+ * failed load is not kept, so the next event tries again instead of every
+ * later cleanup failing on the same rejected promise.
+ */
 export function getMatcher(): Promise<UrlMatcher> {
-  matcherPromise ??= loadIndex().then((table) => createMatcher(table ?? emptyMatchTable()))
+  if (!matcherPromise) {
+    const loading = loadIndex().then((table) => createMatcher(table ?? emptyMatchTable()))
+    matcherPromise = loading
+    loading.catch(() => {
+      if (matcherPromise === loading) matcherPromise = null
+    })
+  }
   return matcherPromise
 }
 

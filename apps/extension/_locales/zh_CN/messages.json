@@ -439,6 +439,9 @@
   "errBackupNewer": {
     "message": "这份备份由更新版本的 Nightstand 导出，请先更新扩展。"
   },
+  "errSaveFailed": {
+    "message": "保存失败，请重试。"
+  },
   "errBackupSecret": {
     "message": "口令或恢复码不正确。"
   },

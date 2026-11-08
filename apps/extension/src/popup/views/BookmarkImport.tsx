@@ -13,6 +13,7 @@ import {
 import {Button} from '@/components/ui/button'
 import {Checkbox} from '@/components/ui/checkbox'
 import {Label} from '@/components/ui/label'
+import {mapConcurrent} from '@/lib/concurrency'
 import {bookmarkRows, removeBookmarks, type BookmarkRow} from '@/platform/bookmarks'
 import {withIcon} from '@/platform/favicon'
 import {t} from '@/platform/i18n'
@@ -20,6 +21,9 @@ import {Segmented} from '../components/ChoiceCards'
 import {Header} from '../components/Header'
 import {mainButtonClass, viewClass} from '../components/styles'
 import {HelpLink} from '../help'
+
+/** Icons captured at the same time (each reads history and renders a few icons). */
+const ICON_CONCURRENCY = 6
 
 /**
  * Move sites from browser bookmarks into Nightstand. Optionally deletes the
@@ -40,6 +44,7 @@ export function BookmarkImport({
   const [removeOriginals, setRemoveOriginals] = useState(true)
   const [done, setDone] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     bookmarkRows((url) => hostOf(url) !== null).then(setRows, console.error)
@@ -58,24 +63,31 @@ export function BookmarkImport({
 
   async function runImport() {
     setBusy(true)
+    setFailed(false)
     try {
-      let next = data
-      const added: VaultEntry[] = []
+      const fresh: VaultEntry[] = []
       const now = Date.now()
       for (const id of selected) {
         const row = byId.get(id)
         if (!row?.url) continue
         const entry = createEntry({url: row.url, title: row.title, matchMode}, now)
-        if (findDuplicate(next.entries, entry)) continue
-        // Before the caller purges history, which takes the cached icon with it.
-        const withSiteIcon = await withIcon(entry)
-        next = addEntry(next, withSiteIcon)
-        added.push(withSiteIcon)
+        if (findDuplicate(data.entries, entry) || findDuplicate(fresh, entry)) continue
+        fresh.push(entry)
       }
-      await onImport(next, added)
+      // Before the caller purges history, which takes the cached icon with it.
+      // Several at once: one after another, a big folder takes long enough
+      // that the popup gets closed and nothing is imported.
+      const added = await mapConcurrent(fresh, ICON_CONCURRENCY, withIcon)
+      await onImport(
+        added.reduce((next, entry) => addEntry(next, entry), data),
+        added
+      )
       if (removeOriginals) await removeBookmarks([...selected])
       setSelected(new Set())
       setDone(added.length)
+    } catch (error) {
+      console.error(error)
+      setFailed(true)
     } finally {
       setBusy(false)
     }
@@ -134,6 +146,7 @@ export function BookmarkImport({
           <Checkbox checked={removeOriginals} onCheckedChange={(v) => setRemoveOriginals(v === true)} />
           {t('bmRemoveOriginals')}
         </Label>
+        {failed && <p className="text-destructive text-xs">{t('errSaveFailed')}</p>}
         {done !== null && <p className="bg-accent text-accent-foreground rounded-[10px] p-2.5 text-xs">{t('bmImported', String(done))}</p>}
         <Button className={mainButtonClass} disabled={busy || selected.size === 0} onClick={runImport}>
           {busy ? t('working') : t('bmImportButton', String(selected.size))}

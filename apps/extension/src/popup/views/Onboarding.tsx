@@ -216,15 +216,21 @@ function RecoveryCodeStep({code, onBack, onNext}: {code: string; onBack: () => v
 
 function HowToStep({created, onBack, onDone}: {created: CreatedVault; onBack: () => void; onDone: (session: Session) => void}) {
   const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
 
   async function finish() {
     setBusy(true)
+    setFailed(false)
     try {
       const salt = newMatchSalt()
       const data = emptyVaultData()
+      const index = await buildMatchTable(data.entries, salt)
       // The one and only write of onboarding.
-      await saveInitialSetup(created.stored, await buildMatchTable(data.entries, salt), defaultDecoyConfig())
-      onDone({stored: created.stored, dek: created.dek, data, salt})
+      await saveInitialSetup(created.stored, index, defaultDecoyConfig())
+      onDone({stored: created.stored, dek: created.dek, data, salt, index})
+    } catch (error) {
+      console.error(error)
+      setFailed(true)
     } finally {
       setBusy(false)
     }
@@ -262,6 +268,11 @@ function HowToStep({created, onBack, onDone}: {created: CreatedVault; onBack: ()
         </div>
       </figure>
       <p className="text-subtle-foreground text-[13px] leading-relaxed">{t('onbHowBody')}</p>
+      {failed && (
+        <p role="alert" className="text-destructive text-xs">
+          {t('errSaveFailed')}
+        </p>
+      )}
     </StepLayout>
   )
 }

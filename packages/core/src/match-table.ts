@@ -119,15 +119,31 @@ export function createMatcher(table: MatchTable): UrlMatcher {
   }
 }
 
+/** Same salt and same hashes: writing `b` over `a` would change nothing. */
+export function sameMatchTable(a: MatchTable, b: MatchTable): boolean {
+  const same = (x: readonly string[], y: readonly string[]) => x.length === y.length && x.every((v, i) => v === y[i])
+  return a.version === b.version && a.salt === b.salt && same(a.site, b.site) && same(a.exact, b.exact)
+}
+
 export function emptyMatchTable(salt: string = newMatchSalt()): MatchTable {
   return {version: 1, salt, site: [], exact: []}
+}
+
+/** A base64 salt `hashWith` can decode (anything else would make every lookup throw). */
+function isSalt(value: unknown): value is string {
+  if (!isString(value)) return false
+  try {
+    return base64ToBytes(value).length > 0
+  } catch {
+    return false
+  }
 }
 
 export function parseMatchTable(raw: unknown): MatchTable {
   if (
     isRecord(raw) &&
     raw.version === 1 &&
-    isString(raw.salt) &&
+    isSalt(raw.salt) &&
     isStringArray(raw.site) &&
     isStringArray(raw.exact)
   ) {

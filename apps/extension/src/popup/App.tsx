@@ -1,11 +1,13 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
 import {
+  changePassphrase,
   entrySiteHosts,
   hostOf,
   recordOpen,
   removeEntry,
   addEntry,
   replaceEntry,
+  rotateRecoveryCode,
   setEntryIcons,
   updateSettings,
   widensScope,
@@ -25,7 +27,7 @@ import {IncognitoHelp} from './components/IncognitoHelp'
 import {SaveCheck} from './components/SaveCheck'
 import {SettingsLink, SettingsLinks} from './components/SettingsLink'
 import {useOpenHelp} from './help'
-import {commit, openSession, type Session, type UnlockResult} from './session'
+import {commit, commitStored, openSession, syncIndex, type Session, type UnlockResult} from './session'
 import {Backup} from './views/Backup'
 import {BookmarkImport} from './views/BookmarkImport'
 import {Decoy} from './views/Decoy'
@@ -151,21 +153,29 @@ export default function App() {
         console.error(error)
       }
     }
+    // The background cleans with the stored match table and can't rebuild it
+    // while locked: fix one that is missing, unreadable or out of date now.
+    try {
+      opened = await syncIndex(opened)
+    } catch (error) {
+      console.error(error)
+    }
     setSession(opened)
     setView(result.via === 'recovery' ? {name: 'resetPassphrase'} : {name: 'vault'})
   }
 
   /**
-   * Applies `change` to the latest vault data and commits it. Updates run one
-   * at a time, each on the result of the one before, so two quick changes
-   * (two switches in settings, say) can't overwrite each other. Resolves to
-   * the new session, or null when the vault was locked meanwhile.
+   * Runs `step` on the latest session and adopts the session it wrote. Every
+   * write of an unlocked vault goes through here, one at a time, each on the
+   * result of the one before, so two quick changes (two switches in settings,
+   * a new passphrase) can't overwrite each other. Resolves to the new
+   * session, or null when the vault was locked meanwhile.
    */
-  function update(change: (data: VaultData) => VaultData): Promise<Session | null> {
+  function enqueue(step: (current: Session) => Promise<Session>): Promise<Session | null> {
     const run = updates.current.then(async () => {
       const current = sessionRef.current
       if (!current) return null
-      const saved = await commit(current, change(current.data))
+      const saved = await step(current)
       // Locked (or replaced) while this was being written: don't bring it back.
       if (sessionRef.current !== current) return null
       setSession(saved)
@@ -176,6 +186,11 @@ export default function App() {
     return run
   }
 
+  /** Applies `change` to the latest vault data and commits it (see `enqueue`). */
+  function update(change: (data: VaultData) => VaultData): Promise<Session | null> {
+    return enqueue((current) => commit(current, change(current.data)))
+  }
+
   async function openEntry(entry: VaultEntry) {
     if (!session) return
     const mode = session.data.settings.openMode
@@ -183,9 +198,18 @@ export default function App() {
       setView({name: 'vault', notice: 'incognito'})
       return
     }
-    await update((data) => recordOpen(data, entry.id, Date.now()))
+    // Only bookkeeping: failing to record it must not keep the site from opening.
+    await update((data) => recordOpen(data, entry.id, Date.now())).catch(console.error)
     await openUrl(entry.url, mode)
     window.close()
+  }
+
+  /** Replaces the passphrase wrap; true once written. */
+  async function setPassphrase(passphrase: string): Promise<boolean> {
+    const saved = await enqueue(async (current) =>
+      commitStored(current, await changePassphrase(current.stored, current.dek, passphrase))
+    )
+    return saved !== null
   }
 
   async function addCurrentTab() {
@@ -312,27 +336,28 @@ export default function App() {
     case 'changePassphrase':
       return (
         <NewPassphrase
-          session={session}
           title={t('changePassTitle')}
           hint={t('changePassHint')}
           onBack={() => setView({name: 'settings'})}
-          onDone={(saved) => {
-            setSession(saved)
-            setBoot({...boot, stored: saved.stored})
-            setView({name: 'settings'})
+          onSubmit={async (passphrase) => {
+            if (await setPassphrase(passphrase)) setView({name: 'settings'})
           }}
         />
       )
     case 'recoveryCode':
       return (
         <RecoveryCode
-          session={session}
           onBack={() => setView({name: 'settings'})}
-          onDone={(saved) => {
-            setSession(saved)
-            setBoot({...boot, stored: saved.stored})
-            setView({name: 'settings'})
+          onRotate={async () => {
+            const issued: {code?: string} = {}
+            const saved = await enqueue(async (current) => {
+              const rotated = await rotateRecoveryCode(current.stored, current.dek)
+              issued.code = rotated.recoveryCode
+              return commitStored(current, rotated.stored)
+            })
+            return saved && issued.code ? issued.code : null
           }}
+          onDone={() => setView({name: 'settings'})}
         />
       )
     case 'backup':
@@ -363,13 +388,10 @@ export default function App() {
     case 'resetPassphrase':
       return (
         <NewPassphrase
-          session={session}
           title={t('resetPassTitle')}
           hint={t('resetPassHint')}
-          onDone={(saved) => {
-            setSession(saved)
-            setBoot({...boot, stored: saved.stored})
-            setView({name: 'vault'})
+          onSubmit={async (passphrase) => {
+            if (await setPassphrase(passphrase)) setView({name: 'vault'})
           }}
         />
       )
