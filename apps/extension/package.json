@@ -51,6 +51,7 @@
     "build": "extension build",
     "build:firefox": "extension build --browser firefox",
     "preview": "extension preview",
-    "test:e2e": "extension build && extension build --browser firefox && vitest run --config vitest.e2e.config.ts"
+    "test:e2e": "extension build && extension build --browser firefox && vitest run --config vitest.e2e.config.ts",
+    "store": "extension build --zip && vitest run --config vitest.store.config.ts"
   }
 }

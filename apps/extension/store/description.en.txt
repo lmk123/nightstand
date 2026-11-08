@@ -1,0 +1,25 @@
+Nightstand makes your address bar forget certain sites.
+
+You're giving a talk, sharing your screen, or a colleague is looking over your shoulder — and you type a few letters into the address bar, only for it to suggest a site you'd rather nobody saw. Nightstand is made for those moments.
+
+Put those sites in Nightstand's encrypted list instead of your bookmarks bar. Nightstand deletes their browsing history after every visit, and the bookmarks that point to them, so the address bar, the history page and the "most visited" tiles on the new tab page stop showing them.
+
+HIGHLIGHTS
+
+• Runs entirely on your device. No account, no server, no analytics, no network requests. Your list is encrypted with your passphrase and never leaves this browser.
+• Looks like an ordinary tool. Click the icon and all you see is a working "Quick Links" launcher. Type your passphrase into its filter box and press Enter to get to your list. Close the popup and it locks again. The name, description and icon on the extensions page are just as unremarkable.
+• No surprises. Before you save a site, Nightstand shows how many pages of history and how many bookmarks it is about to delete.
+• A whole site or a single page. Clean up a site with all its subdomains, or just one URL. Add the other domains a site sends you to — a payment page, a video server — and they are cleaned up too.
+• Quick close. One shortcut (Alt+Shift+Q by default) closes the tabs of saved sites and the Incognito windows Nightstand opened, and cleans their history right away.
+• Open saved sites in the current tab, a new tab, or an Incognito window.
+• Encrypted backups that restore with your passphrase or recovery code, and import straight from your bookmarks.
+
+WHAT IT DOESN'T PROTECT AGAINST
+
+Nightstand protects against people who can see your screen. It doesn't protect against:
+• someone with full control of your computer who goes digging through its data;
+• cloud-side records such as your Google account's "Web & App Activity" and search engine suggestions;
+• network-level records: your workplace network, router, DNS;
+• operating-system records.
+
+Nightstand is open source under the MIT license: https://github.com/lmk123/nightstand

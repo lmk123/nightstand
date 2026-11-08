@@ -29,7 +29,8 @@ It doesn't protect against:
 - someone with full control of your computer who goes digging through its data. For example, anyone who can read the extension's storage can check it against a list of common sites and work out which of them you saved;
 - cloud-side records such as Google account "Web & App Activity" and search engine suggestions;
 - network-level records: your workplace network, router, DNS;
-- operating-system records.
+- operating-system records;
+- the extension's page in the Chrome Web Store, which the extension's details page links to: it says what Nightstand does.
 
 ## Development
 
