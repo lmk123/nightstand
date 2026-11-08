@@ -1,6 +1,7 @@
 {
   "private": true,
   "name": "nightstand",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @nightstand/extension run dev",
