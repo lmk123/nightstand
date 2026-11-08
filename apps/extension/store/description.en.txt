@@ -8,6 +8,7 @@ HIGHLIGHTS
 
 • Runs entirely on your device. No account, no server, no analytics, no network requests. Your list is encrypted with your passphrase and never leaves this browser.
 • Looks like an ordinary tool. Click the icon and all you see is a working "Quick Links" launcher. Type your passphrase into its filter box and press Enter to get to your list. Close the popup and it locks again. The name, description and icon on the extensions page are just as unremarkable.
+• Open source. The code is public under the MIT license, so anyone can check that Nightstand does what it says and nothing more: https://github.com/lmk123/nightstand
 • No surprises. Before you save a site, Nightstand shows how many pages of history and how many bookmarks it is about to delete.
 • A whole site or a single page. Clean up a site with all its subdomains, or just one URL. Add the other domains a site sends you to — a payment page, a video server — and they are cleaned up too.
 • Quick close. One shortcut (Alt+Shift+Q by default) closes the tabs of saved sites and the Incognito windows Nightstand opened, and cleans their history right away.
@@ -21,5 +22,3 @@ Nightstand protects against people who can see your screen. It doesn't protect a
 • cloud-side records such as your Google account's "Web & App Activity" and search engine suggestions;
 • network-level records: your workplace network, router, DNS;
 • operating-system records.
-
-Nightstand is open source under the MIT license: https://github.com/lmk123/nightstand
