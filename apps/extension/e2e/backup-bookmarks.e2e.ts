@@ -1,4 +1,4 @@
-import {readdirSync, readFileSync} from 'node:fs'
+import {copyFileSync, readdirSync, readFileSync} from 'node:fs'
 import {join} from 'node:path'
 import {afterAll, describe, expect, it} from 'vitest'
 import {historyUrls, launchChrome, openPopup, type ChromeSession} from './support/chrome'
@@ -15,7 +15,7 @@ import {
   submitUnlock,
   waitText
 } from './support/popup'
-import {cleanupTemp} from './support/temp'
+import {cleanupTemp, tempDir} from './support/temp'
 
 describe.skipIf(!hasChrome)('backup, passphrase management, bookmarks (Chrome)', () => {
   const sessions: ChromeSession[] = []
@@ -91,9 +91,18 @@ describe.skipIf(!hasChrome)('backup, passphrase management, bookmarks (Chrome)',
     await addEntry(p, 'example.net')
     await addEntry(p, 'www.example.com/dup')
     await openSettings(p, '备份与恢复')
+    // A long file name is truncated instead of widening the view (issue #15).
+    const longName = join(tempDir('backup'), `nightstand-${'a-very-long-file-name-'.repeat(4)}20261108.nightstand`)
+    copyFileSync(backupFile, longName)
     const [chooser] = await Promise.all([p.waitForFileChooser(), clickText(p, '选择备份文件')])
-    await chooser.accept([backupFile])
+    await chooser.accept([longName])
     await waitText(p, '备份的口令或恢复码')
+    const widths = await p.evaluate(() => {
+      const name = [...document.querySelectorAll('span')].find((el) => el.textContent?.endsWith('.nightstand'))!
+      const scroller = name.closest('.overflow-y-auto')!
+      return {nameFits: name.scrollWidth <= name.clientWidth, viewFits: scroller.scrollWidth <= scroller.clientWidth}
+    })
+    expect(widths).toEqual({nameFits: false, viewFits: true})
     await p.type('#secret', 'wrong')
     await clickText(p, '导入')
     await waitText(p, '口令或恢复码不正确')

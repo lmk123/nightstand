@@ -117,9 +117,10 @@ export function Backup({
           </div>
         </section>
 
-        <section className="grid gap-2">
+        {/* grid-cols-1 (minmax(0, 1fr)) instead of the implicit auto column, which a long file name would widen past the popup. */}
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('backupImportSection')}</h2>
-          <div className="panel grid gap-3 p-3.5">
+          <div className="panel grid grid-cols-1 gap-3 p-3.5">
             <p className="text-subtle-foreground text-[12.5px] leading-relaxed">{t('backupImportHint')}</p>
             {isFirefoxLike ? (
               <Field label={t('backupPasteLabel')} htmlFor="paste" hint={t('backupPasteHint')}>
