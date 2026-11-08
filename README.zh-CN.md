@@ -143,3 +143,7 @@ packages/core/    纯 TypeScript 核心（@nightstand/core）：数据模型、�
 它们可以直接复用 `packages/core`。
 
 界面文案全部来自 `apps/extension/_locales/`：英文（`en`，默认语言）和简体中文（`zh_CN`）。浏览器语言是简体中文时显示中文，其他语言（包括繁体中文）都显示英文。`pnpm lint` 会检查两份语言包的条目和占位符是否一致。
+
+## 许可证
+
+[MIT](LICENSE)

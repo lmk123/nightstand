@@ -144,3 +144,7 @@ Planned for later:
 Both can reuse `packages/core` directly.
 
 All UI text comes from `apps/extension/_locales/`: English (`en`, the default) and Simplified Chinese (`zh_CN`). Browsers set to Simplified Chinese get Chinese; every other language, Traditional Chinese included, gets English. `pnpm lint` checks that both catalogs have the same entries and placeholders.
+
+## License
+
+[MIT](LICENSE)
