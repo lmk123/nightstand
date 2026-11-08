@@ -1,108 +1,114 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code（claude.ai/code）在这个仓库里工作时提供指引。
 
-## What this is
+## 这是什么
 
-**Nightstand** is a browser extension (Chrome first, Firefox compatible). Users keep sites they don't want the address bar to suggest (during a talk, a screen share, a colleague looking over their shoulder) in an encrypted vault inside the extension — not in the bookmarks bar — and Nightstand deletes the matching browsing history after every visit. The extension itself is deliberately low-key: locked, it looks and works like an ordinary "Quick Links" launcher.
+**Nightstand** 是一个浏览器扩展（Chrome 优先，兼容 Firefox）。有些网站，用户不希望地址栏把它们提示出来（上台分享、屏幕共享、同事凑过来看屏幕时），就把它们存进扩展里的加密保险箱，而不是书签栏；Nightstand 在每次访问后删除对应的浏览记录。扩展本身刻意低调：锁定时，它看起来、用起来都只是一个普通的“快捷链接”启动器。
 
-The repo is a pnpm workspace monorepo. Today it holds the extension and its pure-TS core; `apps/web` (website) and `apps/server` (e.g. end-to-end-encrypted sync) may come later — don't create them until asked.
+仓库是 pnpm workspace monorepo。目前只有扩展和它的纯 TS 核心；以后可能会有 `apps/web`（官网）和 `apps/server`（例如端到端加密同步）——没被要求之前不要创建。
 
 ```
 apps/extension/   @nightstand/extension — Extension.js + React 19 + Tailwind v4 + shadcn/ui
-packages/core/    @nightstand/core — pure TypeScript: model, URL matching, crypto, backup format
+packages/core/    @nightstand/core — 纯 TypeScript：数据模型、网址匹配、加密、备份格式
+docs/design.md    功能的具体行为、加密设计、权限、网站图标、已知限制（开发者文档）
 ```
 
-## Commands
+## 命令
 
-Package manager is **pnpm 12** (`packageManager` in the root `package.json`). Run from the repo root:
+包管理器是 **pnpm 12**（见根目录 `package.json` 的 `packageManager`）。在仓库根目录运行：
 
 ```bash
-pnpm dev                # extension dev server + browser (Chromium); pnpm dev:firefox for Firefox
-pnpm build              # production build → apps/extension/dist/chromium (build:firefox too)
-pnpm lint               # ESLint in every package + manifest wording check
-pnpm type-check         # tsc --noEmit (TS 7) in every package — the build does NOT fail on type errors
-pnpm test               # Vitest unit tests (packages/core)
-pnpm test:e2e           # builds both targets, then drives real Chrome/Firefox (apps/extension/e2e)
-E2E_HEADED=1 pnpm test:e2e   # also runs the real-popup checks, which need a visible window
+pnpm dev                # 扩展开发服务器 + 浏览器（Chromium）；Firefox 用 pnpm dev:firefox
+pnpm build              # 生产构建 → apps/extension/dist/chromium（也有 build:firefox）
+pnpm lint               # 每个包的 ESLint + manifest 用词检查
+pnpm type-check         # 每个包的 tsc --noEmit（TS 7）——构建本身不会因为类型错误而失败
+pnpm test               # Vitest 单元测试（packages/core）
+pnpm test:e2e           # 构建两个目标，然后驱动真实的 Chrome/Firefox（apps/extension/e2e）
+E2E_HEADED=1 pnpm test:e2e   # 额外运行真实 popup 的检查，需要可见窗口
 pnpm --filter @nightstand/core test:watch
-pnpm --filter @nightstand/extension icons   # re-render icons-src/*.svg → public/icons/<set>/<size>.png
+pnpm --filter @nightstand/extension icons   # 重新渲染 icons-src/*.svg → public/icons/<set>/<size>.png
 ```
 
-Pass Extension.js flags straight after the script name inside the package, e.g. `pnpm --filter @nightstand/extension run dev --browser=firefox`. Do **not** insert `--`: pnpm forwards it literally and Extension.js then reads the flag as a project path ("Manifest file not found").
+在包内给 Extension.js 传参时，直接跟在脚本名后面，例如 `pnpm --filter @nightstand/extension run dev --browser=firefox`。**不要**加 `--`：pnpm 会原样转发它，Extension.js 就会把后面的参数当成项目路径（报 "Manifest file not found"）。
 
-Run `lint`, `type-check` and `test` after every non-trivial change, and `test:e2e` after changes to the popup, background or manifest. The extension package has no unit tests by design: pure logic belongs in `packages/core` (unit-tested); browser behaviour is covered by the e2e suite.
+每次非平凡的改动后运行 `lint`、`type-check` 和 `test`；改了 popup、background 或 manifest 后还要运行 `test:e2e`。扩展包刻意没有单元测试：纯逻辑放进 `packages/core`（有单元测试），浏览器行为由 e2e 覆盖。
 
-### TypeScript 6 and 7 side by side (on purpose)
+### TypeScript 6 和 7 并存（有意为之）
 
-`typescript-eslint` throws on the TS 7 API, so both packages use the official side-by-side setup, with versions pinned once in the `catalog:` of `pnpm-workspace.yaml`:
+`typescript-eslint` 遇到 TS 7 的 API 会报错，所以两个包都用官方的并存方案，版本在 `pnpm-workspace.yaml` 的 `catalog:` 里统一锁定：
 
-- `"typescript": "npm:@typescript/typescript6"` — what `require('typescript')` resolves to (ESLint, editor tsserver).
-- `"typescript-7": "npm:typescript"` — the real TS 7 `tsc` that `type-check` runs.
+- `"typescript": "npm:@typescript/typescript6"` —— `require('typescript')` 解析到的版本（ESLint、编辑器的 tsserver）。
+- `"typescript-7": "npm:typescript"` —— `type-check` 实际运行的 TS 7 `tsc`。
 
-Collapse back to one `typescript` once typescript-eslint#10940 ships.
+等 typescript-eslint#10940 发布后，合并回单一的 `typescript`。
 
-## Hard rules
+## 硬性规则
 
-- **`packages/core` stays pure.** No browser-extension APIs, no DOM, no React. Its `tsconfig.json` has `lib: ["ES2024", "WebWorker"]` and `types: []`, so `window`, `document` and `chrome` are type errors there; it has no React/chrome dependencies. Only standard Web APIs (`URL`, `crypto.subtle`, `TextEncoder`, `btoa`/`atob`). Core returns error codes, never user-facing text.
-- **Only Web Crypto.** No third-party crypto libraries.
-- **Offline only.** No backend, accounts, analytics, or any remote request.
-- **One UI surface: the action popup.** No options page, side panel, new-tab override, and never open an extension tab. Every screen (onboarding, decoy, decoy settings, lock screen, vault list, real settings…) is a view inside the popup.
-- **No content scripts, no host permissions.** Permissions: `storage`, `history`, `tabs`, `alarms`, `bookmarks` (required, not optional: saving an entry deletes its bookmarks, and Chrome's permission prompt would close the popup mid-save), plus `favicon` on Chromium only (`chromium:permissions` in the manifest replaces the plain list there, so keep both lists in sync).
-- **Site icons come only from the browser's local cache** (Chromium `_favicon`), never from the network (no fetching `/favicon.ico` or icon services). Chrome deletes a page's cached icon with its history, so a vault entry's icon is captured at save time, before the purge, and stored in the encrypted entry (`icon`, a bounded `data:` URL — see `isEntryIcon`). Entries still without one are looked up again on unlock: a later visit's icon usually survives because the cleaner deletes the visit before the icon arrives over the network (a race — an icon written first goes with the history; e2e delays its test icon for this reason). Quick Links are looked up live. Firefox shows letter tiles.
-- **The vault key (DEK) lives only in popup memory.** Never write it to any storage (including `storage.session`) and never send it to the background. Closing the popup destroys it — that *is* the lock. No "stay unlocked for N minutes", no timers, no `idle`.
-- **No plaintext on disk.** Never persist edit drafts or other decrypted data to storage.
-- **Onboarding writes nothing until its last step.** Closing the popup mid-onboarding must leave storage empty.
-- **Neutral wording wherever a bystander can look.** Manifest name/description/title/command descriptions must never contain words like private, hide, secret, 隐私, 隐藏, 私密 — `apps/extension/tools/check-manifest-words.mjs` enforces this in `lint`. Storage keys are neutral too (`shelf`, `index`, `links`, `state`).
-- **i18n from day one.** Every UI string goes through `t()` from `apps/extension/src/platform/i18n.ts`; no hard-coded copy in components. Locales: `en` (the `default_locale`, and the file `MessageKey` is derived from, so a key missing there is a type error) and `zh_CN`. Every key goes into both `_locales/*/messages.json` with the same placeholders — `tools/check-locales.mjs` enforces it in `lint`. Browsers without a catalog of their own, Traditional Chinese included, get English. chrome.i18n has no plurals: phrase counts as "Label: $COUNT$" or "(…$COUNT$)" in English.
-- **Storage formats are versioned and migrations are tested.** A change to the stored vault, its payload or the backup format needs a new version, a migration step, and a test that still decrypts the committed v1 fixture when an older build would misread the data or lose something that matters by dropping it: a field removed, renamed, or changed in meaning or type; a new required field; a new field whose loss (an older build re-saving without it) would drop entries or narrow what gets cleaned. A new *optional* field that older builds can ignore, and whose loss only costs a preference (e.g. `skipSaveNotice`), needs no version bump — but it does need a test that it survives a round trip and that a malformed value is dropped instead of failing the vault.
-- When a decision belongs to the user (UI style, defaults, UX trade-offs), list the options and ask instead of assuming.
+- **`packages/core` 保持纯净。** 不用浏览器扩展 API，不碰 DOM，不用 React。它的 `tsconfig.json` 设了 `lib: ["ES2024", "WebWorker"]` 和 `types: []`，所以在那里用 `window`、`document`、`chrome` 都是类型错误；它也没有 React/chrome 依赖。只用标准 Web API（`URL`、`crypto.subtle`、`TextEncoder`、`btoa`/`atob`）。core 返回错误码，从不返回给用户看的文案。
+- **只用 Web Crypto。** 不引入第三方加密库。
+- **只能离线。** 没有后端、账号、统计分析或任何远程请求。
+- **唯一的界面是 action popup。** 没有 options 页、侧边栏、新标签页覆盖，也绝不打开扩展自己的标签页。所有界面（引导、伪装界面、伪装设置、锁屏、保险箱列表、真正的设置……）都是 popup 里的视图。
+- **没有 content script，没有 host 权限。** 权限：`storage`、`history`、`tabs`、`alarms`、`bookmarks`（必需而非可选：保存条目会删除它的书签，而 Chrome 的权限弹窗会在保存中途关掉 popup），以及仅 Chromium 的 `favicon`（manifest 里的 `chromium:permissions` 会在那边替换掉普通列表，所以两份列表要保持同步）。
+- **网站图标只来自浏览器本地缓存**（Chromium 的 `_favicon`），绝不走网络（不抓 `/favicon.ico`，不用图标服务）。Chrome 删除一个网页的历史时会连带删掉它缓存的图标，所以保险箱条目的图标在保存时、清理之前截取，存进加密条目（`icon`，有大小上限的 `data:` URL——见 `isEntryIcon`）。还没有图标的条目在解锁时再查一次：之后某次访问的图标通常能留下来，因为清理器在图标从网络到达之前就删掉了那次访问（这是竞态——先写入的图标会随历史一起被删；e2e 因此故意延迟测试图标）。快捷链接实时查询。Firefox 显示首字母图块。
+- **保险箱密钥（DEK）只存在于 popup 内存里。** 绝不写入任何存储（包括 `storage.session`），也绝不发给 background。关闭 popup 就销毁它——这*就是*上锁。没有“保持解锁 N 分钟”，没有定时器，不用 `idle`。
+- **磁盘上不能有明文。** 不要把编辑草稿或其他解密后的数据持久化到存储里。
+- **引导在最后一步之前什么都不写。** 引导中途关闭 popup，存储必须是空的。
+- **旁人可能看到的地方一律用中性措辞。** manifest 的 name/description/title/命令描述绝不能含 private、hide、secret、隐私、隐藏、私密之类的词——`apps/extension/tools/check-manifest-words.mjs` 在 `lint` 里强制检查。存储键也是中性的（`shelf`、`index`、`links`、`state`）。
+- **从第一天起就做 i18n。** 所有界面字符串都经过 `apps/extension/src/platform/i18n.ts` 的 `t()`；组件里不能有硬编码文案。语言：`en`（`default_locale`，也是推导 `MessageKey` 的那个文件，所以那里缺 key 就是类型错误）和 `zh_CN`。每个 key 都要同时写进两份 `_locales/*/messages.json`，占位符一致——`tools/check-locales.mjs` 在 `lint` 里强制检查。没有对应语言包的浏览器（包括繁体中文）显示英文。chrome.i18n 没有复数形式：英文里的计数写成 "Label: $COUNT$" 或 "(…$COUNT$)"。
+- **存储格式带版本号，迁移要有测试。** 改动存储的保险箱、它的载荷或备份格式时，如果旧版本会误读数据、或丢掉某个重要内容，就需要新版本号、一个迁移步骤，以及一个仍能解开仓库里 v1 测试数据的测试。这些情况包括：删除、重命名字段，或改变字段的含义、类型；新增必填字段；新增字段一旦丢失（旧版本重新保存时不带它）会丢条目或缩小清理范围。新增一个旧版本可以忽略、丢失也只损失一个偏好设置的*可选*字段（例如 `skipSaveNotice`），不需要升版本号——但需要测试它能完整往返，并且格式错误的值会被丢弃而不是让整个保险箱失败。
+- 属于用户的决定（界面风格、默认值、体验取舍），列出选项问用户，不要自行假设。
 
-## Threat model (every design trade-off follows this)
+## 威胁模型（所有设计取舍都以此为准）
 
-- **Defended against: bystanders.** Address-bar suggestions while projecting or screen sharing, the new-tab "most visited" tiles, `chrome://history`, the bookmarks bar, the extension's name/description on the extensions page, and someone curiously clicking the toolbar icon.
-- **Not defended against:** someone with full control of the machine doing forensics, Google account "Web & App Activity", DNS/network-layer logs, OS-level records. The README (English `README.md`, Chinese `README.zh-CN.md` — keep both in step) must state these limits honestly.
-- The plaintext match table stores salted SHA-256 hashes of protected hosts (salt random per device). That only stops someone casually browsing storage; it does not stop hashing a list of common domains and comparing. Say so in comments and the README.
+- **防的是旁观者。** 投影或屏幕共享时的地址栏提示、新标签页的“常去网站”、`chrome://history`、书签栏、扩展管理页上的名称/描述，以及有人好奇点开工具栏图标。
+- **不防：** 完全控制这台机器、做取证分析的人；Google 账户的“网络与应用活动”；DNS/网络层日志；操作系统层面的记录。README（英文 `README.md`、中文 `README.zh-CN.md`，两份保持同步）必须如实说明这些局限。
+- 明文匹配表存的是受保护主机名加盐后的 SHA-256 哈希（盐值每台设备随机）。它只能挡住随手翻看存储的人，挡不住拿常见域名列表逐个算哈希比对。代码注释和 `docs/design.md` 里要写明这一点；README 用一句普通话带过。
 
-## Extension architecture notes
+## README 与开发者文档
 
-- Extension.js treats `src/manifest.json` as the build graph. Keys prefixed `chromium:` / `firefox:` are split per target (e.g. `background.chromium:service_worker` vs `firefox:scripts`); both targets use MV3. At runtime branch on `isChromiumLike` / `isFirefoxLike` from `src/lib/browser.ts` (never `!isFirefoxLike` for Chromium), and use `firefoxBrowser()` for Firefox-only APIs.
-- Extension.js special folders live next to `apps/extension/package.json`, not under `src/`: `_locales/`, `public/` (copied verbatim to the output root — icon sets live in `public/icons/<set>/`, referenced at runtime as `icons/<set>/<size>.png`). `scripts/` and `pages/` are special too (every file becomes an entry point), which is why Node helpers live in `tools/`.
-- The built popup is emitted as `action/index.html`; the background as `background/service_worker.js` (Chromium).
-- `@nightstand/core` is consumed as TypeScript source (`exports` → `src/index.ts`); Extension.js transpiles it directly, there is no core build step.
-- `extension-env.d.ts` is generated by Extension.js and gitignored; `env.d.ts` carries the same references so `type-check` works on a fresh clone.
-- shadcn/ui: `pnpm dlx shadcn@latest add <name>` from `apps/extension`; components land in `src/components/ui`. Keep the generated code as the CLI writes it — it imports `cn` from the official [`cn`](https://github.com/shadcn-ui/cn) package (shadcn's drop-in replacement for clsx + tailwind-merge); use that same import in app code. `assets.d.ts` must stay a script (no top-level import/export).
-- Chromium rejects SVG for action/manifest icons: edit `icons-src/*.svg`, run the `icons` script, commit the PNGs.
+- README 面向普通用户，保持简短：一句话 slogan、几句说明适用场景的简介、少数几个大亮点（第一是纯本地运行，第二是伪装）、“能防住什么，防不住什么”，以及简短的开发命令。不要写成说明书：不列功能细节、不写使用步骤（首次打开有设置向导），也不要出现“威胁模型”“哈希”这类术语。
+- 加密设计、哈希匹配表、权限说明、网站图标、已知限制、功能的具体行为都写在 `docs/design.md`（中文）。改了相关行为时同步更新它。
 
-## Manual acceptance checklist
+## 扩展架构说明
 
-Walk through the relevant items in a real browser for every milestone that touches them. Use test domains such as `example.com` / `example.org`.
+- Extension.js 把 `src/manifest.json` 当作构建图。带 `chromium:` / `firefox:` 前缀的键按目标拆分（例如 `background.chromium:service_worker` 对 `firefox:scripts`）；两个目标都用 MV3。运行时用 `src/lib/browser.ts` 里的 `isChromiumLike` / `isFirefoxLike` 分支（判断 Chromium 时绝不用 `!isFirefoxLike`），Firefox 专有的 API 用 `firefoxBrowser()`。
+- Extension.js 的特殊目录放在 `apps/extension/package.json` 旁边，而不是 `src/` 下：`_locales/`、`public/`（原样复制到输出根目录——图标集在 `public/icons/<set>/`，运行时以 `icons/<set>/<size>.png` 引用）。`scripts/` 和 `pages/` 也是特殊目录（里面每个文件都会成为入口），所以 Node 辅助脚本放在 `tools/`。
+- 构建出的 popup 是 `action/index.html`；background 是 `background/service_worker.js`（Chromium）。
+- `@nightstand/core` 以 TypeScript 源码形式被引用（`exports` → `src/index.ts`）；Extension.js 直接转译它，core 没有构建步骤。
+- `extension-env.d.ts` 由 Extension.js 生成并被 gitignore；`env.d.ts` 带着同样的引用，保证新克隆的仓库上 `type-check` 也能通过。
+- shadcn/ui：在 `apps/extension` 下运行 `pnpm dlx shadcn@latest add <name>`；组件会生成在 `src/components/ui`。保持 CLI 生成的代码原样——它从官方的 [`cn`](https://github.com/shadcn-ui/cn) 包导入 `cn`（shadcn 用来替代 clsx + tailwind-merge 的包）；应用代码里也用同样的导入。`assets.d.ts` 必须保持为脚本（不能有顶层 import/export）。
+- Chromium 不接受 SVG 作为 action/manifest 图标：编辑 `icons-src/*.svg`，运行 `icons` 脚本，提交生成的 PNG。
 
-1. Add `example.com` (site mode), visit `https://www.example.com/foo`, then: `chrome://history` search "example" → no results; new tab, type `exa` in the address bar → no history suggestion; new-tab "most visited" → not there.
-2. Visit a site and bookmark it *before* adding it, then add it: the save notice gives the number of pages in history and of bookmarks; after confirming, both are gone.
-3. Visit a look-alike such as `evil-example.com`: it must **not** be cleaned.
-4. While locked, visit a protected site: history is still cleaned.
-5. Open the popup while locked: only Quick Links are visible; a wrong passphrase gives no hint at all; the right passphrase + Enter unlocks.
-6. Unlock, close the popup, reopen: back to the decoy, passphrase required again.
-7. Fresh install, first popup open: onboarding (not the decoy). Close the popup mid-onboarding and reopen: onboarding restarts and storage holds no vault data.
-8. Press the panic shortcut: matching tabs and incognito windows Nightstand opened are closed, and an open popup closes.
-9. The extensions page shows nothing revealing (name, description, icon), and no extension tab was ever opened during use.
+## 手动验收清单
 
-Also verify, and document under "Known limitations" in the README: whether the Chrome address bar still suggests protected sites from bookmarks, open tabs, search-engine suggestions (server side, tied to Google account activity) or the omnibox "shortcuts" database after history deletion; and whether `history.deleteUrl` also deletes on other devices when Chrome Sync is on.
+每个涉及相关功能的里程碑，都要在真实浏览器里逐项过一遍。测试域名用 `example.com` / `example.org` 之类。
 
-## End-to-end tests (`apps/extension/e2e`)
+1. 添加 `example.com`（整个站点），访问 `https://www.example.com/foo`，然后：`chrome://history` 搜 "example" → 无结果；新标签页地址栏输入 `exa` → 没有历史提示；新标签页“常去网站” → 没有它。
+2. 添加之前先访问某个网站并加书签，再添加它：保存提示给出历史里的网页数和书签数；确认后两者都消失。
+3. 访问 `evil-example.com` 这类外观相似的域名：它**不能**被清理。
+4. 锁定状态下访问受保护站点：历史照样被清理。
+5. 锁定时打开 popup：只看到快捷链接；口令输错没有任何提示；输对口令按回车即解锁。
+6. 解锁后关闭 popup 再打开：回到伪装界面，需要重新输入口令。
+7. 全新安装，第一次打开 popup：进入引导（而不是伪装界面）。引导中途关闭 popup 再打开：引导从头开始，存储里没有保险箱数据。
+8. 按下快速收起（panic）快捷键：匹配的标签页和 Nightstand 打开的无痕窗口被关闭，打开着的 popup 也关闭。
+9. 扩展管理页上没有任何暴露用途的信息（名称、描述、图标），使用过程中从未打开过扩展标签页。
 
-Vitest + `puppeteer-core` against the installed Google Chrome and Firefox (override with `CHROME_PATH` / `FIREFOX_PATH`; a suite skips itself when its browser or build is missing). Shared helpers live in `e2e/support/`; all temp profiles, downloads and patched build copies go under the OS temp dir and are removed after each file. What the suite relies on, and why:
+另外还要验证，并记录到 `docs/design.md` 的“已知限制”里：历史删除后，Chrome 地址栏是否仍会从书签、已打开的标签页、搜索引擎联想（服务端，和 Google 账户活动有关）或地址栏的“快捷方式”数据库提示受保护站点；以及开启 Chrome 同步时 `history.deleteUrl` 是否也会删除其他设备上的记录。
 
-- **Chrome**: `puppeteer.launch({pipe: true, enableExtensions: [dist/chromium]})` with a fresh profile. The extension id comes from the service-worker target; `sw.evaluate()` reaches `chrome.*` in the background. The popup UI is driven as a tab at `chrome-extension://<id>/action/index.html` (closing the tab = closing the popup). `--host-resolver-rules=MAP * 127.0.0.1:<port>` plus `e2e/support/server.ts` makes `example.com` & co. real visits that land in history. Panic is fired with `chrome.commands.onCommand.dispatch('panic')`.
-- **The real popup** (`e2e/real-popup.e2e.ts`, `E2E_HEADED=1` only): `chrome.action.openPopup({windowId})` from the service worker after focusing a normal window. It pins the findings the UI is designed around: a file chooser does **not** close the popup (Chrome on macOS); a blob download completes after the popup closes. (A `permissions.request` prompt **does** close it — the reason `bookmarks` is a required permission.)
-- **Firefox**: WebDriver BiDi installs the add-on (`browser.installExtension`) but refuses to navigate to or expose `moz-extension://` pages, so the popup UI can't be driven. `e2e/firefox-history.e2e.ts` checks the background instead: a patched copy seeds the match table, visits go through the test server as an HTTP proxy, and `places.sqlite` (read with the `sqlite3` CLI after closing the browser) shows what history is left. Popup-only Firefox branches (paste-based backup import, private-window wording) still need a manual pass with `pnpm dev:firefox`.
-- UI steps find buttons by their zh_CN label (`clickText`), so renaming zh_CN copy can break e2e tests — update both. So that the machine's language can't switch them to English, `launchChrome` loads a copy of the build whose only (and default) catalog is zh_CN. Only `e2e/locale.e2e.ts` passes `lang` and runs the real build, checking which catalog en-US / zh-TW / zh-CN browsers get. Chrome on macOS ignores `--lang`; `-AppleLanguages (xx)` works there but also opens a stray `http://(xx)/` tab, so don't use it in history/tab tests.
+## 端到端测试（`apps/extension/e2e`）
 
-## MCP servers
+Vitest + `puppeteer-core`，驱动本机安装的 Google Chrome 和 Firefox（可用 `CHROME_PATH` / `FIREFOX_PATH` 覆盖；缺少对应浏览器或构建产物时，该套测试会自动跳过）。共享的辅助代码在 `e2e/support/`；所有临时 profile、下载文件和打过补丁的构建副本都放在系统临时目录下，每个测试文件结束后删除。测试依赖下面这些事实，原因如下：
 
-`.mcp.json` wires three servers:
+- **Chrome**：用 `puppeteer.launch({pipe: true, enableExtensions: [dist/chromium]})` 和全新 profile。扩展 id 从 service worker target 获取；`sw.evaluate()` 可以在 background 里调用 `chrome.*`。popup 界面以标签页形式驱动，地址是 `chrome-extension://<id>/action/index.html`（关闭标签页 = 关闭 popup）。`--host-resolver-rules=MAP * 127.0.0.1:<port>` 加上 `e2e/support/server.ts`，让 `example.com` 等成为真实访问并进入历史。panic 用 `chrome.commands.onCommand.dispatch('panic')` 触发。
+- **真实 popup**（`e2e/real-popup.e2e.ts`，仅在 `E2E_HEADED=1` 时运行）：先聚焦一个普通窗口，再从 service worker 调用 `chrome.action.openPopup({windowId})`。它固定住了界面设计所依赖的几个事实：文件选择器**不会**关掉 popup（macOS 上的 Chrome）；blob 下载在 popup 关闭后仍能完成。（`permissions.request` 的弹窗**会**关掉 popup——这就是 `bookmarks` 是必需权限的原因。）
+- **Firefox**：WebDriver BiDi 能安装附加组件（`browser.installExtension`），但拒绝导航到或暴露 `moz-extension://` 页面，所以没法驱动 popup 界面。`e2e/firefox-history.e2e.ts` 改为检查 background：一个打过补丁的副本预置匹配表，访问通过测试服务器（作为 HTTP 代理）进行，关闭浏览器后用 `sqlite3` 命令行读取 `places.sqlite`，看历史里还剩什么。只在 popup 里的 Firefox 分支（粘贴式备份导入、隐私窗口的措辞）仍需用 `pnpm dev:firefox` 手动过一遍。
+- 界面操作按 zh_CN 文案查找按钮（`clickText`），所以改了 zh_CN 文案可能会让 e2e 测试失败——两边一起改。为了不让本机语言把它们切成英文，`launchChrome` 加载的是一份只有 zh_CN 语言包（同时也是默认语言）的构建副本。只有 `e2e/locale.e2e.ts` 传 `lang` 并运行真实构建，检查 en-US / zh-TW / zh-CN 浏览器分别得到哪种语言。macOS 上的 Chrome 会忽略 `--lang`；`-AppleLanguages (xx)` 在那里有效，但也会打开一个多余的 `http://(xx)/` 标签页，所以历史/标签页相关的测试里不要用它。
 
-- **extension-dev** (`@extension.dev/mcp`) — build-aware project control (dev server, reload, generated manifest, storage, logs).
-- **chrome-devtools** (`chrome-devtools-mcp`) — raw CDP debugging; needs a Chrome listening on `http://127.0.0.1:9222`.
-- **extensionjs** — hosted Extension.js docs; prefer it over memory for "how do I…" Extension.js questions.
+## MCP 服务器
+
+`.mcp.json` 配置了三个服务器：
+
+- **extension-dev**（`@extension.dev/mcp`）—— 感知构建的项目控制（开发服务器、重载、生成的 manifest、存储、日志）。
+- **chrome-devtools**（`chrome-devtools-mcp`）—— 原始 CDP 调试；需要一个监听 `http://127.0.0.1:9222` 的 Chrome。
+- **extensionjs** —— 托管的 Extension.js 文档；回答“Extension.js 怎么做……”类问题时优先用它，而不是凭记忆。
