@@ -66,7 +66,10 @@ export interface VaultSettings {
 /**
  * Decrypted vault payload. `version` is the payload schema version:
  * 1 — initial; 2 — entries gain `extraHosts`; 3 — entries lose `note` and
- * `tags`; 4 — entries gain an optional `icon`.
+ * `tags`; 4 — entries gain an optional `icon`. Optional fields whose loss
+ * on an older build only costs a preference (`skipSaveNotice`,
+ * `skipSaveCheck`) were added without a bump (see the storage-format rule
+ * in CLAUDE.md).
  */
 export interface VaultData {
   version: 4
