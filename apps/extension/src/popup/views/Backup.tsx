@@ -49,6 +49,7 @@ export function Backup({
   const [busy, setBusy] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const filePick = useRef(0)
 
   function exportEncrypted() {
     const text = serializeBackup(createBackup(session.stored, Date.now()))
@@ -107,9 +108,9 @@ export function Backup({
     <div className={viewClass}>
       <Header title={t('backupTitle')} onBack={onBack} />
       <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4 *:shrink-0">
-        <section className="stack gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('backupExportSection')}</h2>
-          <div className="panel stack gap-3 p-3.5">
+          <div className="panel grid grid-cols-1 gap-3 p-3.5">
             <p className="text-subtle-foreground text-[12.5px] leading-relaxed">{t('backupExportHint')}</p>
             <Button className={cn(buttonClass, 'justify-self-start')} onClick={exportEncrypted}>
               <Download />
@@ -118,9 +119,9 @@ export function Backup({
           </div>
         </section>
 
-        <section className="stack gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('backupImportSection')}</h2>
-          <div className="panel stack gap-3 p-3.5">
+          <div className="panel grid grid-cols-1 gap-3 p-3.5">
             <p className="text-subtle-foreground text-[12.5px] leading-relaxed">{t('backupImportHint')}</p>
             {isFirefoxLike ? (
               <Field label={t('backupPasteLabel')} htmlFor="paste" hint={t('backupPasteHint')}>
@@ -148,8 +149,20 @@ export function Backup({
                     const file = e.target.files?.[0]
                     e.target.value = ''
                     if (!file) return
+                    // Drop the previous file's backup at once, and ignore a read that a later pick overtook.
+                    const pick = ++filePick.current
                     setFileName(file.name)
-                    load(await file.text())
+                    setBackup(null)
+                    setResult(null)
+                    let text: string
+                    try {
+                      text = await file.text()
+                    } catch (err) {
+                      console.error(err)
+                      if (pick === filePick.current) setError(t('errBackupInvalid'))
+                      return
+                    }
+                    if (pick === filePick.current) load(text)
                   }}
                 />
                 <FileText className="text-subtle-foreground size-[18px] shrink-0" aria-hidden />
@@ -166,7 +179,7 @@ export function Backup({
               </div>
             )}
             {backup && (
-              <form className="stack gap-3" onSubmit={importBackup}>
+              <form className="grid grid-cols-1 gap-3" onSubmit={importBackup}>
                 <Field label={t('backupSecretLabel')} htmlFor="secret" hint={t('backupSecretHint')}>
                   <Input
                     id="secret"
@@ -192,10 +205,10 @@ export function Backup({
           </div>
         </section>
 
-        <section className="stack gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('plainExportSection')}</h2>
           {confirmPlain ? (
-            <div role="alert" className="bg-destructive-soft border-destructive-line stack gap-2 rounded-xl border p-3.5">
+            <div role="alert" className="bg-destructive-soft border-destructive-line grid grid-cols-1 gap-2 rounded-xl border p-3.5">
               <p className="text-destructive flex items-center gap-2 text-[13px] font-semibold">
                 <TriangleAlert className="size-[18px] shrink-0" aria-hidden />
                 {t('plainExportWarningTitle')}

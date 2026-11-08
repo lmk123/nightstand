@@ -9,7 +9,7 @@ import {t} from '@/platform/i18n'
  */
 export function IncognitoHelp() {
   return (
-    <div className="bg-accent text-accent-foreground border-accent-line stack gap-2.5 rounded-xl border p-3 text-xs leading-relaxed">
+    <div className="bg-accent text-accent-foreground border-accent-line grid grid-cols-1 gap-2.5 rounded-xl border p-3 text-xs leading-relaxed">
       <p>{isFirefoxLike ? t('privateNeededFirefox') : t('incognitoNeeded')}</p>
       {isChromiumLike && (
         <Button

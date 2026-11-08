@@ -16,7 +16,7 @@ export function Field({
   children: ReactNode
 }) {
   return (
-    <div className="stack gap-1.5">
+    <div className="grid grid-cols-1 gap-1.5">
       <Label htmlFor={htmlFor} className="text-subtle-foreground text-xs font-semibold">
         {label}
       </Label>

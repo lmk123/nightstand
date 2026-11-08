@@ -94,7 +94,7 @@ function StepLayout({
 
 function BackAndNext({onBack, next}: {onBack: () => void; next: ReactNode}) {
   return (
-    <div className="grid grid-cols-[96px_1fr] gap-2">
+    <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-2">
       <Button type="button" variant="outline" className={cn(mainButtonClass, outlineButtonClass)} onClick={onBack}>
         {t('back')}
       </Button>
@@ -251,7 +251,7 @@ function HowToStep({created, onBack, onDone}: {created: CreatedVault; onBack: ()
       }
     >
       {/* A sketch of the locked popup: type into the filter box, press Enter. */}
-      <figure aria-hidden className="bg-muted mt-1 stack gap-2.5 rounded-[14px] p-3.5">
+      <figure aria-hidden className="bg-muted mt-1 grid grid-cols-1 gap-2.5 rounded-[14px] p-3.5">
         <div className="flex items-center gap-2">
           <span className="bg-card border-primary flex h-9 flex-1 items-center gap-2 rounded-[9px] border-[1.5px] px-2.5">
             <Search className="text-muted-foreground size-3.5" />

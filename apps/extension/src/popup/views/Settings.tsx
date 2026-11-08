@@ -48,7 +48,7 @@ export function Settings({
     <div className={viewClass}>
       <Header title={t('settingsTitle')} onBack={onBack} />
       <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4 *:shrink-0">
-        <section className="stack gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('openModeLabel')}</h2>
           <Segmented
             label={t('openModeLabel')}
@@ -62,9 +62,9 @@ export function Settings({
           />
           {settings.openMode === 'incognito' && incognitoAllowed === false && <IncognitoHelp />}
         </section>
-        <section className="stack gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('saveNoticeSection')}</h2>
-          <div className="panel divide-line stack divide-y">
+          <div className="panel divide-line grid grid-cols-1 divide-y">
             <SwitchRow checked={settings.skipSaveNotice !== true} onChange={(on) => onChange({skipSaveNotice: !on})}>
               {t('saveNoticeSetting')}
             </SwitchRow>
@@ -73,7 +73,7 @@ export function Settings({
             </SwitchRow>
           </div>
         </section>
-        <section className="stack gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('shortcutSection')}</h2>
           <ShortcutInfo />
         </section>

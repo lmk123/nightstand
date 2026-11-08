@@ -20,14 +20,14 @@ const STEPS: MessageKey[] = ['saveCheckHow', 'saveCheckOpenTab', 'saveCheckIfSti
 export function SaveCheck({onDismiss}: {onDismiss: (skipFromNow: boolean) => void}) {
   const [dontShowAgain, setDontShowAgain] = useState(false)
   return (
-    <section role="status" className="bg-warn text-warn-foreground border-warn-line mx-3 mb-2 stack gap-2.5 rounded-xl border p-3.5 pb-3">
+    <section role="status" className="bg-warn text-warn-foreground border-warn-line mx-3 mb-2 grid grid-cols-1 gap-2.5 rounded-xl border p-3.5 pb-3">
       <div className="flex items-center gap-2">
         <span className="bg-warn-solid text-warn-solid-foreground flex size-[22px] shrink-0 items-center justify-center rounded-full">
           <Check className="size-3.5" strokeWidth={3} aria-hidden />
         </span>
         <h2 className="text-sm font-semibold">{t('saveCheckTitle')}</h2>
       </div>
-      <ol className="stack gap-2 text-[12.5px] leading-relaxed">
+      <ol className="grid grid-cols-1 gap-2 text-[12.5px] leading-relaxed">
         {STEPS.map((key, i) => (
           <li key={key} className="flex gap-2">
             <span className="bg-warn-chip mt-0.5 flex size-[18px] shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">

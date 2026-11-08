@@ -57,17 +57,21 @@ export async function rowIcons(page: Page): Promise<(string | null)[]> {
 }
 
 /**
- * Whether any scrolling area of the view also scrolls sideways — what a long
- * unbroken string (file name, URL title) does when it widens a layout past
- * the 360px popup instead of being truncated.
+ * Whether the view spills sideways — what a long unbroken string (file name,
+ * URL title) does when it widens a layout past the 360px popup instead of
+ * being truncated: either content escapes the 360px body itself (the page is
+ * a wider tab here, so the document would not scroll), or a scrolling area
+ * inside the view also scrolls sideways.
  */
 export function scrollsSideways(page: Page): Promise<boolean> {
-  return page.evaluate(() =>
-    [...document.body.querySelectorAll('*')].some((el) => {
+  return page.evaluate(() => {
+    if (document.body.scrollWidth > document.body.clientWidth) return true
+    return [...document.body.querySelectorAll('*')].some((el) => {
+      if (el.scrollWidth <= el.clientWidth) return false
       const {overflowX} = getComputedStyle(el)
-      return (overflowX === 'auto' || overflowX === 'scroll') && el.scrollWidth > el.clientWidth
+      return overflowX === 'auto' || overflowX === 'scroll'
     })
-  )
+  })
 }
 
 export function listItems(page: Page): Promise<string[]> {
