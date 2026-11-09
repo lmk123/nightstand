@@ -7,20 +7,18 @@
 // chosen idle time (a minute by default) without input on the page, unless
 // its tab is playing sound.
 //
-// It only reads the hashed match table, the cover/mute preferences and, on a
-// page it covers, the plaintext decoy config `links` for its toolbar icon
-// (shown on the button, so the user sees what covered the page), never the
-// vault, and sends nothing anywhere except "shown"/"covered" (and "still
-// playing?") for its own tab to the background. On any other page it removes its pre-load hiding as
-// soon as the lookup answers and then stays idle.
-import {createMatcher, parseDecoyConfig, type IconSet, type UrlMatcher} from '@nightstand/core'
+// It only reads the hashed match table, the cover/mute/idle preferences and,
+// on a page it covers, the plaintext decoy config `links` for its toolbar
+// icon (shown on the button, so the user sees what covered the page), never
+// the vault, and sends nothing anywhere except "shown"/"covered" (and "is it
+// playing?") for its own tab to the background. On any other page it
+// removes its pre-load hiding as soon as the lookup answers and then stays
+// idle.
+import {createMatcher, defaultPrefs, parseDecoyConfig, type IconSet, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
 import {isPageNotice, type PageReply, type PageRequest} from '@/platform/messages'
 import {loadLinks, loadPrefsAndIndex, STORAGE_KEYS} from '@/platform/storage'
 import {createIcon} from './cover-icons'
-
-/** Once the idle time is up, how often a page whose tab plays sound asks again. */
-const PLAYING_POLL_MS = 15_000
 
 /** Input that counts as using the page. */
 const ACTIVITY_EVENTS = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const
@@ -239,15 +237,17 @@ export default function main(): (() => void) | undefined {
   // Idle: a shown page is covered again after `idleMs` without input. Sound
   // means someone is watching or listening (as with a screen saver): once
   // the time is up the page asks the background whether its tab is playing,
-  // and while it is, asks again every PLAYING_POLL_MS; the first answer
-  // that it isn't (paused, ended) covers the page, unless there was input
-  // meanwhile, which starts the wait again.
-  let idleMs = 60_000
+  // and while it is, waits for the background to say the tab went quiet
+  // (paused, ended), which covers the page unless there was input meanwhile.
+  // In case that notice never comes, it asks again after another `idleMs`.
+  let idleMs = defaultPrefs().idleMinutes * 60_000
   let lastInput = Date.now()
   let idleTimer: ReturnType<typeof setTimeout> | undefined
   // Bumped whenever the wait stops or restarts, so an answer about playing
   // that arrives afterwards is dropped.
   let idleRun = 0
+  // The idle time is up, but the tab was playing sound when last asked.
+  let playing = false
   const onActivity = () => {
     lastInput = Date.now()
   }
@@ -256,6 +256,7 @@ export default function main(): (() => void) | undefined {
   }
   async function checkIdle(): Promise<void> {
     idleTimer = undefined
+    playing = false
     if (state !== 'shown') return
     const left = lastInput + idleMs - Date.now()
     if (left > 0) {
@@ -266,9 +267,21 @@ export default function main(): (() => void) | undefined {
     const reply = await send({type: 'pagePlaying'})
     if (run !== idleRun || state !== 'shown') return
     // No answer (extension updated, background failed): not playing.
-    if (reply?.playing === true) waitIdle(PLAYING_POLL_MS)
-    else if (Date.now() - lastInput >= idleMs) coverPage(true)
+    if (reply?.playing === true) {
+      playing = true
+      waitIdle(idleMs)
+    } else if (Date.now() - lastInput >= idleMs) coverPage(true)
     else void checkIdle()
+  }
+  /**
+   * The background saw the tab go quiet. Matters only once the idle time is
+   * up: to a page waiting out the sound, or to one whose question is on its
+   * way (its answer may say "playing" from just before), which asks again.
+   */
+  function onQuiet(): void {
+    if (state !== 'shown' || (idleTimer !== undefined && !playing)) return
+    stopIdle()
+    void checkIdle()
   }
   function stopIdle(): void {
     idleRun++
@@ -460,6 +473,8 @@ export default function main(): (() => void) | undefined {
     if (!isPageNotice(message)) return
     if (message.type === 'cover') {
       if (state === 'shown') coverPage(false)
+    } else if (message.type === 'quiet') {
+      onQuiet()
     } else {
       queueEvaluate('load')
     }

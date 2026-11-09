@@ -13,6 +13,17 @@ import {IncognitoHelp} from '../components/IncognitoHelp'
 import {ShortcutInfo} from '../components/ShortcutInfo'
 import {viewClass} from '../components/styles'
 
+/** A setting's text with its control at the end; the whole row is the control's label. */
+function SettingRow({disabled, control, children}: {disabled?: boolean; control: ReactNode; children: ReactNode}) {
+  return (
+    <Label className="flex items-center gap-3 p-3 text-[13px] leading-normal font-normal">
+      {/* Dimmed along with the control, which dims itself. */}
+      <span className={disabled ? 'flex-1 opacity-50' : 'flex-1'}>{children}</span>
+      {control}
+    </Label>
+  )
+}
+
 function SwitchRow({
   checked,
   onChange,
@@ -25,16 +36,19 @@ function SwitchRow({
   children: ReactNode
 }) {
   return (
-    <Label className="flex items-center gap-3 p-3 text-[13px] leading-normal font-normal">
-      {/* Dimmed along with the switch, which dims itself. */}
-      <span className={disabled ? 'flex-1 opacity-50' : 'flex-1'}>{children}</span>
-      <Switch
-        checked={checked}
-        onCheckedChange={onChange}
-        disabled={disabled}
-        className="data-[size=default]:h-6 data-[size=default]:w-10 [&>span]:group-data-[size=default]/switch:size-[18px] [&>span]:group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-1px)] [&>span]:group-data-[size=default]/switch:data-unchecked:translate-x-[2px]"
-      />
-    </Label>
+    <SettingRow
+      disabled={disabled}
+      control={
+        <Switch
+          checked={checked}
+          onCheckedChange={onChange}
+          disabled={disabled}
+          className="data-[size=default]:h-6 data-[size=default]:w-10 [&>span]:group-data-[size=default]/switch:size-[18px] [&>span]:group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-1px)] [&>span]:group-data-[size=default]/switch:data-unchecked:translate-x-[2px]"
+        />
+      }
+    >
+      {children}
+    </SettingRow>
   )
 }
 
@@ -106,24 +120,28 @@ export function Settings({
                 {t('muteSetting')}
               </SwitchRow>
               {/* Only a shown page waits out the idle time, and with covering off none is. */}
-              <Label className="flex items-center gap-3 p-3 text-[13px] leading-normal font-normal">
-                <span className={prefs.cover ? 'flex-1' : 'flex-1 opacity-50'}>{t('idleSetting')}</span>
-                <NativeSelect
-                  size="sm"
-                  value={String(prefs.idleMinutes)}
-                  disabled={!prefs.cover}
-                  onChange={(event) => {
-                    const idleMinutes = Number(event.target.value)
-                    if (isIdleMinutes(idleMinutes)) changePrefs({idleMinutes})
-                  }}
-                >
-                  {IDLE_MINUTES.map((minutes) => (
-                    <NativeSelectOption key={minutes} value={String(minutes)}>
-                      {t('idleMinutesOption', String(minutes))}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
-              </Label>
+              <SettingRow
+                disabled={!prefs.cover}
+                control={
+                  <NativeSelect
+                    size="sm"
+                    value={String(prefs.idleMinutes)}
+                    disabled={!prefs.cover}
+                    onChange={(event) => {
+                      const idleMinutes = Number(event.target.value)
+                      if (isIdleMinutes(idleMinutes)) changePrefs({idleMinutes})
+                    }}
+                  >
+                    {IDLE_MINUTES.map((minutes) => (
+                      <NativeSelectOption key={minutes} value={String(minutes)}>
+                        {t('idleMinutesOption', String(minutes))}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                }
+              >
+                {t('idleSetting')}
+              </SettingRow>
             </div>
           </section>
         )}

@@ -382,7 +382,7 @@
     "message": "自动静音（页面显示后恢复声音）"
   },
   "idleSetting": {
-    "message": "无操作后重新遮住"
+    "message": "无操作多久后重新遮住"
   },
   "idleMinutesOption": {
     "message": "$COUNT$ 分钟",

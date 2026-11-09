@@ -213,6 +213,7 @@ export function handlePageRequest(request: PageRequest, tabId: number, url: stri
         // Sound over the last couple of seconds, from any frame (an embedded
         // player too), even with the tab muted. A video playing silently
         // doesn't count, so neither does a muted looping background video.
+        // When it stops, `onTabQuiet` tells the page.
         return {inside: true, shown: tabs[tabId] === 'shown', playing: tab.audible === true}
     }
   })
@@ -287,8 +288,19 @@ async function onPrefsChange(before: Prefs, after: Prefs): Promise<void> {
   })
 }
 
+/**
+ * A tab stopped playing sound: if it is a shown protected page, its page
+ * script may be waiting for that past its idle time (see `pagePlaying`).
+ * Told rather than asked over and over, so a long video doesn't keep the
+ * worker awake.
+ */
+async function onTabQuiet(tabId: number): Promise<void> {
+  if (await updateTabs((tabs) => tabs[tabId] === 'shown')) notify(tabId, {type: 'quiet'})
+}
+
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   if (change.url) onTabUrl(tabId, change.url, tab).catch(console.error)
+  if (change.audible === false) onTabQuiet(tabId).catch(console.error)
 })
 
 function forgetTab(tabId: number): void {

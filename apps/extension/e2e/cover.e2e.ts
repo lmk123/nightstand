@@ -1,6 +1,6 @@
 import type {Page, Protocol} from 'puppeteer-core'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
-import {launchChrome, openPopup, type ChromeSession} from './support/chrome'
+import {launchChrome, openPopup, waitStorage, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
 import {addEntry, clearAndType, clickText, hasText, onboard, openSettings, sleep, submitUnlock, waitText} from './support/popup'
 import {startTestServer} from './support/server'
@@ -338,7 +338,7 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
       try {
         await submitUnlock(p, 'notes')
         await openSettings(p)
-        await waitText(p, '无操作后重新遮住')
+        await waitText(p, '无操作多久后重新遮住')
         const select = 'select[data-slot="native-select"]'
         await p.waitForSelector(select)
         expect(await p.$eval(select, (el) => [...(el as HTMLSelectElement).options].map((o) => o.text))).toEqual([
@@ -349,7 +349,7 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
         expect(await p.$eval(select, (el) => (el as HTMLSelectElement).value)).toBe('1')
         await p.select(select, '5')
         const prefs = () => s.sw.evaluate(async () => (await chrome.storage.local.get('prefs')).prefs as Record<string, unknown>)
-        await sleep(200)
+        await waitStorage(s, (snapshot) => (snapshot.prefs as {idleMinutes?: unknown} | undefined)?.idleMinutes === 5)
         expect(await prefs()).toEqual({cover: true, mute: true, idleMinutes: 5})
 
         // The first switch in settings is "cover the page".
