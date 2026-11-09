@@ -59,7 +59,7 @@ pnpm run store          # 构建并打 zip，再生成 Chrome 网上应用店的
 - **引导在最后一步之前什么都不写。** 引导中途关闭 popup，存储必须是空的。
 - **旁人可能看到的地方一律用中性措辞。** manifest 的 name/description/title/命令描述绝不能含 private、hide、secret、隐私、隐藏、私密之类的词——`apps/extension/tools/check-manifest-words.mjs` 在 `lint` 里强制检查。存储键也是中性的（`shelf`、`index`、`links`、`state`、`prefs`）。
 - **从第一天起就做 i18n。** 所有界面字符串都经过 `apps/extension/src/platform/i18n.ts` 的 `t()`；组件里不能有硬编码文案。语言：`en`（`default_locale`，也是推导 `MessageKey` 的那个文件，所以那里缺 key 就是类型错误）和 `zh_CN`。每个 key 都要同时写进两份 `_locales/*/messages.json`，占位符一致——`tools/check-locales.mjs` 在 `lint` 里强制检查。没有对应语言包的浏览器（包括繁体中文）显示英文。chrome.i18n 没有复数形式：英文里的计数写成 "Label: $COUNT$" 或 "(…$COUNT$)"；不分单复数的缩写单位可以直接跟在数字后面（"$COUNT$ min"）。
-- **存储格式带版本号，迁移要有测试。** 改动存储的保险箱、它的载荷或备份格式时，如果旧版本会误读数据、或丢掉某个重要内容，就需要新版本号、一个迁移步骤，以及一个仍能解开仓库里 v1 测试数据的测试。这些情况包括：删除、重命名字段，或改变字段的含义、类型；新增必填字段；新增字段一旦丢失（旧版本重新保存时不带它）会丢条目或缩小清理范围。新增一个旧版本可以忽略、丢失也只损失一个偏好设置的*可选*字段（例如 `skipSaveNotice`），不需要升版本号——但需要测试它能完整往返，并且格式错误的值会被丢弃而不是让整个保险箱失败。
+- **存储格式带版本号，迁移要有测试。** 改动存储的保险箱、它的载荷或备份格式时，如果旧版本会误读数据、或丢掉某个重要内容，就需要新版本号、一个迁移步骤，以及一个仍能解开仓库里 v1 测试数据的测试。这些情况包括：删除、重命名字段，或改变字段的含义、类型；新增必填字段；新增字段一旦丢失（旧版本重新保存时不带它）会丢条目或缩小清理范围。新增一个旧版本可以忽略、丢失也只损失一个偏好设置的*可选*字段（例如 `skipSaveNotice`），不需要升版本号——但需要测试它能完整往返，并且格式错误的值会被丢弃而不是让整个保险箱失败。同理，删除一个设置字段时，如果旧版本读到它缺失会回落到默认值、而这个默认值正好就是新的行为（例如已移除的 `openMode`），也不需要升版本号；新版本的迁移步骤要丢掉旧值，并有测试覆盖。
 - 属于用户的决定（界面风格、默认值、体验取舍），列出选项问用户，不要自行假设。
 
 ## 威胁模型（所有设计取舍都以此为准）
@@ -95,9 +95,9 @@ pnpm run store          # 构建并打 zip，再生成 Chrome 网上应用店的
 5. 锁定时打开 popup：只看到快捷链接；口令输错没有任何提示；输对口令按回车即解锁。
 6. 解锁后关闭 popup 再打开：回到伪装界面，需要重新输入口令。
 7. 全新安装，第一次打开 popup：进入引导（而不是伪装界面）。引导中途关闭 popup 再打开：引导从头开始，存储里没有保险箱数据。
-8. 按下快速收起（panic）快捷键：匹配的标签页和 Nightstand 打开的无痕窗口被关闭，打开着的 popup 也关闭。
+8. 按下快速收起（panic）快捷键：匹配的标签页被关闭，打开着的 popup 也关闭。
 9. 扩展管理页上没有任何暴露用途的信息（名称、描述、图标），使用过程中从未打开过扩展标签页。
-10. 打开受保护站点（https 和 http 各一个）：加载过程中任何时刻都看不到页面内容，直接出现遮罩；标签页标题是“新标签页”、已静音。点“显示页面”后内容和声音恢复；切换标签页、切到别的应用、超过设置的时长（默认 1 分钟）不操作后都重新遮住并静音；标签页在播放声音时不因无操作而遮住，停止播放后约 12 秒遮住（中途停几秒再继续不遮住）。普通网站加载时没有可察觉的闪白。
+10. 打开受保护站点（https 和 http 各一个）：加载过程中任何时刻都看不到页面内容，直接出现遮罩；标签页标题是“新标签页”、已静音。点“显示页面”后内容和声音恢复；鼠标移出网页、切换标签页、切到别的应用、超过设置的时长（默认 1 分钟）不操作后都重新遮住并静音；标签页在播放声音时不因无操作而遮住，停止播放后约 12 秒遮住（中途停几秒再继续不遮住）；用鼠标点别的标签页再切回来时，看不到页面内容闪一下；鼠标移到网页上的右键菜单、下拉选项上时不会遮住。普通网站加载时没有可察觉的闪白。
 
 另外还要验证，并记录到 `docs/design.md` 的“已知限制”里：历史删除后，Chrome 地址栏是否仍会从书签、已打开的标签页、搜索引擎联想（服务端，和 Google 账户活动有关）或地址栏的“快捷方式”数据库提示受保护站点；以及开启 Chrome 同步时 `history.deleteUrl` 是否也会删除其他设备上的记录。
 
@@ -108,7 +108,7 @@ Vitest + `puppeteer-core`，驱动本机安装的 Google Chrome 和 Firefox（�
 - **遮罩**（`e2e/cover.e2e.ts`）：遮罩是用 `showModal()` 打开的 `<dialog>`，测试用 `:modal` 判断是否遮住，按视口中心点击“显示页面”（按钮在封闭的 shadow root 里）。测试服务器是纯 http，走“问后台”的路径；`http://localhost` 是安全上下文，用来覆盖网页脚本自己算哈希的路径。窗口失焦用 `chrome.windows.onFocusChanged.dispatch(WINDOW_ID_NONE)` 模拟。无操作计时和“播放中不计时”在一份打过补丁的构建副本里测（`patchedCopy` 的 `pageScript` 把网页脚本里的一分钟换成一秒、静音宽限期换成 1.5 秒，并核对替换次数，构建产物变了会直接报错）；声音来自一个远低于听觉的振荡器（17 kHz、-60 dB），为此这组测试用 `launchChrome({audible: true})` 去掉 puppeteer 默认的 `--mute-audio`（带着它，标签页永远不会变成 `audible`）。
 - **Chrome**：用 `puppeteer.launch({pipe: true, enableExtensions: [dist/chromium]})` 和全新 profile。扩展 id 从 service worker target 获取；`sw.evaluate()` 可以在 background 里调用 `chrome.*`。popup 界面以标签页形式驱动，地址是 `chrome-extension://<id>/action/index.html`（关闭标签页 = 关闭 popup）。`--host-resolver-rules=MAP * 127.0.0.1:<port>` 加上 `e2e/support/server.ts`，让 `example.com` 等成为真实访问并进入历史。panic 用 `chrome.commands.onCommand.dispatch('panic')` 触发。
 - **真实 popup**（`e2e/real-popup.e2e.ts`，仅在 `E2E_HEADED=1` 时运行）：先聚焦一个普通窗口，再从 service worker 调用 `chrome.action.openPopup({windowId})`。它固定住了界面设计所依赖的几个事实：文件选择器**不会**关掉 popup（macOS 上的 Chrome）；blob 下载在 popup 关闭后仍能完成。（`permissions.request` 的弹窗**会**关掉 popup——这就是 `bookmarks` 是必需权限的原因。）
-- **Firefox**：WebDriver BiDi 能安装附加组件（`browser.installExtension`），但拒绝导航到或暴露 `moz-extension://` 页面，所以没法驱动 popup 界面。`e2e/firefox-history.e2e.ts` 改为检查 background：一个打过补丁的副本预置匹配表，访问通过测试服务器（作为 HTTP 代理）进行，关闭浏览器后用 `sqlite3` 命令行读取 `places.sqlite`，看历史里还剩什么。只在 popup 里的 Firefox 分支（粘贴式备份导入、隐私窗口的措辞）仍需用 `pnpm dev:firefox` 手动过一遍。
+- **Firefox**：WebDriver BiDi 能安装附加组件（`browser.installExtension`），但拒绝导航到或暴露 `moz-extension://` 页面，所以没法驱动 popup 界面。`e2e/firefox-history.e2e.ts` 改为检查 background：一个打过补丁的副本预置匹配表，访问通过测试服务器（作为 HTTP 代理）进行，关闭浏览器后用 `sqlite3` 命令行读取 `places.sqlite`，看历史里还剩什么。只在 popup 里的 Firefox 分支（粘贴式备份导入）仍需用 `pnpm dev:firefox` 手动过一遍。
 - 界面操作按 zh_CN 文案查找按钮（`clickText`），所以改了 zh_CN 文案可能会让 e2e 测试失败——两边一起改。为了不让本机语言把它们切成英文，`launchChrome` 加载的是一份只有 zh_CN 语言包（同时也是默认语言）的构建副本。只有 `e2e/locale.e2e.ts` 传 `lang` 并运行真实构建，检查 en-US / zh-TW / zh-CN 浏览器分别得到哪种语言。macOS 上的 Chrome 会忽略 `--lang`；`-AppleLanguages (xx)` 在那里有效，但也会打开一个多余的 `http://(xx)/` 标签页，所以历史/标签页相关的测试里不要用它。
 
 ## MCP 服务器

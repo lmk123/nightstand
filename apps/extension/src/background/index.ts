@@ -2,14 +2,13 @@
 //
 // Cleans history for protected sites (also while the vault is locked, using
 // only the hashed match table), mutes protected tabs and answers the page
-// script that covers them, opens incognito windows for the popup, and
-// handles the panic shortcut. It never sees the vault key.
+// script that covers them, and handles the panic shortcut. It never sees the
+// vault key.
 import {applyIcon} from '@/platform/icons'
 import {isBackgroundRequest, isPageRequest, type PageReply} from '@/platform/messages'
 import {loadLinks, removeRetiredKeys} from '@/platform/storage'
 import {fullScan, handleVisited, incrementalScan, isOwnPage, purgeEntries} from './cleaner'
 import {coverOpenTabs, handlePageRequest} from './cover'
-import {forgetIncognitoWindows, openIncognito} from './incognito'
 import {panic} from './panic'
 
 const SCAN_ALARM = 'scan'
@@ -48,11 +47,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   // Everything else only from our own popup.
   if (!isBackgroundRequest(message)) return
-  const work =
-    message.type === 'purge'
-      ? purgeEntries(message.hosts, message.urls)
-      : openIncognito(message.url)
-  work.then(
+  purgeEntries(message.hosts, message.urls).then(
     () => sendResponse({ok: true}),
     (error: unknown) => {
       console.error(error)
@@ -83,10 +78,6 @@ async function restoreIcon(): Promise<void> {
 }
 
 chrome.runtime.onStartup.addListener(() => {
-  // Window ids start over with every browser session, and windows still open
-  // when the browser quit never reported being closed: forget them all, so
-  // panic can't close an ordinary window that now has one of those ids.
-  forgetIncognitoWindows().catch(console.error)
   restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
   coverOpenTabs().catch(console.error)

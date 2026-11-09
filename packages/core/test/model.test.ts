@@ -156,8 +156,8 @@ describe('vault operations', () => {
     expect(data.entries[0]?.title).toBe('B')
     data = removeEntry(data, 'b')
     expect(data.entries.map((e) => e.id)).toEqual(['a'])
-    data = updateSettings(data, {openMode: 'incognito'})
-    expect(data.settings.openMode).toBe('incognito')
+    data = updateSettings(data, {skipSaveNotice: true})
+    expect(data.settings.skipSaveNotice).toBe(true)
   })
   it('findDuplicate uses normalized identity per match mode', () => {
     const entries = [
@@ -244,11 +244,19 @@ describe('entryCoversUrl', () => {
 })
 
 describe('migrateVaultData', () => {
-  it('accepts a valid payload and defaults unknown settings', () => {
+  it('accepts a valid payload and drops unknown settings', () => {
     const data = {...emptyVaultData(), entries: [createEntry({url: 'example.com'}, NOW, 'x')]}
     expect(migrateVaultData(JSON.parse(JSON.stringify(data)))).toEqual(data)
-    expect(migrateVaultData({version: 1, entries: [], settings: {openMode: 'teleport', extra: 1}}).settings).toEqual({openMode: 'newTab'})
-    expect(migrateVaultData({version: 1, entries: []}).settings.openMode).toBe('newTab')
+    expect(migrateVaultData({version: 1, entries: [], settings: {extra: 1}}).settings).toEqual({})
+    expect(migrateVaultData({version: 1, entries: []}).settings).toEqual({})
+  })
+  it('drops the retired open-mode setting from older payloads', () => {
+    for (const openMode of ['current', 'newTab', 'incognito', 'teleport']) {
+      for (const version of [1, 4]) {
+        const out = migrateVaultData({version, entries: [], settings: {openMode, skipSaveNotice: true}})
+        expect(out.settings).toEqual({skipSaveNotice: true})
+      }
+    }
   })
   it('upgrades v1 entries with empty extra hosts and drops note / tags; v2 entries must carry extra hosts', () => {
     const current = createEntry({url: 'example.com'}, NOW, 'x')
@@ -257,7 +265,7 @@ describe('migrateVaultData', () => {
     expect(migrateVaultData({version: 1, entries: [v1Entry]})).toEqual({
       version: 4,
       entries: [current],
-      settings: {openMode: 'newTab'}
+      settings: {}
     })
     expect(() => migrateVaultData({version: 1, entries: [{...v1Entry, tags: undefined}]})).toThrow()
     expect(() => migrateVaultData({version: 2, entries: [v1Entry]})).toThrow()
@@ -288,14 +296,14 @@ describe('migrateVaultData', () => {
   })
   it('keeps the optional save-notice flag only when it is a boolean', () => {
     const data = updateSettings(emptyVaultData(), {skipSaveNotice: true})
-    expect(migrateVaultData(JSON.parse(JSON.stringify(data))).settings).toEqual({openMode: 'newTab', skipSaveNotice: true})
-    expect(migrateVaultData({version: 1, entries: [], settings: {openMode: 'current', skipSaveNotice: 'yes'}}).settings).toEqual({openMode: 'current'})
+    expect(migrateVaultData(JSON.parse(JSON.stringify(data))).settings).toEqual({skipSaveNotice: true})
+    expect(migrateVaultData({version: 1, entries: [], settings: {skipSaveNotice: 'yes'}}).settings).toEqual({})
     expect(emptyVaultData().settings).not.toHaveProperty('skipSaveNotice')
   })
   it('keeps the optional save-check flag only when it is a boolean', () => {
     const data = updateSettings(emptyVaultData(), {skipSaveCheck: true})
-    expect(migrateVaultData(JSON.parse(JSON.stringify(data))).settings).toEqual({openMode: 'newTab', skipSaveCheck: true})
-    expect(migrateVaultData({version: 4, entries: [], settings: {openMode: 'current', skipSaveCheck: 1}}).settings).toEqual({openMode: 'current'})
+    expect(migrateVaultData(JSON.parse(JSON.stringify(data))).settings).toEqual({skipSaveCheck: true})
+    expect(migrateVaultData({version: 4, entries: [], settings: {skipSaveCheck: 1}}).settings).toEqual({})
     expect(emptyVaultData().settings).not.toHaveProperty('skipSaveCheck')
   })
   it('rejects malformed payloads and unknown versions', () => {

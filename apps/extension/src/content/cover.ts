@@ -2,10 +2,10 @@
 //
 // On a protected page it draws an opaque cover over everything and gives the
 // tab a neutral title until the user clicks "Show"; the background keeps the
-// tab muted until then. A shown page is covered again when its tab is hidden,
-// when the browser window loses focus (the background says so) or after the
-// chosen idle time (a minute by default) without input on the page, unless
-// its tab is playing sound.
+// tab muted until then. A shown page is covered again when the mouse leaves
+// it, when its tab is hidden, when the browser window loses focus (the
+// background says so) or after the chosen idle time (a minute by default)
+// without input on the page, unless its tab is playing sound.
 //
 // It only reads the hashed match table, the cover/mute/idle preferences and,
 // on a page it covers, the plaintext decoy config `links` for its toolbar
@@ -318,8 +318,63 @@ export default function main(): (() => void) | undefined {
   }
   for (const type of ACTIVITY_EVENTS) window.addEventListener(type, onActivity, {capture: true, passive: true})
 
+  // Leaving: the mouse goes past the page's edge (to the tab strip, the
+  // window's buttons, another window). Covered then, while the page still
+  // paints: a hidden tab paints nothing, so a cover put up only when the tab
+  // is hidden misses its last frame, and that frame (the page) is what the
+  // browser shows for a moment when the user switches back. Switching tabs
+  // from the keyboard gives no such warning.
+  //
+  // Missing a leave flashes the page, covering once too often only costs a
+  // click, so anything that may be a leave counts: the mouse going out, a
+  // button released outside (a drag past the edge: no `mouseout` comes while
+  // it is held, and after release only once the mouse moves again), a
+  // dragged link or file leaving the window. Only a pointer still within the
+  // page is not leaving: it went over a menu, a picker or a browser bubble
+  // on top of the page.
+  // Listened to only while the page is shown.
+  const LEAVE_EVENTS = ['mouseout', 'mouseup', 'dragleave', 'dragend'] as const
+
+  /**
+   * Outside the part of the page on screen. Client coordinates are relative
+   * to the layout viewport; when zoomed in by pinching, only the visual
+   * viewport (a part of it) is on screen.
+   *
+   * A leave may be reported on the edge itself, so the edge counts as
+   * outside. A release on the edge is a click there (a window that touches
+   * the screen's edge: its scrollbar, a full-screen player's controls), so
+   * for `mouseup` only past the edge counts.
+   */
+  function isOutside({type, clientX: x, clientY: y}: MouseEvent): boolean {
+    const view = window.visualViewport
+    const zoomed = view !== null && view.scale > 1
+    const left = zoomed ? view.offsetLeft : 0
+    const top = zoomed ? view.offsetTop : 0
+    const right = zoomed ? left + view.width : innerWidth
+    const bottom = zoomed ? top + view.height : innerHeight
+    if (type === 'mouseup') return x < left || y < top || x >= right || y >= bottom
+    return x <= left || y <= top || x >= right - 1 || y >= bottom - 1
+  }
+
+  const onLeave = (event: MouseEvent) => {
+    if (state !== 'shown') return
+    // Moving from one element (or frame) of the page to another.
+    if ((event.type === 'mouseout' || event.type === 'dragleave') && event.relatedTarget !== null) return
+    // Still dragging: where the button is released decides.
+    if (event.type === 'mouseout' && event.buttons !== 0) return
+    if (isOutside(event)) coverPage(true)
+  }
+
+  function watchLeaving(on: boolean): void {
+    for (const type of LEAVE_EVENTS) {
+      if (on) window.addEventListener(type, onLeave, true)
+      else window.removeEventListener(type, onLeave, true)
+    }
+  }
+
   function coverPage(report: boolean): void {
     stopIdle()
+    watchLeaving(false)
     state = 'covered'
     loadIcon()
     raise()
@@ -343,12 +398,14 @@ export default function main(): (() => void) | undefined {
     state = 'shown'
     release()
     startIdle()
+    watchLeaving(true)
     if (report) void send({type: 'pageShown'})
   }
 
   function off(): void {
     if (state === 'covered') uncover()
     stopIdle()
+    watchLeaving(false)
     state = 'off'
     release()
   }

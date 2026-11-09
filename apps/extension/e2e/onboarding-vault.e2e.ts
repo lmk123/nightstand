@@ -125,7 +125,7 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
     expect(await submitUnlock(p, 'notes')).toBe(false)
     expect(await submitUnlock(p, 'shelf')).toBe(true)
     await openSettings(p)
-    await waitText(p, '打开方式')
+    await waitText(p, '快速收起快捷键')
     await p.close()
   })
 
