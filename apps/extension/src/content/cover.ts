@@ -6,14 +6,17 @@
 // when the browser window loses focus (the background says so) or after a
 // minute without input on the page.
 //
-// It only reads the hashed match table and the cover/mute preferences, never
-// the vault, and sends nothing anywhere except "shown"/"covered" for its own
-// tab to the background. On any other page it removes its pre-load hiding as
+// It only reads the hashed match table, the cover/mute preferences and, on a
+// page it covers, the plaintext decoy config `links` for its toolbar icon
+// (shown on the button, so the user sees what covered the page), never the
+// vault, and sends nothing anywhere except "shown"/"covered" for its own tab
+// to the background. On any other page it removes its pre-load hiding as
 // soon as the lookup answers and then stays idle.
-import {createMatcher, type UrlMatcher} from '@nightstand/core'
+import {createMatcher, parseDecoyConfig, type IconSet, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
 import {isPageNotice, type PageReply, type PageRequest} from '@/platform/messages'
-import {loadPrefsAndIndex, STORAGE_KEYS} from '@/platform/storage'
+import {loadLinks, loadPrefsAndIndex, STORAGE_KEYS} from '@/platform/storage'
+import {createIcon} from './cover-icons'
 
 /** A shown page is covered again after this long without input on it. */
 const IDLE_MS = 60_000
@@ -55,9 +58,14 @@ const SHADOW_CSS = `
 }
 button {
   font: inherit; color: inherit; cursor: pointer;
-  padding: 6px 14px; border-radius: 8px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px 6px 10px; border-radius: 8px;
   border: 1px solid #d4d4d8; background: #fff;
 }
+.icon { display: block; width: 16px; height: 16px; flex: none; }
+button.no-icon { padding: 6px 14px; }
+button.no-icon .icon { display: none; }
+svg { display: block; width: 100%; height: 100%; }
 button:hover { background: #fafafa; }
 button:focus-visible { outline: 2px solid #a1a1aa; outline-offset: 2px; }
 @media (prefers-color-scheme: dark) {
@@ -116,12 +124,54 @@ export default function main(): (() => void) | undefined {
   style.textContent = SHADOW_CSS
   const cover = document.createElement('div')
   cover.className = 'cover'
+  // The toolbar's icon and, on hover only (a bystander sees just the
+  // button), who covered the page: otherwise the owner may not connect a
+  // plain grey page with Nightstand.
   const button = document.createElement('button')
   button.type = 'button'
-  button.textContent = t('coverShow')
+  button.title = t('coverShowTitle', t('extName'))
+  // Holds the icon's place, so the label doesn't move when the icon arrives.
+  const iconBox = document.createElement('span')
+  iconBox.className = 'icon'
+  const label = document.createElement('span')
+  label.textContent = t('coverShow')
+  button.append(iconBox, label)
   button.addEventListener('click', () => show(true))
   cover.append(button)
   shadow.append(style, cover)
+
+  // The icon is read only when the page covers (most pages never do), off
+  // the path that holds every page invisible. An icon from a storage change
+  // that arrives while the read is on its way wins over the read. A failed
+  // read drops the empty slot (so the label sits centred) and is tried again
+  // the next time the page covers.
+  let iconSet: IconSet | null = null
+  let iconLoading = false
+
+  function setIcon(set: IconSet): void {
+    button.classList.remove('no-icon')
+    if (set === iconSet) return
+    iconSet = set
+    iconBox.replaceChildren(createIcon(set))
+  }
+
+  function loadIcon(): void {
+    if (iconSet || iconLoading) return
+    iconLoading = true
+    loadLinks()
+      .then(
+        ({icon}) => {
+          if (!iconSet) setIcon(icon)
+        },
+        (error: unknown) => {
+          if (!iconSet) button.classList.add('no-icon')
+          console.error(error)
+        }
+      )
+      .finally(() => {
+        iconLoading = false
+      })
+  }
 
   function raise(): void {
     if (!host.isConnected) (document.documentElement ?? document).append(host)
@@ -208,6 +258,7 @@ export default function main(): (() => void) | undefined {
   function coverPage(report: boolean): void {
     clearTimeout(idleTimer)
     state = 'covered'
+    loadIcon()
     raise()
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined)
     maskTitle()
@@ -381,6 +432,9 @@ export default function main(): (() => void) | undefined {
 
   const onStorage = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
     if (area !== 'local') return
+    const links = changes[STORAGE_KEYS.links]
+    // Only once the icon is shown or on its way; otherwise the next read gets it.
+    if (links && (iconSet || iconLoading)) setIcon(parseDecoyConfig(links.newValue).icon)
     if (STORAGE_KEYS.index in changes || STORAGE_KEYS.prefs in changes) queueEvaluate('release')
   }
   chrome.storage.onChanged.addListener(onStorage)

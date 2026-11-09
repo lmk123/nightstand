@@ -14,5 +14,8 @@
     "test:e2e": "pnpm --filter @nightstand/extension run test:e2e",
     "store": "pnpm --filter @nightstand/extension run store"
   },
-  "packageManager": "pnpm@12.18.0"
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": "^22.18 || >=23.6"
+  }
 }
