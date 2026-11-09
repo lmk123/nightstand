@@ -8,7 +8,7 @@ HIGHLIGHTS
 
 • Runs entirely on your device. No account, no server, no analytics, no network requests. Your list is encrypted with your passphrase and never leaves this browser.
 • Looks like an ordinary tool. Click the icon and all you see is a working "Quick Links" launcher. Type your passphrase into its filter box and press Enter to get to your list. Close the popup and it locks again. The name, description and icon on the extensions page are just as unremarkable.
-• Covered until you choose. A saved site opens behind a plain cover, with a neutral tab title and its sound muted, until you click Show. Switch tabs, leave the browser window or stop using the page for a minute, and it is covered again. A saved site that starts playing in a background tab stays silent.
+• Covered until you choose. A saved site opens behind a plain cover, with a neutral tab title and its sound muted, until you click Show. Switch tabs, leave the browser window or stop using the page for a while (one to five minutes, your choice; not while it plays sound), and it is covered again. A saved site that starts playing in a background tab stays silent.
 • Open source. The code is public under the MIT license, so anyone can check that Nightstand does what it says and nothing more: https://github.com/lmk123/nightstand
 • No surprises. Before you save a site, Nightstand shows how many pages of history and how many bookmarks it is about to delete.
 • A whole site or a single page. Clean up a site with all its subdomains, or just one URL. Add the other domains a site sends you to — a payment page, a video server — and they are cleaned up too.

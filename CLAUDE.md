@@ -97,7 +97,7 @@ pnpm run store          # 构建并打 zip，再生成 Chrome 网上应用店的
 7. 全新安装，第一次打开 popup：进入引导（而不是伪装界面）。引导中途关闭 popup 再打开：引导从头开始，存储里没有保险箱数据。
 8. 按下快速收起（panic）快捷键：匹配的标签页和 Nightstand 打开的无痕窗口被关闭，打开着的 popup 也关闭。
 9. 扩展管理页上没有任何暴露用途的信息（名称、描述、图标），使用过程中从未打开过扩展标签页。
-10. 打开受保护站点（https 和 http 各一个）：加载过程中任何时刻都看不到页面内容，直接出现遮罩；标签页标题是“新标签页”、已静音。点“显示页面”后内容和声音恢复；切换标签页、切到别的应用、60 秒不操作后都重新遮住并静音。普通网站加载时没有可察觉的闪白。
+10. 打开受保护站点（https 和 http 各一个）：加载过程中任何时刻都看不到页面内容，直接出现遮罩；标签页标题是“新标签页”、已静音。点“显示页面”后内容和声音恢复；切换标签页、切到别的应用、超过设置的时长（默认 1 分钟）不操作后都重新遮住并静音；标签页在播放声音时不因无操作而遮住，停止播放后约 15 秒内遮住。普通网站加载时没有可察觉的闪白。
 
 另外还要验证，并记录到 `docs/design.md` 的“已知限制”里：历史删除后，Chrome 地址栏是否仍会从书签、已打开的标签页、搜索引擎联想（服务端，和 Google 账户活动有关）或地址栏的“快捷方式”数据库提示受保护站点；以及开启 Chrome 同步时 `history.deleteUrl` 是否也会删除其他设备上的记录。
 
@@ -105,7 +105,7 @@ pnpm run store          # 构建并打 zip，再生成 Chrome 网上应用店的
 
 Vitest + `puppeteer-core`，驱动本机安装的 Google Chrome 和 Firefox（可用 `CHROME_PATH` / `FIREFOX_PATH` 覆盖；缺少对应浏览器或构建产物时，该套测试会自动跳过）。共享的辅助代码在 `e2e/support/`；所有临时 profile、下载文件和打过补丁的构建副本都放在系统临时目录下，每个测试文件结束后删除。测试依赖下面这些事实，原因如下：
 
-- **遮罩**（`e2e/cover.e2e.ts`）：遮罩是用 `showModal()` 打开的 `<dialog>`，测试用 `:modal` 判断是否遮住，按视口中心点击“显示页面”（按钮在封闭的 shadow root 里）。测试服务器是纯 http，走“问后台”的路径；`http://localhost` 是安全上下文，用来覆盖网页脚本自己算哈希的路径。窗口失焦用 `chrome.windows.onFocusChanged.dispatch(WINDOW_ID_NONE)` 模拟。60 秒无操作没有自动化测试。
+- **遮罩**（`e2e/cover.e2e.ts`）：遮罩是用 `showModal()` 打开的 `<dialog>`，测试用 `:modal` 判断是否遮住，按视口中心点击“显示页面”（按钮在封闭的 shadow root 里）。测试服务器是纯 http，走“问后台”的路径；`http://localhost` 是安全上下文，用来覆盖网页脚本自己算哈希的路径。窗口失焦用 `chrome.windows.onFocusChanged.dispatch(WINDOW_ID_NONE)` 模拟。无操作计时（最短 1 分钟）和“播放中不计时”没有自动化测试。
 - **Chrome**：用 `puppeteer.launch({pipe: true, enableExtensions: [dist/chromium]})` 和全新 profile。扩展 id 从 service worker target 获取；`sw.evaluate()` 可以在 background 里调用 `chrome.*`。popup 界面以标签页形式驱动，地址是 `chrome-extension://<id>/action/index.html`（关闭标签页 = 关闭 popup）。`--host-resolver-rules=MAP * 127.0.0.1:<port>` 加上 `e2e/support/server.ts`，让 `example.com` 等成为真实访问并进入历史。panic 用 `chrome.commands.onCommand.dispatch('panic')` 触发。
 - **真实 popup**（`e2e/real-popup.e2e.ts`，仅在 `E2E_HEADED=1` 时运行）：先聚焦一个普通窗口，再从 service worker 调用 `chrome.action.openPopup({windowId})`。它固定住了界面设计所依赖的几个事实：文件选择器**不会**关掉 popup（macOS 上的 Chrome）；blob 下载在 popup 关闭后仍能完成。（`permissions.request` 的弹窗**会**关掉 popup——这就是 `bookmarks` 是必需权限的原因。）
 - **Firefox**：WebDriver BiDi 能安装附加组件（`browser.installExtension`），但拒绝导航到或暴露 `moz-extension://` 页面，所以没法驱动 popup 界面。`e2e/firefox-history.e2e.ts` 改为检查 background：一个打过补丁的副本预置匹配表，访问通过测试服务器（作为 HTTP 代理）进行，关闭浏览器后用 `sqlite3` 命令行读取 `places.sqlite`，看历史里还剩什么。只在 popup 里的 Firefox 分支（粘贴式备份导入、隐私窗口的措辞）仍需用 `pnpm dev:firefox` 手动过一遍。

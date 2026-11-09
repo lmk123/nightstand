@@ -376,10 +376,22 @@
     "message": "Cover the page until I click \"Show page\""
   },
   "coverHint": {
-    "message": "It is covered again when you switch tabs, leave the browser window, or stop using the page for a minute."
+    "message": "It is covered again when you switch tabs, leave the browser window, or stop using the page for a while (not while it plays sound)."
   },
   "muteSetting": {
     "message": "Mute the tab (sound comes back when the page is shown)"
+  },
+  "idleSetting": {
+    "message": "Cover again after no input for"
+  },
+  "idleMinutesOption": {
+    "message": "$COUNT$ min",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
   },
   "coverShow": {
     "message": "Show page"

@@ -209,6 +209,11 @@ export function handlePageRequest(request: PageRequest, tabId: number, url: stri
         tabs[tabId] = 'covered'
         await mute(tab)
         return {inside: true, shown: false}
+      case 'pagePlaying':
+        // Sound over the last couple of seconds, from any frame (an embedded
+        // player too), even with the tab muted. A video playing silently
+        // doesn't count, so neither does a muted looping background video.
+        return {inside: true, shown: tabs[tabId] === 'shown', playing: tab.audible === true}
     }
   })
 }

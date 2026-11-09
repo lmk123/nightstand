@@ -1,23 +1,34 @@
 import {describe, expect, it} from 'vitest'
-import {defaultPrefs, parsePrefs} from '../src/index.ts'
+import {defaultPrefs, IDLE_MINUTES, parsePrefs} from '../src/index.ts'
+
+const defaults = {cover: true, mute: true, idleMinutes: 1}
 
 describe('prefs', () => {
-  it('defaults to covering and muting', () => {
-    expect(defaultPrefs()).toEqual({cover: true, mute: true})
-    expect(parsePrefs(undefined)).toEqual({cover: true, mute: true})
-    expect(parsePrefs('nope')).toEqual({cover: true, mute: true})
+  it('defaults to covering and muting, and to a minute without input', () => {
+    expect(defaultPrefs()).toEqual(defaults)
+    expect(parsePrefs(undefined)).toEqual(defaults)
+    expect(parsePrefs('nope')).toEqual(defaults)
+  })
+  it('reads prefs an older build saved, without the idle time', () => {
+    expect(parsePrefs({cover: false, mute: true})).toEqual({cover: false, mute: true, idleMinutes: 1})
   })
   it('round-trips what was saved', () => {
     for (const prefs of [
-      {cover: false, mute: true},
-      {cover: true, mute: false},
-      {cover: false, mute: false}
+      {cover: false, mute: true, idleMinutes: 1},
+      {cover: true, mute: false, idleMinutes: 2},
+      {cover: false, mute: false, idleMinutes: 5}
     ]) {
       expect(parsePrefs(JSON.parse(JSON.stringify(prefs)))).toEqual(prefs)
     }
+    for (const idleMinutes of IDLE_MINUTES) {
+      expect(parsePrefs({...defaults, idleMinutes}).idleMinutes).toBe(idleMinutes)
+    }
   })
   it('drops malformed fields one by one and ignores unknown ones', () => {
-    expect(parsePrefs({cover: 'no', mute: false, later: 1})).toEqual({cover: true, mute: false})
-    expect(parsePrefs({cover: false, mute: 0})).toEqual({cover: false, mute: true})
+    expect(parsePrefs({cover: 'no', mute: false, later: 1})).toEqual({cover: true, mute: false, idleMinutes: 1})
+    expect(parsePrefs({cover: false, mute: 0})).toEqual({cover: false, mute: true, idleMinutes: 1})
+    for (const idleMinutes of [0, 3, -1, 1.5, '5', null, Infinity]) {
+      expect(parsePrefs({cover: false, mute: false, idleMinutes})).toEqual({cover: false, mute: false, idleMinutes: 1})
+    }
   })
 })

@@ -3,14 +3,15 @@
 // On a protected page it draws an opaque cover over everything and gives the
 // tab a neutral title until the user clicks "Show"; the background keeps the
 // tab muted until then. A shown page is covered again when its tab is hidden,
-// when the browser window loses focus (the background says so) or after a
-// minute without input on the page.
+// when the browser window loses focus (the background says so) or after the
+// chosen idle time (a minute by default) without input on the page, unless
+// its tab is playing sound.
 //
 // It only reads the hashed match table, the cover/mute preferences and, on a
 // page it covers, the plaintext decoy config `links` for its toolbar icon
 // (shown on the button, so the user sees what covered the page), never the
-// vault, and sends nothing anywhere except "shown"/"covered" for its own tab
-// to the background. On any other page it removes its pre-load hiding as
+// vault, and sends nothing anywhere except "shown"/"covered" (and "still
+// playing?") for its own tab to the background. On any other page it removes its pre-load hiding as
 // soon as the lookup answers and then stays idle.
 import {createMatcher, parseDecoyConfig, type IconSet, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
@@ -18,8 +19,8 @@ import {isPageNotice, type PageReply, type PageRequest} from '@/platform/message
 import {loadLinks, loadPrefsAndIndex, STORAGE_KEYS} from '@/platform/storage'
 import {createIcon} from './cover-icons'
 
-/** A shown page is covered again after this long without input on it. */
-const IDLE_MS = 60_000
+/** Once the idle time is up, how often a page whose tab plays sound asks again. */
+const PLAYING_POLL_MS = 15_000
 
 /** Input that counts as using the page. */
 const ACTIVITY_EVENTS = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const
@@ -235,28 +236,62 @@ export default function main(): (() => void) | undefined {
   document.addEventListener('toggle', onTopLayer, true)
   document.addEventListener('fullscreenchange', onTopLayer, true)
 
-  // Idle: a shown page is covered again after IDLE_MS without input.
+  // Idle: a shown page is covered again after `idleMs` without input. Sound
+  // means someone is watching or listening (as with a screen saver): once
+  // the time is up the page asks the background whether its tab is playing,
+  // and while it is, asks again every PLAYING_POLL_MS; the first answer
+  // that it isn't (paused, ended) covers the page, unless there was input
+  // meanwhile, which starts the wait again.
+  let idleMs = 60_000
   let lastInput = Date.now()
   let idleTimer: ReturnType<typeof setTimeout> | undefined
+  // Bumped whenever the wait stops or restarts, so an answer about playing
+  // that arrives afterwards is dropped.
+  let idleRun = 0
   const onActivity = () => {
     lastInput = Date.now()
   }
-  function checkIdle(): void {
+  function waitIdle(ms: number): void {
+    idleTimer = setTimeout(() => void checkIdle(), ms)
+  }
+  async function checkIdle(): Promise<void> {
     idleTimer = undefined
     if (state !== 'shown') return
-    const left = lastInput + IDLE_MS - Date.now()
-    if (left > 0) idleTimer = setTimeout(checkIdle, left)
-    else coverPage(true)
+    const left = lastInput + idleMs - Date.now()
+    if (left > 0) {
+      waitIdle(left)
+      return
+    }
+    const run = idleRun
+    const reply = await send({type: 'pagePlaying'})
+    if (run !== idleRun || state !== 'shown') return
+    // No answer (extension updated, background failed): not playing.
+    if (reply?.playing === true) waitIdle(PLAYING_POLL_MS)
+    else if (Date.now() - lastInput >= idleMs) coverPage(true)
+    else void checkIdle()
+  }
+  function stopIdle(): void {
+    idleRun++
+    clearTimeout(idleTimer)
+    idleTimer = undefined
   }
   function startIdle(): void {
     lastInput = Date.now()
-    clearTimeout(idleTimer)
-    idleTimer = setTimeout(checkIdle, IDLE_MS)
+    stopIdle()
+    waitIdle(idleMs)
+  }
+  /** The idle time changed: a shown page waits by the new one from its last input. */
+  function setIdleMs(ms: number): void {
+    if (ms === idleMs) return
+    idleMs = ms
+    if (state !== 'shown') return
+    stopIdle()
+    void checkIdle()
   }
   for (const type of ACTIVITY_EVENTS) window.addEventListener(type, onActivity, {capture: true, passive: true})
 
   function coverPage(report: boolean): void {
-    clearTimeout(idleTimer)
+    stopIdle()
     state = 'covered'
     loadIcon()
     raise()
@@ -285,13 +320,14 @@ export default function main(): (() => void) | undefined {
 
   function off(): void {
     if (state === 'covered') uncover()
-    clearTimeout(idleTimer)
+    stopIdle()
     state = 'off'
     release()
   }
 
   async function lookup(): Promise<{cover: boolean; matcher: UrlMatcher | null}> {
     const {prefs, index} = await loadPrefsAndIndex()
+    setIdleMs(prefs.idleMinutes * 60_000)
     // No vault yet, or a damaged table: nothing is protected.
     return {cover: prefs.cover, matcher: index ? createMatcher(index) : null}
   }
@@ -443,7 +479,6 @@ export default function main(): (() => void) | undefined {
 
   return () => {
     off()
-    clearTimeout(idleTimer)
     document.removeEventListener('toggle', onTopLayer, true)
     document.removeEventListener('fullscreenchange', onTopLayer, true)
     document.removeEventListener('visibilitychange', onVisibility)

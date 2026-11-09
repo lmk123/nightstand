@@ -2,7 +2,7 @@ import type {Page, Protocol} from 'puppeteer-core'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {launchChrome, openPopup, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {addEntry, clearAndType, clickText, hasText, onboard, sleep, submitUnlock, waitText} from './support/popup'
+import {addEntry, clearAndType, clickText, hasText, onboard, openSettings, sleep, submitUnlock, waitText} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp} from './support/temp'
 
@@ -316,6 +316,52 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
       await page.close()
       await s.sw.evaluate((links) => chrome.storage.local.set({links}), links)
     }
+  })
+
+  describe('the idle time setting', () => {
+    let savedPrefs: unknown
+
+    beforeAll(async () => {
+      savedPrefs = await s.sw.evaluate(async () => (await chrome.storage.local.get('prefs')).prefs)
+    })
+
+    afterAll(async () => {
+      await s.sw.evaluate(async (prefs) => {
+        if (prefs === undefined) await chrome.storage.local.remove('prefs')
+        else await chrome.storage.local.set({prefs})
+      }, savedPrefs)
+    })
+
+    it('defaults to a minute, saves the choice, and is disabled with covering off', async () => {
+      await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
+      const p = await openPopup(s)
+      try {
+        await submitUnlock(p, 'notes')
+        await openSettings(p)
+        await waitText(p, '无操作后重新遮住')
+        const select = 'select[data-slot="native-select"]'
+        await p.waitForSelector(select)
+        expect(await p.$eval(select, (el) => [...(el as HTMLSelectElement).options].map((o) => o.text))).toEqual([
+          '1 分钟',
+          '2 分钟',
+          '5 分钟'
+        ])
+        expect(await p.$eval(select, (el) => (el as HTMLSelectElement).value)).toBe('1')
+        await p.select(select, '5')
+        const prefs = () => s.sw.evaluate(async () => (await chrome.storage.local.get('prefs')).prefs as Record<string, unknown>)
+        await sleep(200)
+        expect(await prefs()).toEqual({cover: true, mute: true, idleMinutes: 5})
+
+        // The first switch in settings is "cover the page".
+        const [coverSwitch] = await p.$$('[role="switch"]')
+        if (!coverSwitch) throw new Error('no switch in settings')
+        await coverSwitch.click()
+        await p.waitForFunction((select) => (document.querySelector(select) as HTMLSelectElement).disabled, {timeout: 5000}, select)
+        expect(await prefs()).toEqual({cover: false, mute: true, idleMinutes: 5})
+      } finally {
+        await p.close()
+      }
+    })
   })
 
   describe('the save notice', () => {

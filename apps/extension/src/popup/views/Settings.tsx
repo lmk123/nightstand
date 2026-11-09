@@ -1,6 +1,7 @@
 import {useEffect, useState, type ReactNode} from 'react'
-import type {OpenMode, Prefs, VaultSettings} from '@nightstand/core'
+import {IDLE_MINUTES, isIdleMinutes, type OpenMode, type Prefs, type VaultSettings} from '@nightstand/core'
 import {Label} from '@/components/ui/label'
+import {NativeSelect, NativeSelectOption} from '@/components/ui/native-select'
 import {Switch} from '@/components/ui/switch'
 import {isFirefoxLike} from '@/lib/browser'
 import {t} from '@/platform/i18n'
@@ -104,6 +105,25 @@ export function Settings({
               <SwitchRow checked={prefs.cover && prefs.mute} disabled={!prefs.cover} onChange={(mute) => changePrefs({mute})}>
                 {t('muteSetting')}
               </SwitchRow>
+              {/* Only a shown page waits out the idle time, and with covering off none is. */}
+              <Label className="flex items-center gap-3 p-3 text-[13px] leading-normal font-normal">
+                <span className={prefs.cover ? 'flex-1' : 'flex-1 opacity-50'}>{t('idleSetting')}</span>
+                <NativeSelect
+                  size="sm"
+                  value={String(prefs.idleMinutes)}
+                  disabled={!prefs.cover}
+                  onChange={(event) => {
+                    const idleMinutes = Number(event.target.value)
+                    if (isIdleMinutes(idleMinutes)) changePrefs({idleMinutes})
+                  }}
+                >
+                  {IDLE_MINUTES.map((minutes) => (
+                    <NativeSelectOption key={minutes} value={String(minutes)}>
+                      {t('idleMinutesOption', String(minutes))}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </Label>
             </div>
           </section>
         )}
