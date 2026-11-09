@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import {ChevronDown, ChevronUp, RefreshCw, Trash2} from 'lucide-react'
+import {ChevronDown, ChevronUp, EyeOff, RefreshCw, Trash2} from 'lucide-react'
 import {cn} from 'cn'
 import {
   createEntry,
@@ -10,6 +10,7 @@ import {
   parseExtraHosts,
   type EntryInput,
   type MatchMode,
+  type Prefs,
   type VaultEntry,
   widensScope
 } from '@nightstand/core'
@@ -21,6 +22,7 @@ import {Textarea} from '@/components/ui/textarea'
 import {findBookmarksFor} from '@/platform/bookmarks'
 import {countHistoryFor} from '@/platform/history'
 import {t} from '@/platform/i18n'
+import {loadPrefs} from '@/platform/storage'
 import {ChoiceCards} from '../components/ChoiceCards'
 import {Field} from '../components/Field'
 import {Header} from '../components/Header'
@@ -66,7 +68,7 @@ export function EntryForm({
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   /** Validated entry waiting for the user to confirm the notice, with what saving it deletes. */
-  const [pending, setPending] = useState<{entry: VaultEntry; history: number; bookmarks: number} | null>(null)
+  const [pending, setPending] = useState<{entry: VaultEntry; history: number; bookmarks: number; prefs: Prefs} | null>(null)
   const [dontShowAgain, setDontShowAgain] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
 
@@ -106,10 +108,12 @@ export function EntryForm({
     setBusy(true)
     let history: number
     let bookmarks: number
+    let prefs: Prefs
     try {
-      ;[history, bookmarks] = await Promise.all([
+      ;[history, bookmarks, prefs] = await Promise.all([
         countHistoryFor(entry),
-        findBookmarksFor(entry).then((found) => found.length)
+        findBookmarksFor(entry).then((found) => found.length),
+        loadPrefs()
       ])
     } finally {
       setBusy(false)
@@ -119,7 +123,7 @@ export function EntryForm({
     // something is there to delete, e.g. a bookmark added since.
     if (!widensScope(editing, entry) && history === 0 && bookmarks === 0) return save(entry, false)
     setDontShowAgain(false)
-    setPending({entry, history, bookmarks})
+    setPending({entry, history, bookmarks, prefs})
   }
 
   return (
@@ -279,6 +283,13 @@ export function EntryForm({
               <RefreshCw className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
               {t('saveNoticeAutoClean')}
             </p>
+            {/* So the first covered page isn't a surprise. Says nothing when the cover is off. */}
+            {pending.prefs.cover && (
+              <p className="text-foreground flex items-start gap-2 text-[13px] leading-snug font-semibold">
+                <EyeOff className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                {t(pending.prefs.mute ? 'saveNoticeCoverMute' : 'saveNoticeCover')}
+              </p>
+            )}
             <p className="text-muted-foreground text-xs leading-relaxed">{t('saveNoticeEffects')}</p>
             <Label className="text-subtle-foreground flex min-h-8 items-center gap-2 text-[13px] font-normal">
               <Checkbox checked={dontShowAgain} onCheckedChange={(v) => setDontShowAgain(v === true)} />

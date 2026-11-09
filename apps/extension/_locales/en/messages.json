@@ -95,6 +95,12 @@
   "saveNoticeAutoClean": {
     "message": "After saving, the browsing history of every visit will be deleted automatically"
   },
+  "saveNoticeCover": {
+    "message": "Its pages will open covered until you click “Show page” (you can turn this off in Settings)"
+  },
+  "saveNoticeCoverMute": {
+    "message": "Its pages will open covered and muted until you click “Show page” (you can turn this off in Settings)"
+  },
   "saveNoticeEffects": {
     "message": "This can't be undone, and address bar suggestions that came from them disappear too. Cookies, cache and download history are not affected."
   },
@@ -377,6 +383,15 @@
   },
   "coverShow": {
     "message": "Show page"
+  },
+  "coverShowTitle": {
+    "message": "$NAME$ is covering this page",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nightstand"
+      }
+    }
   },
   "coverTitle": {
     "message": "New Tab"

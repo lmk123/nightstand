@@ -95,6 +95,12 @@
   "saveNoticeAutoClean": {
     "message": "保存后，以后每次访问都会自动删除浏览记录"
   },
+  "saveNoticeCover": {
+    "message": "打开它的网页时会先遮住页面，点“显示页面”后才显示（可在设置里关闭）"
+  },
+  "saveNoticeCoverMute": {
+    "message": "打开它的网页时会先遮住页面并静音，点“显示页面”后才显示（可在设置里关闭）"
+  },
   "saveNoticeEffects": {
     "message": "删除后无法恢复，地址栏里来自它们的提示也会随之消失。Cookie、缓存和下载记录不受影响。"
   },
@@ -377,6 +383,15 @@
   },
   "coverShow": {
     "message": "显示页面"
+  },
+  "coverShowTitle": {
+    "message": "$NAME$ 暂时遮住了这个页面",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nightstand"
+      }
+    }
   },
   "coverTitle": {
     "message": "新标签页"

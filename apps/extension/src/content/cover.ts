@@ -6,14 +6,16 @@
 // when the browser window loses focus (the background says so) or after a
 // minute without input on the page.
 //
-// It only reads the hashed match table and the cover/mute preferences, never
-// the vault, and sends nothing anywhere except "shown"/"covered" for its own
+// It only reads the hashed match table, the cover/mute preferences and the
+// toolbar icon (shown on the button, so the user sees what covered the page),
+// never the vault, and sends nothing anywhere except "shown"/"covered" for its own
 // tab to the background. On any other page it removes its pre-load hiding as
 // soon as the lookup answers and then stays idle.
-import {createMatcher, type UrlMatcher} from '@nightstand/core'
+import {createMatcher, parseDecoyConfig, type IconSet, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
 import {isPageNotice, type PageReply, type PageRequest} from '@/platform/messages'
-import {loadPrefsAndIndex, STORAGE_KEYS} from '@/platform/storage'
+import {loadPageConfig, STORAGE_KEYS} from '@/platform/storage'
+import {createIcon} from './cover-icons'
 
 /** A shown page is covered again after this long without input on it. */
 const IDLE_MS = 60_000
@@ -55,9 +57,11 @@ const SHADOW_CSS = `
 }
 button {
   font: inherit; color: inherit; cursor: pointer;
-  padding: 6px 14px; border-radius: 8px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px 6px 10px; border-radius: 8px;
   border: 1px solid #d4d4d8; background: #fff;
 }
+svg { width: 16px; height: 16px; flex: none; }
 button:hover { background: #fafafa; }
 button:focus-visible { outline: 2px solid #a1a1aa; outline-offset: 2px; }
 @media (prefers-color-scheme: dark) {
@@ -116,12 +120,28 @@ export default function main(): (() => void) | undefined {
   style.textContent = SHADOW_CSS
   const cover = document.createElement('div')
   cover.className = 'cover'
+  // The toolbar's icon and, on hover only (a bystander sees just the
+  // button), who covered the page: otherwise the owner may not connect a
+  // plain grey page with Nightstand.
   const button = document.createElement('button')
   button.type = 'button'
-  button.textContent = t('coverShow')
+  button.title = t('coverShowTitle', t('extName'))
+  let iconSet: IconSet = 'nightstand'
+  let icon = createIcon(iconSet)
+  const label = document.createElement('span')
+  label.textContent = t('coverShow')
+  button.append(icon, label)
   button.addEventListener('click', () => show(true))
   cover.append(button)
   shadow.append(style, cover)
+
+  function setIcon(set: IconSet): void {
+    if (set === iconSet) return
+    iconSet = set
+    const next = createIcon(set)
+    icon.replaceWith(next)
+    icon = next
+  }
 
   function raise(): void {
     if (!host.isConnected) (document.documentElement ?? document).append(host)
@@ -240,7 +260,8 @@ export default function main(): (() => void) | undefined {
   }
 
   async function lookup(): Promise<{cover: boolean; matcher: UrlMatcher | null}> {
-    const {prefs, index} = await loadPrefsAndIndex()
+    const {prefs, index, icon: toolbarIcon} = await loadPageConfig()
+    setIcon(toolbarIcon)
     // No vault yet, or a damaged table: nothing is protected.
     return {cover: prefs.cover, matcher: index ? createMatcher(index) : null}
   }
@@ -381,6 +402,8 @@ export default function main(): (() => void) | undefined {
 
   const onStorage = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
     if (area !== 'local') return
+    const links = changes[STORAGE_KEYS.links]
+    if (links) setIcon(parseDecoyConfig(links.newValue).icon)
     if (STORAGE_KEYS.index in changes || STORAGE_KEYS.prefs in changes) queueEvaluate('release')
   }
   chrome.storage.onChanged.addListener(onStorage)

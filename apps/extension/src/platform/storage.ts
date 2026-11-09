@@ -4,6 +4,7 @@ import {
   parseMatchTable,
   parsePrefs,
   type DecoyConfig,
+  type IconSet,
   type MatchTable,
   type Prefs,
   type StoredVault
@@ -15,7 +16,7 @@ import {
  *
  * - `shelf`    encrypted vault (absent until onboarding completes)
  * - `index`    hashed match table for the background
- * - `links`    decoy links + icon (plaintext, needed while locked)
+ * - `links`    decoy links + icon (plaintext, needed while locked; the page script reads the icon)
  * - `state`    background bookkeeping (written by the background)
  * - `prefs`    cover / mute preferences (plaintext, needed while locked)
  *
@@ -96,10 +97,17 @@ export async function loadPrefs(): Promise<Prefs> {
   return parsePrefs(await get(KEY.prefs))
 }
 
-/** Preferences and match table in one read: the page script needs both on every page load. */
-export async function loadPrefsAndIndex(): Promise<{prefs: Prefs; index: MatchTable | null}> {
-  const result = await chrome.storage.local.get([KEY.prefs, KEY.index])
-  return {prefs: parsePrefs(result[KEY.prefs]), index: parseStoredIndex(result[KEY.index])}
+/**
+ * What the page script needs on every page load, in one read: preferences,
+ * the match table, and the toolbar icon (shown on the cover's button).
+ */
+export async function loadPageConfig(): Promise<{prefs: Prefs; index: MatchTable | null; icon: IconSet}> {
+  const result = await chrome.storage.local.get([KEY.prefs, KEY.index, KEY.links])
+  return {
+    prefs: parsePrefs(result[KEY.prefs]),
+    index: parseStoredIndex(result[KEY.index]),
+    icon: parseDecoyConfig(result[KEY.links]).icon
+  }
 }
 
 export async function savePrefs(prefs: Prefs): Promise<void> {

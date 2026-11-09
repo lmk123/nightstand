@@ -52,7 +52,7 @@ pnpm run store          # 构建并打 zip，再生成 Chrome 网上应用店的
 - **只用 Web Crypto。** 不引入第三方加密库。
 - **只能离线。** 没有后端、账号、统计分析或任何远程请求。
 - **唯一的界面是 action popup。** 没有 options 页、侧边栏、新标签页覆盖，也绝不打开扩展自己的标签页。所有界面（引导、伪装界面、伪装设置、锁屏、保险箱列表、真正的设置……）都是 popup 里的视图。唯一的例外是受保护网页上的遮罩（见下一条）：它只有一个“显示页面”按钮，不承载任何别的功能或设置。
-- **只有一个 content script：遮罩（`src/content/cover.ts`）。** 它在所有 http/https 网页的顶层框架、`document_start` 时运行（事先不知道用户收藏什么网站；按站点申请权限会把域名写进扩展详情页）。它只读 `index` 和 `prefs`，不读网页内容（标签页标题除外），只和后台交换“是否受保护 / 已显示 / 已遮住”；任何解密数据都不进入网页脚本。纯 http 页面没有 `crypto.subtle`，由后台按发消息的框架网址匹配。不要再加别的网页脚本或 host 权限。权限：`storage`、`history`、`tabs`、`alarms`、`bookmarks`（必需而非可选：保存条目会删除它的书签，而 Chrome 的权限弹窗会在保存中途关掉 popup），以及仅 Chromium 的 `favicon`（manifest 里的 `chromium:permissions` 会在那边替换掉普通列表，所以两份列表要保持同步）。
+- **只有一个 content script：遮罩（`src/content/cover.ts`）。** 它在所有 http/https 网页的顶层框架、`document_start` 时运行（事先不知道用户收藏什么网站；按站点申请权限会把域名写进扩展详情页）。它只读 `index`、`prefs` 和 `links` 里的工具栏图标（显示在遮罩按钮上），不读网页内容（标签页标题除外），只和后台交换“是否受保护 / 已显示 / 已遮住”；任何解密数据都不进入网页脚本。纯 http 页面没有 `crypto.subtle`，由后台按发消息的框架网址匹配。不要再加别的网页脚本或 host 权限。权限：`storage`、`history`、`tabs`、`alarms`、`bookmarks`（必需而非可选：保存条目会删除它的书签，而 Chrome 的权限弹窗会在保存中途关掉 popup），以及仅 Chromium 的 `favicon`（manifest 里的 `chromium:permissions` 会在那边替换掉普通列表，所以两份列表要保持同步）。
 - **网站图标只来自浏览器本地缓存**（Chromium 的 `_favicon`），绝不走网络（不抓 `/favicon.ico`，不用图标服务）。Chrome 删除一个网页的历史时会连带删掉它缓存的图标，所以保险箱条目的图标在保存时、清理之前截取，存进加密条目（`icon`，有大小上限的 `data:` URL——见 `isEntryIcon`）。还没有图标的条目在解锁时再查一次：之后某次访问的图标通常能留下来，因为清理器在图标从网络到达之前就删掉了那次访问（这是竞态——先写入的图标会随历史一起被删；e2e 因此故意延迟测试图标）。快捷链接实时查询。Firefox 显示首字母图块。
 - **保险箱密钥（DEK）只存在于 popup 内存里。** 绝不写入任何存储（包括 `storage.session`），也绝不发给 background。关闭 popup 就销毁它——这*就是*上锁。没有“保持解锁 N 分钟”，没有定时器，不用 `idle`。
 - **磁盘上不能有明文。** 不要把编辑草稿或其他解密后的数据持久化到存储里。
