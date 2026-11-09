@@ -199,13 +199,18 @@ export type EntryScope = Pick<VaultEntry, 'url' | 'matchMode'> & {extraHosts?: r
 /**
  * Does saving `after` (over `before`, or as a new entry when `before` is
  * undefined) protect anything that wasn't protected yet: a new site / URL or
- * a new extra host? Only the title changing (or hosts dropped) is not.
+ * a new extra host? A title change, dropped hosts, or a narrower scope that
+ * `before` already covered (the whole site → one of its URLs or subdomains)
+ * is not.
  */
 export function widensScope(before: EntryScope | undefined, after: EntryScope): boolean {
   if (!before) return true
-  if (entryKey(before) !== entryKey(after)) return true
-  const old = before.extraHosts ?? []
-  return (after.extraHosts ?? []).some((h) => !old.includes(h))
+  // Each host `after` protects with its subdomains must already be one of
+  // `before`'s, or under one.
+  const old = entrySiteHosts(before)
+  const coveredSite = (host: string) => hostCandidates(host).some((h) => old.includes(h))
+  if (!entrySiteHosts(after).every(coveredSite)) return true
+  return after.matchMode === 'exact' && !entryCoversUrl(before, after.url)
 }
 
 /** Every host an entry protects with all its subdomains: its own (in `site` mode) and its extra hosts. */

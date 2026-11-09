@@ -14,14 +14,21 @@ const problems = []
 /** Attribute order doesn't matter. */
 const sorted = (attributes) => Object.fromEntries(Object.entries(attributes).sort(([a], [b]) => a.localeCompare(b)))
 
+/** An element's attributes, single- or double-quoted. */
+const attributesOf = (attrs) =>
+  sorted(Object.fromEntries([...attrs.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map(([, name, dq, sq]) => [name, dq ?? sq])))
+
+/** The `<svg>` root's own attributes. */
+const rootOf = (svg) => attributesOf(/<svg\b([^>]*)>/.exec(svg)?.[1] ?? '')
+
 /** The drawing elements of an SVG, in order, as [tag, attributes]. */
 function shapesOf(svg) {
   const body = svg.replace(/^[\s\S]*?<svg\b[^>]*>/, '').replace(/<\/svg>[\s\S]*$/, '')
-  return [...body.matchAll(/<([a-zA-Z]+)\b([^>]*?)\/?>/g)].map(([, tag, attrs]) => [
-    tag,
-    sorted(Object.fromEntries([...attrs.matchAll(/([\w:-]+)="([^"]*)"/g)].map(([, name, value]) => [name, value])))
-  ])
+  return [...body.matchAll(/<([a-zA-Z]+)\b([^>]*?)\/?>/g)].map(([, tag, attrs]) => [tag, attributesOf(attrs)])
 }
+
+/** Root attributes the cover reproduces: createIcon sets only the viewBox. */
+const ROOT_ATTRIBUTES = new Set(['xmlns', 'viewBox'])
 
 const sources = readdirSync(join(root, 'icons-src'))
   .filter((file) => file.endsWith('.svg'))
@@ -34,8 +41,12 @@ for (const name of sources) {
   }
   const svg = readFileSync(join(root, 'icons-src', `${name}.svg`), 'utf8')
   // createIcon draws every set on VIEW_BOX; another canvas would crop or shrink it.
-  const viewBox = /<svg\b[^>]*?\bviewBox="([^"]*)"/.exec(svg)?.[1]
-  if (viewBox !== VIEW_BOX) problems.push(`icons-src/${name}.svg has viewBox "${viewBox}", the cover draws on "${VIEW_BOX}"`)
+  const svgRoot = rootOf(svg)
+  if (svgRoot.viewBox !== VIEW_BOX) problems.push(`icons-src/${name}.svg has viewBox "${svgRoot.viewBox}", the cover draws on "${VIEW_BOX}"`)
+  // Anything else on the root (a fill, a style...) is inherited by the shapes, but the cover wouldn't copy it.
+  for (const attribute of Object.keys(svgRoot).filter((a) => !ROOT_ATTRIBUTES.has(a))) {
+    problems.push(`icons-src/${name}.svg sets "${attribute}" on <svg>, which the cover doesn't draw; put it on the shapes`)
+  }
   const want = JSON.stringify(shapesOf(svg))
   const got = JSON.stringify(SHAPES[name].map(([tag, attributes]) => [tag, sorted(attributes)]))
   if (want !== got) problems.push(`${name}: cover-icons.ts differs from icons-src/${name}.svg\n      svg:   ${want}\n      cover: ${got}`)

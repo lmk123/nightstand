@@ -63,6 +63,8 @@ button {
   border: 1px solid #d4d4d8; background: #fff;
 }
 .icon { display: block; width: 16px; height: 16px; flex: none; }
+button.no-icon { padding: 6px 14px; }
+button.no-icon .icon { display: none; }
 svg { display: block; width: 100%; height: 100%; }
 button:hover { background: #fafafa; }
 button:focus-visible { outline: 2px solid #a1a1aa; outline-offset: 2px; }
@@ -138,27 +140,37 @@ export default function main(): (() => void) | undefined {
   cover.append(button)
   shadow.append(style, cover)
 
-  // The icon is read only for a page that covers (most pages never do), off
+  // The icon is read only when the page covers (most pages never do), off
   // the path that holds every page invisible. An icon from a storage change
-  // that arrives while the read is on its way wins over the read.
+  // that arrives while the read is on its way wins over the read. A failed
+  // read drops the empty slot (so the label sits centred) and is tried again
+  // the next time the page covers.
   let iconSet: IconSet | null = null
-  let iconRead: Promise<void> | null = null
+  let iconLoading = false
 
   function setIcon(set: IconSet): void {
+    button.classList.remove('no-icon')
     if (set === iconSet) return
     iconSet = set
     iconBox.replaceChildren(createIcon(set))
   }
 
   function loadIcon(): void {
-    if (iconSet) return
-    iconRead ??= (async () => {
-      const {icon} = await loadLinks()
-      if (!iconSet) setIcon(icon)
-    })().catch((error: unknown) => {
-      iconRead = null
-      console.error(error)
-    })
+    if (iconSet || iconLoading) return
+    iconLoading = true
+    loadLinks()
+      .then(
+        ({icon}) => {
+          if (!iconSet) setIcon(icon)
+        },
+        (error: unknown) => {
+          if (!iconSet) button.classList.add('no-icon')
+          console.error(error)
+        }
+      )
+      .finally(() => {
+        iconLoading = false
+      })
   }
 
   function raise(): void {
@@ -329,9 +341,6 @@ export default function main(): (() => void) | undefined {
       return
     }
     if (local === true && reason === 'release') return
-    // Matched here: fetch the icon while the background answers. A page that
-    // couldn't check (every plain-http page) waits for the answer, in `coverPage`.
-    if (local === true) loadIcon()
     const settled = state === 'covered' || state === 'shown'
     const reply = await send({type: 'pageQuery'})
     // Only a clear "not protected" uncovers a page this script couldn't
@@ -425,7 +434,7 @@ export default function main(): (() => void) | undefined {
     if (area !== 'local') return
     const links = changes[STORAGE_KEYS.links]
     // Only once the icon is shown or on its way; otherwise the next read gets it.
-    if (links && (iconSet || iconRead)) setIcon(parseDecoyConfig(links.newValue).icon)
+    if (links && (iconSet || iconLoading)) setIcon(parseDecoyConfig(links.newValue).icon)
     if (STORAGE_KEYS.index in changes || STORAGE_KEYS.prefs in changes) queueEvaluate('release')
   }
   chrome.storage.onChanged.addListener(onStorage)
