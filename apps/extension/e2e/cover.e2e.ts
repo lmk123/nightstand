@@ -162,9 +162,11 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: false}}))
     expect(await muted(s, 'http://example.com/mute-off')).toBe(false)
     expect(await covered(page)).toBe(true)
+    // Muting back on: a page still covered is muted again at once.
+    await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
+    expect(await muted(s, 'http://example.com/mute-off')).toBe(true)
     await page.close()
 
-    await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
     const open = await s.browser.newPage()
     await open.goto('http://example.com/cover-off')
     await waitCovered(open, true)

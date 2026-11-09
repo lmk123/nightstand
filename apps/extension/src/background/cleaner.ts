@@ -42,14 +42,25 @@ export function isOwnPage(url: string): boolean {
   return url.startsWith(`${OWN_ORIGIN}/`)
 }
 
-/** Ids of the open tabs on protected pages (a loading tab by the address it is heading to). */
-export async function protectedTabIds(): Promise<number[]> {
+/**
+ * A tab on a protected page, or loading one. Both addresses count: `url` is
+ * the page still on screen ("" before a new tab's first page commits),
+ * `pendingUrl` the one it is heading to.
+ */
+export async function isProtectedTab(tab: chrome.tabs.Tab): Promise<boolean> {
   const matcher = await getMatcher()
-  if (matcher.isEmpty) return []
+  if (matcher.isEmpty) return false
+  for (const url of [tab.url, tab.pendingUrl]) {
+    if (url && (await matcher.matches(url))) return true
+  }
+  return false
+}
+
+/** Ids of the open tabs on (or loading) protected pages. */
+export async function protectedTabIds(): Promise<number[]> {
   const ids: number[] = []
   for (const tab of await chrome.tabs.query({})) {
-    const url = tab.url ?? tab.pendingUrl
-    if (tab.id !== undefined && url && (await matcher.matches(url))) ids.push(tab.id)
+    if (tab.id !== undefined && (await isProtectedTab(tab))) ids.push(tab.id)
   }
   return ids
 }

@@ -28,6 +28,12 @@ export type PageRequest =
   /** The page covered itself again (tab hidden, idle): mute the tab. */
   | {type: 'pageCovered'}
 
+/**
+ * Background → page script, the answer to every `PageRequest`. `{}` means
+ * the background couldn't tell: the page script keeps the page covered.
+ */
+export type PageReply = {inside: boolean; shown: boolean} | Record<string, never>
+
 /** Background → page script. */
 export type PageNotice =
   /** Cover now (the browser window lost focus). */

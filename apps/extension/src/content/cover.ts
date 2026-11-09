@@ -12,7 +12,7 @@
 // soon as the lookup answers and then stays idle.
 import {createMatcher, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
-import {isPageNotice, type PageRequest} from '@/platform/messages'
+import {isPageNotice, type PageReply, type PageRequest} from '@/platform/messages'
 import {loadIndex, loadPrefs, STORAGE_KEYS} from '@/platform/storage'
 
 /** A shown page is covered again after this long without input on it. */
@@ -69,13 +69,19 @@ button:focus-visible { outline: 2px solid #a1a1aa; outline-offset: 2px; }
 
 type State = 'deciding' | 'off' | 'covered' | 'shown'
 
-function send(request: PageRequest): Promise<unknown> {
+/** The background's answer, or undefined when there was none. */
+function send(request: PageRequest): Promise<Partial<PageReply> | undefined> {
   try {
-    return chrome.runtime.sendMessage(request).catch(() => undefined)
+    return chrome.runtime.sendMessage<PageRequest, PageReply>(request).catch(() => undefined)
   } catch {
     // Extension updated or removed since this page loaded.
     return Promise.resolve(undefined)
   }
+}
+
+/** Chrome is preparing this page before the user goes to it (speculation rules). */
+function isPrerendering(): boolean {
+  return (document as Document & {prerendering?: boolean}).prerendering === true
 }
 
 export default function main(): (() => void) | undefined {
@@ -150,12 +156,11 @@ export default function main(): (() => void) | undefined {
   }
 
   function restoreTitle(): void {
-    if (ownTitle) {
-      ownTitle.remove()
-      ownTitle = null
-    } else if (pageTitle !== null && document.title === neutralTitle) {
-      document.title = pageTitle
-    }
+    // The <title> Nightstand created goes, unless the page has since set a
+    // title of its own (the setter wrote it into that same element).
+    if (ownTitle && !pageTitle) ownTitle.remove()
+    else if (pageTitle !== null && document.title === neutralTitle) document.title = pageTitle
+    ownTitle = null
     pageTitle = null
   }
 
@@ -255,11 +260,13 @@ export default function main(): (() => void) | undefined {
    * longer protected.
    */
   async function evaluate(onlyRelease = false): Promise<void> {
-    let local: boolean | null = false
+    let local: boolean | null
     try {
       local = await matchHere()
     } catch (error) {
+      // Couldn't check here: the background decides.
       console.error(error)
+      local = null
     }
     if (local === false) {
       off()
@@ -267,17 +274,40 @@ export default function main(): (() => void) | undefined {
     }
     const settled = state === 'covered' || state === 'shown'
     if (local === true && (onlyRelease || settled)) return
-    const reply = (await send({type: 'pageQuery'})) as {inside?: unknown; shown?: unknown} | undefined
-    if (local === null && reply?.inside !== true) {
+    const reply = await send({type: 'pageQuery'})
+    // Only a clear "not protected" uncovers a page this script couldn't
+    // check: no answer (or one the background couldn't give) keeps it covered.
+    if (local === null && reply?.inside === false) {
       off()
       return
     }
     if (onlyRelease || settled) return
-    // Covering is reported so the background mutes the tab even when it saw
-    // no URL change (a reload after the site was added).
-    if (reply?.shown === true && document.visibilityState === 'visible') show(false)
+    settle(reply)
+  }
+
+  /**
+   * Covers or shows a protected page that has just loaded (or was just
+   * activated). Covering is reported so the background mutes the tab even
+   * when it saw no URL change (a reload after the site was added). A
+   * prerendered page only covers itself and says nothing: it isn't in the
+   * tab yet, whose state is the page on screen. It decides again when shown.
+   */
+  function settle(reply: Partial<PageReply> | undefined): void {
+    if (isPrerendering()) coverPage(false)
+    else if (reply?.shown === true && document.visibilityState === 'visible') show(false)
     else coverPage(true)
   }
+
+  const onActivated = () => {
+    pending = pending
+      .then(async () => {
+        if (state !== 'covered') return
+        const reply = await send({type: 'pageQuery'})
+        if (state === 'covered') settle(reply)
+      })
+      .catch(console.error)
+  }
+  if (isPrerendering()) document.addEventListener('prerenderingchange', onActivated, {once: true})
 
   // One evaluation at a time: a URL change can arrive while the first is running.
   let pending: Promise<void> = Promise.resolve()
@@ -300,7 +330,7 @@ export default function main(): (() => void) | undefined {
     if (!event.persisted || state !== 'shown') return
     pending = pending
       .then(async () => {
-        const reply = (await send({type: 'pageQuery'})) as {shown?: unknown} | undefined
+        const reply = await send({type: 'pageQuery'})
         if (state === 'shown' && (reply?.shown !== true || document.visibilityState !== 'visible')) coverPage(false)
       })
       .catch(console.error)
@@ -335,6 +365,7 @@ export default function main(): (() => void) | undefined {
     document.removeEventListener('visibilitychange', onVisibility)
     window.removeEventListener('pagehide', onPageHide)
     window.removeEventListener('pageshow', onPageShow)
+    document.removeEventListener('prerenderingchange', onActivated)
     for (const type of ACTIVITY_EVENTS) window.removeEventListener(type, onActivity, {capture: true})
     chrome.runtime.onMessage.removeListener(onNotice)
     chrome.storage.onChanged.removeListener(onStorage)

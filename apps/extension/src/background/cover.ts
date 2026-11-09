@@ -1,7 +1,7 @@
-import type {Prefs} from '@nightstand/core'
-import type {PageNotice, PageRequest} from '@/platform/messages'
+import {parsePrefs, type Prefs} from '@nightstand/core'
+import type {PageNotice, PageReply, PageRequest} from '@/platform/messages'
 import {loadPrefs, STORAGE_KEYS} from '@/platform/storage'
-import {getMatcher, protectedTabIds} from './cleaner'
+import {getMatcher, isProtectedTab, protectedTabIds} from './cleaner'
 
 /**
  * Covering and muting protected pages. The page script (`content/cover.ts`)
@@ -13,7 +13,7 @@ import {getMatcher, protectedTabIds} from './cleaner'
  * browser session) because the service worker may stop between events:
  * - `covered`: on a protected page, not shown (muted when muting is on)
  * - `shown`: on a protected page the user chose to show
- * - absent: not on a protected page
+ * - absent: not on a protected page, or covering is off
  *
  * Only tab ids are kept, never URLs or hosts.
  */
@@ -22,23 +22,39 @@ type CoverMap = Record<string, TabCover>
 
 const SESSION_KEY = 'tabs'
 
+/**
+ * In-memory copy of the map in `storage.session`, so that the many
+ * navigations that don't touch it cost no storage read. Only this module
+ * writes the map, always through the queue; a restarted worker reads it again.
+ */
+let mirror: CoverMap | null = null
+
 let queue: Promise<unknown> = Promise.resolve()
 
 /**
  * Serialized read-modify-write of the per-tab map (events arrive
- * concurrently). Written back only when `change` altered it: this runs for
- * every navigation and closed tab, protected or not.
+ * concurrently). The muting that goes with a change happens inside `change`
+ * too, so that two changes to one tab can't land their mutes out of order.
+ * Written back only when `change` altered the map.
  */
 function updateTabs<T>(change: (tabs: CoverMap) => T | Promise<T>): Promise<T> {
   const run = queue.then(async () => {
-    const tabs = await readTabs()
-    const before = JSON.stringify(tabs)
+    mirror ??= await readTabs()
+    const tabs = {...mirror}
     const result = await change(tabs)
-    if (JSON.stringify(tabs) !== before) await chrome.storage.session.set({[SESSION_KEY]: tabs})
+    if (!sameTabs(tabs, mirror)) {
+      await chrome.storage.session.set({[SESSION_KEY]: tabs})
+      mirror = tabs
+    }
     return result
   })
   queue = run.catch(() => undefined)
   return run
+}
+
+function sameTabs(a: CoverMap, b: CoverMap): boolean {
+  const keys = Object.keys(a)
+  return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key])
 }
 
 async function readTabs(): Promise<CoverMap> {
@@ -52,8 +68,23 @@ async function readTabs(): Promise<CoverMap> {
   return tabs
 }
 
-async function isProtected(url: string | undefined): Promise<boolean> {
-  if (!url) return false
+let prefsPromise: Promise<Prefs> | null = null
+
+/** Cached preferences, dropped when they change. A failed load is not kept. */
+function getPrefs(): Promise<Prefs> {
+  if (!prefsPromise) {
+    const loading = loadPrefs()
+    prefsPromise = loading
+    loading.catch(() => {
+      if (prefsPromise === loading) prefsPromise = null
+    })
+  }
+  return prefsPromise
+}
+
+/** A page at `url` is covered: covering is on and the address is protected. */
+async function covers(url: string | undefined): Promise<boolean> {
+  if (!url || !(await getPrefs()).cover) return false
   const matcher = await getMatcher()
   return !matcher.isEmpty && (await matcher.matches(url))
 }
@@ -63,8 +94,8 @@ function mutes(prefs: Prefs): boolean {
   return prefs.cover && prefs.mute
 }
 
-async function mute(tabId: number, prefs?: Prefs): Promise<void> {
-  if (!mutes(prefs ?? (await loadPrefs()))) return
+async function mute(tabId: number): Promise<void> {
+  if (!mutes(await getPrefs())) return
   await chrome.tabs.update(tabId, {muted: true}).catch(() => undefined)
 }
 
@@ -91,26 +122,29 @@ function notify(tabId: number, notice: PageNotice): void {
  * check at load (or its current state) already has right.
  */
 async function onTabUrl(tabId: number, url: string): Promise<void> {
-  const inside = await isProtected(url)
-  const change = await updateTabs((tabs) => {
+  const inside = await covers(url)
+  const changed = await updateTabs(async (tabs) => {
     const before = tabs[tabId]
-    if (!inside) {
+    if (inside === Boolean(before)) return false
+    if (inside) {
+      tabs[tabId] = 'covered'
+      await mute(tabId)
+    } else {
       delete tabs[tabId]
-      return before ? 'left' : 'none'
+      await unmuteOurs(tabId)
     }
-    if (!before) tabs[tabId] = 'covered'
-    return before ? 'none' : 'entered'
+    return true
   })
-  if (change === 'none') return
-  if (change === 'entered') await mute(tabId)
-  else await unmuteOurs(tabId)
-  notify(tabId, {type: 'recheck'})
+  if (changed) notify(tabId, {type: 'recheck'})
 }
 
 /** Covers every shown tab outside the focused window (WINDOW_ID_NONE: none is focused). */
 async function onWindowFocus(windowId: number): Promise<void> {
-  const tabs = await readTabs()
-  const shown = Object.keys(tabs).filter((id) => tabs[id] === 'shown').map(Number)
+  const shown = await updateTabs((tabs) =>
+    Object.keys(tabs)
+      .filter((id) => tabs[id] === 'shown')
+      .map(Number)
+  )
   for (const id of shown) {
     const tab = await chrome.tabs.get(id).catch(() => undefined)
     if (!tab) continue
@@ -121,56 +155,58 @@ async function onWindowFocus(windowId: number): Promise<void> {
 
 /** Covers a tab that is still showing a protected page (it may have left since the caller looked). */
 async function coverTab(tabId: number): Promise<void> {
-  const wasShown = await updateTabs((tabs) => {
+  const wasShown = await updateTabs(async (tabs) => {
     if (tabs[tabId] !== 'shown') return false
     tabs[tabId] = 'covered'
+    await mute(tabId)
     return true
   })
-  if (!wasShown) return
-  await mute(tabId)
-  notify(tabId, {type: 'cover'})
+  if (wasShown) notify(tabId, {type: 'cover'})
 }
 
 /**
  * Answers the page script about its own tab. `url` is the address of the
  * frame that sent it (the top frame), which the page script can't always
  * check itself: plain-http pages have no `crypto.subtle`. Anything about a
- * page that is not protected is ignored.
+ * page that is not covered is ignored.
  */
-export async function handlePageRequest(request: PageRequest, tabId: number, url: string | undefined): Promise<unknown> {
-  if (!(await isProtected(url))) return {inside: false, shown: false}
+export async function handlePageRequest(request: PageRequest, tabId: number, url: string | undefined): Promise<PageReply> {
+  if (!(await covers(url))) return {inside: false, shown: false}
   switch (request.type) {
     case 'pageQuery':
-      return {inside: true, shown: (await readTabs())[tabId] === 'shown'}
+      // Through the queue: a change already under way (the window lost
+      // focus, a navigation) is answered as it ends, not as it began.
+      return {inside: true, shown: await updateTabs((tabs) => tabs[tabId] === 'shown')}
     case 'pageShown':
-      await updateTabs((tabs) => {
+      await updateTabs(async (tabs) => {
         tabs[tabId] = 'shown'
+        await unmuteOurs(tabId)
       })
-      await unmuteOurs(tabId)
-      return {}
+      return {inside: true, shown: true}
     case 'pageCovered':
-      await updateTabs((tabs) => {
+      await updateTabs(async (tabs) => {
         tabs[tabId] = 'covered'
+        await mute(tabId)
       })
-      await mute(tabId)
-      return {}
+      return {inside: true, shown: false}
   }
 }
 
 /**
  * Startup / install: tabs already open on protected pages (restored session,
  * or opened before Nightstand was installed) start covered and muted. Pages
- * loaded before an install or update have no page script, so only the mute
- * applies to them until they reload.
+ * loaded before an install have no page script, so only the mute applies to
+ * them until they reload. (Not after an update: see the caller.)
  */
 export async function coverOpenTabs(): Promise<void> {
-  const inside = await protectedTabIds()
-  await updateTabs((tabs) => {
+  const inside = (await getPrefs()).cover ? await protectedTabIds() : []
+  await updateTabs(async (tabs) => {
     for (const key of Object.keys(tabs)) delete tabs[key]
-    for (const id of inside) tabs[id] = 'covered'
+    for (const id of inside) {
+      tabs[id] = 'covered'
+      await mute(id)
+    }
   })
-  const prefs = await loadPrefs()
-  for (const id of inside) await mute(id, prefs)
 }
 
 /**
@@ -181,23 +217,39 @@ export async function coverOpenTabs(): Promise<void> {
  * and its listener was added first (this module imports it).
  */
 async function releaseTabs(): Promise<void> {
-  const released = await updateTabs(async (tabs) => {
-    const gone: number[] = []
+  await updateTabs(async (tabs) => {
     for (const key of Object.keys(tabs)) {
       const tab = await chrome.tabs.get(Number(key)).catch(() => undefined)
-      if (tab && (await isProtected(tab.url ?? tab.pendingUrl))) continue
+      if (tab && (await isProtectedTab(tab))) continue
       delete tabs[key]
-      if (tab) gone.push(Number(key))
+      if (tab) await unmuteOurs(Number(key))
     }
-    return gone
   })
-  for (const id of released) await unmuteOurs(id)
 }
 
-/** Muting (or covering) was turned off: undo every mute Nightstand set. */
+/** Undoes every mute Nightstand set. */
 async function unmuteAll(): Promise<void> {
   const tabs = await chrome.tabs.query({muted: true})
   for (const tab of tabs) if (tab.id !== undefined) await unmuteOurs(tab.id)
+}
+
+/**
+ * Covering off: every mute goes and every tab is forgotten (their page
+ * scripts uncover themselves; turned on again, open pages stay as they are
+ * until they load again, like newly protected ones). Muting off: every mute
+ * goes. Muting back on (covering on): covered tabs are muted again.
+ */
+async function onPrefsChange(before: Prefs, after: Prefs): Promise<void> {
+  await updateTabs(async (tabs) => {
+    if (!after.cover) {
+      for (const key of Object.keys(tabs)) delete tabs[key]
+      await unmuteAll()
+    } else if (!after.mute) {
+      await unmuteAll()
+    } else if (!mutes(before)) {
+      for (const [key, value] of Object.entries(tabs)) if (value === 'covered') await mute(Number(key))
+    }
+  })
 }
 
 chrome.tabs.onUpdated.addListener((tabId, change) => {
@@ -217,9 +269,9 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return
   if (STORAGE_KEYS.index in changes) releaseTabs().catch(console.error)
-  if (STORAGE_KEYS.prefs in changes) {
-    loadPrefs()
-      .then((prefs) => (mutes(prefs) ? undefined : unmuteAll()))
-      .catch(console.error)
+  const prefs = changes[STORAGE_KEYS.prefs]
+  if (prefs) {
+    prefsPromise = null
+    onPrefsChange(parsePrefs(prefs.oldValue), parsePrefs(prefs.newValue)).catch(console.error)
   }
 })

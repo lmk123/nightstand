@@ -5,7 +5,7 @@
 // script that covers them, opens incognito windows for the popup, and
 // handles the panic shortcut. It never sees the vault key.
 import {applyIcon} from '@/platform/icons'
-import {isBackgroundRequest, isPageRequest} from '@/platform/messages'
+import {isBackgroundRequest, isPageRequest, type PageReply} from '@/platform/messages'
 import {loadLinks, removeRetiredKeys} from '@/platform/storage'
 import {fullScan, handleVisited, incrementalScan, isOwnPage, purgeEntries} from './cleaner'
 import {coverOpenTabs, handlePageRequest} from './cover'
@@ -24,15 +24,26 @@ function fromOwnPage(sender: chrome.runtime.MessageSender): boolean {
   return sender.url !== undefined && isOwnPage(sender.url)
 }
 
+/**
+ * The page script runs only in a tab's top frame. Its `frameId` is 0 except
+ * while Chrome prerenders it; `frameType` says it either way where the
+ * browser reports it (Chromium, not Firefox).
+ */
+function fromTopFrame(sender: chrome.runtime.MessageSender): boolean {
+  const frameType = (sender as {frameType?: string}).frameType
+  return frameType === undefined ? sender.frameId === 0 : frameType === 'outermost_frame'
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return
   // The page script may only ask about the tab it runs in.
   if (!fromOwnPage(sender)) {
     const tabId = sender.tab?.id
-    if (tabId === undefined || sender.frameId !== 0 || !isPageRequest(message)) return
+    if (tabId === undefined || !fromTopFrame(sender) || !isPageRequest(message)) return
     handlePageRequest(message, tabId, sender.url).then(sendResponse, (error: unknown) => {
       console.error(error)
-      sendResponse({inside: false, shown: false})
+      // Can't tell: the page script keeps the page covered.
+      sendResponse({} satisfies PageReply)
     })
     return true
   }
@@ -83,10 +94,13 @@ chrome.runtime.onStartup.addListener(() => {
   fullScan().catch(console.error)
 })
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(({reason}) => {
   removeRetiredKeys().catch(console.error)
   restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
-  coverOpenTabs().catch(console.error)
+  // Not after an update: pages loaded before it keep a page script that can
+  // no longer reach the background, so a mute set now could not be undone
+  // from their "Show page" (or ever, on a page already shown).
+  if (reason !== 'update') coverOpenTabs().catch(console.error)
   fullScan().catch(console.error)
 })
