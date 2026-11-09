@@ -6,13 +6,21 @@ import {addEntry, onboard, sleep, submitUnlock} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp} from './support/temp'
 
-/** Whether the page script's cover is up (it lives in the top layer as an open popover). */
+/** The page script's cover: a modal dialog it appends to the root element (page dialogs live in the body). */
+const COVER = ':root > dialog:modal'
+
+/** Whether the page script's cover is up. */
 function covered(page: Page): Promise<boolean> {
-  return page.evaluate(() => document.querySelector(':popover-open') !== null)
+  return page.evaluate((selector) => document.querySelector(selector) !== null, COVER)
 }
 
 async function waitCovered(page: Page, expected: boolean): Promise<void> {
-  await page.waitForFunction((expected) => (document.querySelector(':popover-open') !== null) === expected, {timeout: 5000}, expected)
+  await page.waitForFunction(
+    (selector, expected) => (document.querySelector(selector) !== null) === expected,
+    {timeout: 5000},
+    COVER,
+    expected
+  )
 }
 
 /** The page is not held invisible (the page script hides everything until it has decided). */
@@ -146,28 +154,97 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await page.close()
   })
 
-  it('follows the settings: no cover when off, and turning mute off unmutes', async () => {
+  it('follows the settings: turning mute off unmutes, and muting goes with the cover', async () => {
     const page = await s.browser.newPage()
-    await page.goto('http://example.com/kept-muted')
+    await page.goto('http://example.com/mute-off')
     await waitCovered(page, true)
+    expect(await muted(s, 'http://example.com/mute-off')).toBe(true)
+    await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: false}}))
+    expect(await muted(s, 'http://example.com/mute-off')).toBe(false)
+    expect(await covered(page)).toBe(true)
+    await page.close()
 
+    await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
+    const open = await s.browser.newPage()
+    await open.goto('http://example.com/cover-off')
+    await waitCovered(open, true)
+    expect(await muted(s, 'http://example.com/cover-off')).toBe(true)
+
+    // Covering off: an open page is uncovered and unmuted at once (it would
+    // never be shown, so its mute would never end), and new pages neither.
     await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: false, mute: true}}))
-    // An open page is uncovered as soon as the setting changes.
-    await waitCovered(page, false)
-    expect(await page.title()).toBe(serverTitle('http://example.com/kept-muted'))
+    await waitCovered(open, false)
+    expect(await open.title()).toBe(serverTitle('http://example.com/cover-off'))
+    expect(await muted(s, 'http://example.com/cover-off')).toBe(false)
 
     const plain = await s.browser.newPage()
     await plain.goto('http://example.com/uncovered')
     await sleep(300)
     expect(await covered(plain)).toBe(false)
-    expect(await muted(s, 'http://example.com/uncovered')).toBe(true)
-
-    await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: false, mute: false}}))
     expect(await muted(s, 'http://example.com/uncovered')).toBe(false)
-    expect(await muted(s, 'http://example.com/kept-muted')).toBe(false)
 
     await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
-    await page.close()
+    await open.close()
     await plain.close()
+  })
+
+  it('uncovers and unmutes an open page as soon as its site is no longer protected', async () => {
+    const page = await s.browser.newPage()
+    await page.goto('http://example.com/removed')
+    await waitCovered(page, true)
+    expect(await muted(s, 'http://example.com/removed')).toBe(true)
+
+    // Same storage change as removing the last entry (the table goes away).
+    const index = await s.sw.evaluate(async () => {
+      const {index} = await chrome.storage.local.get('index')
+      await chrome.storage.local.remove('index')
+      return index as unknown
+    })
+    await waitCovered(page, false)
+    expect(await muted(s, 'http://example.com/removed')).toBe(false)
+
+    await s.sw.evaluate((index) => chrome.storage.local.set({index}), index)
+    await page.close()
+  })
+
+  it('stays clickable over a modal dialog the page opens', async () => {
+    const page = await s.browser.newPage()
+    await page.evaluateOnNewDocument(() => {
+      addEventListener('DOMContentLoaded', () => {
+        const dialog = document.createElement('dialog')
+        dialog.textContent = 'page dialog'
+        document.body.append(dialog)
+        dialog.showModal()
+      })
+    })
+    await page.goto('http://example.com/dialog')
+    await waitCovered(page, true)
+    await page.waitForFunction(() => document.querySelector('body > dialog')?.matches('[open]') === true)
+    // The cover is raised above the page's dialog, which would otherwise make it inert.
+    await waitCovered(page, true)
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await page.evaluate(() => document.querySelector('body > dialog')?.matches(':modal'))).toBe(true)
+    await page.close()
+  })
+
+  it('mutes a page covered on reload after its site was added while it was open', async () => {
+    const page = await s.browser.newPage()
+    await page.goto('http://example.net/reload')
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+
+    const p = await openPopup(s)
+    await submitUnlock(p, 'notes')
+    await addEntry(p, 'example.net')
+    await p.close()
+    // Added while open: left as it is until it loads again.
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+
+    await page.reload()
+    await waitCovered(page, true)
+    expect(await muted(s, 'http://example.net/reload')).toBe(true)
+    await page.close()
   })
 })

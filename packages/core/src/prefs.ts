@@ -7,7 +7,9 @@ import {isRecord} from './guards.ts'
  *
  * - `cover`: protected pages open behind an opaque cover until the user
  *   chooses to show them.
- * - `mute`: tabs on protected pages are muted until shown.
+ * - `mute`: tabs on protected pages are muted until shown. Only while
+ *   `cover` is on: with no cover, a page is never shown and the mute would
+ *   never end.
  *
  * Both default to on; an absent key (fresh install, older build) means on.
  */

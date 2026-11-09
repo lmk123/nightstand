@@ -12,13 +12,25 @@ import {IncognitoHelp} from '../components/IncognitoHelp'
 import {ShortcutInfo} from '../components/ShortcutInfo'
 import {viewClass} from '../components/styles'
 
-function SwitchRow({checked, onChange, children}: {checked: boolean; onChange: (on: boolean) => void; children: ReactNode}) {
+function SwitchRow({
+  checked,
+  onChange,
+  disabled,
+  children
+}: {
+  checked: boolean
+  onChange: (on: boolean) => void
+  disabled?: boolean
+  children: ReactNode
+}) {
   return (
     <Label className="flex items-center gap-3 p-3 text-[13px] leading-normal font-normal">
-      <span className="flex-1">{children}</span>
+      {/* Dimmed along with the switch, which dims itself. */}
+      <span className={disabled ? 'flex-1 opacity-50' : 'flex-1'}>{children}</span>
       <Switch
         checked={checked}
         onCheckedChange={onChange}
+        disabled={disabled}
         className="data-[size=default]:h-6 data-[size=default]:w-10 [&>span]:group-data-[size=default]/switch:size-[18px] [&>span]:group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-1px)] [&>span]:group-data-[size=default]/switch:data-unchecked:translate-x-[2px]"
       />
     </Label>
@@ -84,7 +96,8 @@ export function Settings({
                 {t('coverSetting')}
                 <span className="text-muted-foreground mt-1 block text-xs">{t('coverHint')}</span>
               </SwitchRow>
-              <SwitchRow checked={prefs.mute} onChange={(mute) => changePrefs({mute})}>
+              {/* Muting goes with the cover: with covering off no page is ever shown, so it would never end. */}
+              <SwitchRow checked={prefs.cover && prefs.mute} disabled={!prefs.cover} onChange={(mute) => changePrefs({mute})}>
                 {t('muteSetting')}
               </SwitchRow>
             </div>

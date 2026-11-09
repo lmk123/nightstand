@@ -38,8 +38,20 @@ chrome.storage.onChanged.addListener((changes, area) => {
 /** Nightstand's own pages (popup) must never linger in history either. */
 const OWN_ORIGIN = new URL(chrome.runtime.getURL('/')).origin
 
-function isOwnPage(url: string): boolean {
+export function isOwnPage(url: string): boolean {
   return url.startsWith(`${OWN_ORIGIN}/`)
+}
+
+/** Ids of the open tabs on protected pages (a loading tab by the address it is heading to). */
+export async function protectedTabIds(): Promise<number[]> {
+  const matcher = await getMatcher()
+  if (matcher.isEmpty) return []
+  const ids: number[] = []
+  for (const tab of await chrome.tabs.query({})) {
+    const url = tab.url ?? tab.pendingUrl
+    if (tab.id !== undefined && url && (await matcher.matches(url))) ids.push(tab.id)
+  }
+  return ids
 }
 
 /**

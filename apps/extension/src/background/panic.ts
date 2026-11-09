@@ -1,5 +1,5 @@
 import type {PopupNotice} from '@/platform/messages'
-import {fullScan, getMatcher} from './cleaner'
+import {fullScan, protectedTabIds} from './cleaner'
 import {readState, updateState} from './state'
 
 /**
@@ -18,16 +18,8 @@ export async function panic(): Promise<void> {
   await Promise.all(incognitoWindows.map((id) => closeIfIncognito(id)))
   await updateState((s) => ({...s, incognitoWindows: []}))
 
-  const matcher = await getMatcher()
-  if (!matcher.isEmpty) {
-    const tabs = await chrome.tabs.query({})
-    const doomed: number[] = []
-    for (const tab of tabs) {
-      const url = tab.url ?? tab.pendingUrl
-      if (tab.id !== undefined && url && (await matcher.matches(url))) doomed.push(tab.id)
-    }
-    if (doomed.length) await chrome.tabs.remove(doomed).catch(console.error)
-  }
+  const doomed = await protectedTabIds()
+  if (doomed.length) await chrome.tabs.remove(doomed).catch(console.error)
 
   await fullScan()
 }

@@ -7,7 +7,7 @@
 import {applyIcon} from '@/platform/icons'
 import {isBackgroundRequest, isPageRequest} from '@/platform/messages'
 import {loadLinks, removeRetiredKeys} from '@/platform/storage'
-import {fullScan, handleVisited, incrementalScan, purgeEntries} from './cleaner'
+import {fullScan, handleVisited, incrementalScan, isOwnPage, purgeEntries} from './cleaner'
 import {coverOpenTabs, handlePageRequest} from './cover'
 import {forgetIncognitoWindows, openIncognito} from './incognito'
 import {panic} from './panic'
@@ -19,11 +19,9 @@ chrome.history.onVisited.addListener((item) => {
   if (item.url) handleVisited(item.url).catch(console.error)
 })
 
-const OWN_ORIGIN = new URL(chrome.runtime.getURL('/')).origin
-
 /** Sent from one of Nightstand's own pages (the popup), not a page script on a website. */
 function fromOwnPage(sender: chrome.runtime.MessageSender): boolean {
-  return sender.url?.startsWith(`${OWN_ORIGIN}/`) ?? false
+  return sender.url !== undefined && isOwnPage(sender.url)
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

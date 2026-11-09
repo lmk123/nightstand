@@ -10,10 +10,10 @@
 // the vault, and sends nothing anywhere except "shown"/"covered" for its own
 // tab to the background. On any other page it removes its pre-load hiding as
 // soon as the lookup answers and then stays idle.
-import {createMatcher, parseMatchTable, parsePrefs, type UrlMatcher} from '@nightstand/core'
+import {createMatcher, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
 import {isPageNotice, type PageRequest} from '@/platform/messages'
-import {STORAGE_KEYS} from '@/platform/storage'
+import {loadIndex, loadPrefs, STORAGE_KEYS} from '@/platform/storage'
 
 /** A shown page is covered again after this long without input on it. */
 const IDLE_MS = 60_000
@@ -21,7 +21,10 @@ const IDLE_MS = 60_000
 /** Input that counts as using the page. */
 const ACTIVITY_EVENTS = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const
 
-/** Covers the host itself: page styles can't reach inside the shadow root, and these win over theirs. */
+/**
+ * Styles the host (a `<dialog>`) itself: page styles can't reach inside the
+ * shadow root, and these inline `!important` rules win over theirs.
+ */
 const HOST_STYLE = [
   'all:initial',
   'position:fixed',
@@ -91,12 +94,18 @@ export default function main(): (() => void) | undefined {
   firstRoot.append(hold)
   const release = () => hold.remove()
 
-  // The cover: a top-layer popover, so it sits above the page's own stacking
-  // contexts; raised again whenever the page puts something in the top layer.
-  const host = document.createElement('div')
-  host.setAttribute('popover', 'manual')
+  // The cover: a modal dialog in the top layer, so it sits above the page's
+  // own stacking contexts and makes the page beneath inert; raised again
+  // whenever the page puts something in the top layer. Modal rather than a
+  // popover: a modal dialog the page opens would make a popover inert too,
+  // and "Show page" could not be clicked. A dialog can't hold a shadow root,
+  // so a plain element inside it does.
+  const host = document.createElement('dialog')
   host.setAttribute('style', HOST_STYLE)
-  const shadow = host.attachShadow({mode: 'closed'})
+  const inner = document.createElement('div')
+  inner.setAttribute('style', 'all:initial!important;display:block!important')
+  host.append(inner)
+  const shadow = inner.attachShadow({mode: 'closed'})
   const style = document.createElement('style')
   style.textContent = SHADOW_CSS
   const cover = document.createElement('div')
@@ -111,13 +120,19 @@ export default function main(): (() => void) | undefined {
   function raise(): void {
     if (!host.isConnected) (document.documentElement ?? document).append(host)
     try {
-      if (host.matches(':popover-open')) host.hidePopover()
-      host.showPopover()
+      if (host.open) host.close()
+      host.showModal()
     } catch {
-      // Not an HTML document any more (document.open), or no popover support:
+      // Not an HTML document any more (document.open), or not fully active:
       // the fixed, max z-index host still covers the page.
     }
   }
+  // Escape would close a modal dialog: refuse, and put it back if the
+  // browser closes it anyway (repeated Escape without user activation).
+  host.addEventListener('cancel', (event) => event.preventDefault())
+  host.addEventListener('close', () => {
+    if (state === 'covered' && !host.open) raise()
+  })
 
   // Tab title: the page's own while shown, a neutral one while covered.
   const neutralTitle = t('coverTitle')
@@ -193,11 +208,8 @@ export default function main(): (() => void) | undefined {
 
   function uncover(): void {
     watcher.disconnect()
-    try {
-      if (host.matches(':popover-open')) host.hidePopover()
-    } catch {
-      // Already gone with its document.
-    }
+    // Its `close` event comes later, when `state` no longer says covered.
+    if (host.open) host.close()
     host.remove()
     restoreTitle()
   }
@@ -218,15 +230,9 @@ export default function main(): (() => void) | undefined {
   }
 
   async function lookup(): Promise<{cover: boolean; matcher: UrlMatcher | null}> {
-    const stored = await chrome.storage.local.get([STORAGE_KEYS.index, STORAGE_KEYS.prefs])
-    const {cover} = parsePrefs(stored[STORAGE_KEYS.prefs])
-    let matcher: UrlMatcher | null = null
-    try {
-      matcher = createMatcher(parseMatchTable(stored[STORAGE_KEYS.index]))
-    } catch {
-      // No vault yet, or a damaged table: nothing is protected.
-    }
-    return {cover, matcher}
+    const [prefs, table] = await Promise.all([loadPrefs(), loadIndex()])
+    // No vault yet, or a damaged table: nothing is protected.
+    return {cover: prefs.cover, matcher: table ? createMatcher(table) : null}
   }
 
   /**
@@ -267,8 +273,10 @@ export default function main(): (() => void) | undefined {
       return
     }
     if (onlyRelease || settled) return
+    // Covering is reported so the background mutes the tab even when it saw
+    // no URL change (a reload after the site was added).
     if (reply?.shown === true && document.visibilityState === 'visible') show(false)
-    else coverPage(false)
+    else coverPage(true)
   }
 
   // One evaluation at a time: a URL change can arrive while the first is running.
