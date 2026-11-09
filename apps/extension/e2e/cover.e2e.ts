@@ -182,6 +182,37 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await page.close()
   })
 
+  it('covers and mutes again when the mouse leaves the page, before the tab can be hidden', async () => {
+    const page = await s.browser.newPage()
+    await page.goto('http://example.com/leave')
+    await waitCovered(page, true)
+    await clickShow(page)
+    await waitCovered(page, false)
+    const {w, h} = await page.evaluate(() => ({w: innerWidth, h: innerHeight}))
+
+    // A drag past the edge (selecting text) is not leaving.
+    await page.mouse.move(w / 2, h / 2)
+    await page.mouse.down()
+    await page.mouse.move(w / 2, -5)
+    await page.mouse.move(w / 2, h / 2)
+    await page.mouse.up()
+    // Nor is the pointer going over a menu or bubble on top of the page
+    // (the browser says the mouse left, but it is still within the page).
+    await page.evaluate(() => {
+      document.body.dispatchEvent(new MouseEvent('mouseout', {bubbles: true, relatedTarget: null, clientX: 40, clientY: 40}))
+    })
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+    expect(await muted(s, 'http://example.com/leave')).toBe(false)
+
+    // Towards the tab strip.
+    await page.mouse.move(w / 2, -5)
+    await waitCovered(page, true)
+    expect(await page.title()).toBe('新标签页')
+    expect(await muted(s, 'http://example.com/leave')).toBe(true)
+    await page.close()
+  })
+
   it('covers and mutes again when the browser window loses focus', async () => {
     const page = await s.browser.newPage()
     await page.goto('http://example.com/focus')

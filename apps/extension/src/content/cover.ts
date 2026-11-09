@@ -2,9 +2,9 @@
 //
 // On a protected page it draws an opaque cover over everything and gives the
 // tab a neutral title until the user clicks "Show"; the background keeps the
-// tab muted until then. A shown page is covered again when its tab is hidden,
-// when the browser window loses focus (the background says so) or after a
-// minute without input on the page.
+// tab muted until then. A shown page is covered again when the mouse leaves
+// it, when its tab is hidden, when the browser window loses focus (the
+// background says so) or after a minute without input on the page.
 //
 // It only reads the hashed match table, the cover/mute preferences and, on a
 // page it covers, the plaintext decoy config `links` for its toolbar icon
@@ -255,6 +255,22 @@ export default function main(): (() => void) | undefined {
   }
   for (const type of ACTIVITY_EVENTS) window.addEventListener(type, onActivity, {capture: true, passive: true})
 
+  // Leaving: the mouse goes past the page's edge (to the tab strip, the
+  // window's buttons, another window). Covered then, while the page still
+  // paints: a hidden tab paints nothing, so a cover put up only when the tab
+  // is hidden misses its last frame, and that frame (the page) is what the
+  // browser shows for a moment when the user switches back. Switching tabs
+  // from the keyboard gives no such warning. A pointer still within the
+  // page went over a menu, a picker or a browser bubble on top of it, and a
+  // pressed button is a drag (selecting text past the edge): neither is
+  // leaving.
+  const onMouseOut = (event: MouseEvent) => {
+    if (state !== 'shown' || event.relatedTarget !== null || event.buttons !== 0) return
+    const {clientX: x, clientY: y} = event
+    if (x <= 0 || y <= 0 || x >= innerWidth - 1 || y >= innerHeight - 1) coverPage(true)
+  }
+  window.addEventListener('mouseout', onMouseOut, true)
+
   function coverPage(report: boolean): void {
     clearTimeout(idleTimer)
     state = 'covered'
@@ -451,6 +467,7 @@ export default function main(): (() => void) | undefined {
     window.removeEventListener('pageshow', onPageShow)
     document.removeEventListener('prerenderingchange', onActivated)
     for (const type of ACTIVITY_EVENTS) window.removeEventListener(type, onActivity, {capture: true})
+    window.removeEventListener('mouseout', onMouseOut, true)
     chrome.runtime.onMessage.removeListener(onNotice)
     chrome.storage.onChanged.removeListener(onStorage)
   }
