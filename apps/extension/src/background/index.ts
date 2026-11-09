@@ -25,13 +25,12 @@ function fromOwnPage(sender: chrome.runtime.MessageSender): boolean {
 }
 
 /**
- * The page script runs only in a tab's top frame. Its `frameId` is 0 except
- * while Chrome prerenders it; `frameType` says it either way where the
- * browser reports it (Chromium, not Firefox).
+ * The page script runs only in a tab's top frame, whose `frameId` is 0. A
+ * page Chrome is prerendering has another `frameId` and gets no answer: its
+ * page script stays covered and asks again once the page is activated.
  */
 function fromTopFrame(sender: chrome.runtime.MessageSender): boolean {
-  const frameType = (sender as {frameType?: string}).frameType
-  return frameType === undefined ? sender.frameId === 0 : frameType === 'outermost_frame'
+  return sender.frameId === 0
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

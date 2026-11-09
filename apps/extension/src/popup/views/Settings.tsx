@@ -67,7 +67,11 @@ export function Settings({
     if (!prefs) return
     const next = {...prefs, ...patch}
     setPrefs(next)
-    savePrefs(next).catch(console.error)
+    savePrefs(next).catch((error: unknown) => {
+      console.error(error)
+      // Show what is actually stored, not a change that never landed.
+      loadPrefs().then(setPrefs, console.error)
+    })
   }
 
   return (

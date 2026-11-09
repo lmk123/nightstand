@@ -1,6 +1,7 @@
 import {parsePrefs, type Prefs} from '@nightstand/core'
 import type {PageNotice, PageReply, PageRequest} from '@/platform/messages'
 import {loadPrefs, STORAGE_KEYS} from '@/platform/storage'
+import {cached} from './cached'
 import {getMatcher, isProtectedTab, protectedTabIds} from './cleaner'
 
 /**
@@ -68,19 +69,9 @@ async function readTabs(): Promise<CoverMap> {
   return tabs
 }
 
-let prefsPromise: Promise<Prefs> | null = null
-
-/** Cached preferences, dropped when they change. A failed load is not kept. */
-function getPrefs(): Promise<Prefs> {
-  if (!prefsPromise) {
-    const loading = loadPrefs()
-    prefsPromise = loading
-    loading.catch(() => {
-      if (prefsPromise === loading) prefsPromise = null
-    })
-  }
-  return prefsPromise
-}
+/** Cached preferences, dropped when they change. */
+const prefsCache = cached(loadPrefs)
+const getPrefs = prefsCache.get
 
 /** A page at `url` is covered: covering is on and the address is protected. */
 async function covers(url: string | undefined): Promise<boolean> {
@@ -94,16 +85,26 @@ function mutes(prefs: Prefs): boolean {
   return prefs.cover && prefs.mute
 }
 
+/**
+ * Mutes a tab that isn't muted yet. An existing mute is left alone: muting
+ * again would make it Nightstand's (`mutedInfo.reason`), and showing the page
+ * would then undo a mute the user chose.
+ */
 async function mute(tabId: number): Promise<void> {
   if (!mutes(await getPrefs())) return
+  const tab = await chrome.tabs.get(tabId).catch(() => undefined)
+  if (!tab || tab.mutedInfo?.muted) return
   await chrome.tabs.update(tabId, {muted: true}).catch(() => undefined)
+}
+
+function isOurMute(tab: chrome.tabs.Tab | undefined): boolean {
+  const info = tab?.mutedInfo
+  return info?.muted === true && info.reason === 'extension' && info.extensionId === chrome.runtime.id
 }
 
 /** Unmutes only a mute Nightstand set: one the user chose stays. */
 async function unmuteOurs(tabId: number): Promise<void> {
-  const tab = await chrome.tabs.get(tabId).catch(() => undefined)
-  const info = tab?.mutedInfo
-  if (info?.muted && info.reason === 'extension' && info.extensionId === chrome.runtime.id) {
+  if (isOurMute(await chrome.tabs.get(tabId).catch(() => undefined))) {
     await chrome.tabs.update(tabId, {muted: false}).catch(() => undefined)
   }
 }
@@ -120,12 +121,19 @@ function notify(tabId: number, notice: PageNotice): void {
  * whatever the user chose; leaving them undoes Nightstand's mute. The page
  * script is told only when the tab entered or left: anything else, its own
  * check at load (or its current state) already has right.
+ *
+ * A tab outside protected pages with no record can still carry a mute of
+ * Nightstand's: an extension update clears `storage.session` but not the
+ * mutes. `tab` (from the event) says so without another lookup.
  */
-async function onTabUrl(tabId: number, url: string): Promise<void> {
+async function onTabUrl(tabId: number, url: string, tab: chrome.tabs.Tab): Promise<void> {
   const inside = await covers(url)
   const changed = await updateTabs(async (tabs) => {
     const before = tabs[tabId]
-    if (inside === Boolean(before)) return false
+    if (inside === Boolean(before)) {
+      if (!inside && isOurMute(tab)) await unmuteOurs(tabId)
+      return false
+    }
     if (inside) {
       tabs[tabId] = 'covered'
       await mute(tabId)
@@ -140,28 +148,20 @@ async function onTabUrl(tabId: number, url: string): Promise<void> {
 
 /** Covers every shown tab outside the focused window (WINDOW_ID_NONE: none is focused). */
 async function onWindowFocus(windowId: number): Promise<void> {
-  const shown = await updateTabs((tabs) =>
-    Object.keys(tabs)
-      .filter((id) => tabs[id] === 'shown')
-      .map(Number)
-  )
-  for (const id of shown) {
-    const tab = await chrome.tabs.get(id).catch(() => undefined)
-    if (!tab) continue
-    if (tab.windowId === windowId) continue
-    await coverTab(id)
-  }
-}
-
-/** Covers a tab that is still showing a protected page (it may have left since the caller looked). */
-async function coverTab(tabId: number): Promise<void> {
-  const wasShown = await updateTabs(async (tabs) => {
-    if (tabs[tabId] !== 'shown') return false
-    tabs[tabId] = 'covered'
-    await mute(tabId)
-    return true
+  const covered = await updateTabs(async (tabs) => {
+    const ids: number[] = []
+    for (const [key, value] of Object.entries(tabs)) {
+      if (value !== 'shown') continue
+      const id = Number(key)
+      const tab = await chrome.tabs.get(id).catch(() => undefined)
+      if (!tab || tab.windowId === windowId) continue
+      tabs[key] = 'covered'
+      await mute(id)
+      ids.push(id)
+    }
+    return ids
   })
-  if (wasShown) notify(tabId, {type: 'cover'})
+  for (const id of covered) notify(id, {type: 'cover'})
 }
 
 /**
@@ -199,8 +199,9 @@ export async function handlePageRequest(request: PageRequest, tabId: number, url
  * them until they reload. (Not after an update: see the caller.)
  */
 export async function coverOpenTabs(): Promise<void> {
-  const inside = (await getPrefs()).cover ? await protectedTabIds() : []
   await updateTabs(async (tabs) => {
+    // Looked up inside the queue, so no change in between is overwritten.
+    const inside = (await getPrefs()).cover ? await protectedTabIds() : []
     for (const key of Object.keys(tabs)) delete tabs[key]
     for (const id of inside) {
       tabs[id] = 'covered'
@@ -252,8 +253,8 @@ async function onPrefsChange(before: Prefs, after: Prefs): Promise<void> {
   })
 }
 
-chrome.tabs.onUpdated.addListener((tabId, change) => {
-  if (change.url) onTabUrl(tabId, change.url).catch(console.error)
+chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+  if (change.url) onTabUrl(tabId, change.url, tab).catch(console.error)
 })
 
 chrome.tabs.onRemoved.addListener((tabId) => {
@@ -271,7 +272,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (STORAGE_KEYS.index in changes) releaseTabs().catch(console.error)
   const prefs = changes[STORAGE_KEYS.prefs]
   if (prefs) {
-    prefsPromise = null
+    prefsCache.invalidate()
     onPrefsChange(parsePrefs(prefs.oldValue), parsePrefs(prefs.newValue)).catch(console.error)
   }
 })

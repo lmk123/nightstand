@@ -165,10 +165,15 @@ export default function main(): (() => void) | undefined {
   }
 
   // While covered: keep the title masked and the cover attached, whatever
-  // the page (or its parser) does to the document.
-  const watcher = new MutationObserver(() => {
+  // the page (or its parser) does to the document. A dialog of the page's
+  // that opens raises the cover too: browsers without `toggle` events for
+  // dialogs (Chrome before 132) would otherwise leave it on top.
+  const watcher = new MutationObserver((records) => {
     if (state !== 'covered') return
-    if (!host.isConnected) raise()
+    const pageDialogOpened = records.some(
+      ({type, target}) => type === 'attributes' && target !== host && target instanceof HTMLDialogElement && target.open
+    )
+    if (!host.isConnected || pageDialogOpened) raise()
     maskTitle()
   })
 
@@ -206,7 +211,7 @@ export default function main(): (() => void) | undefined {
     raise()
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined)
     maskTitle()
-    watcher.observe(document, {childList: true, subtree: true, characterData: true})
+    watcher.observe(document, {childList: true, subtree: true, characterData: true, attributeFilter: ['open']})
     release()
     if (report) void send({type: 'pageCovered'})
   }
@@ -303,7 +308,11 @@ export default function main(): (() => void) | undefined {
       .then(async () => {
         if (state !== 'covered') return
         const reply = await send({type: 'pageQuery'})
-        if (state === 'covered') settle(reply)
+        if (state !== 'covered') return
+        // A plain-http page that got no answer while prerendering covered
+        // itself without knowing; a clear "not protected" uncovers it.
+        if (reply?.inside === false) off()
+        else settle(reply)
       })
       .catch(console.error)
   }
@@ -327,7 +336,14 @@ export default function main(): (() => void) | undefined {
   }
   const onPageShow = (event: PageTransitionEvent) => {
     leaving = false
-    if (!event.persisted || state !== 'shown') return
+    if (!event.persisted) return
+    if (state === 'covered') {
+      // The tab may have been shown on another page since: it is covered
+      // again now, so the background mutes it again.
+      pending = pending.then(() => send({type: 'pageCovered'})).then(() => undefined, console.error)
+      return
+    }
+    if (state !== 'shown') return
     pending = pending
       .then(async () => {
         const reply = await send({type: 'pageQuery'})
