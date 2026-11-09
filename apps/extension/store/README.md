@@ -33,7 +33,7 @@ pnpm store
 
 **Single purpose**
 
-> Nightstand keeps the sites a user chooses out of the browser's address bar suggestions, history page and bookmarks. The user saves those sites in an encrypted list; Nightstand deletes their browsing history after every visit and deletes bookmarks that point to them. While locked, its popup shows a plain "Quick Links" launcher; the passphrase typed into its filter box unlocks the list.
+> Nightstand keeps the sites a user chooses out of the browser's address bar suggestions, history page and bookmarks. The user saves those sites in an encrypted list; Nightstand deletes their browsing history after every visit and deletes bookmarks that point to them; when one of them is opened, its page is covered and its tab muted until the user clicks to show it, so it can't be seen or heard by accident. While locked, its popup shows a plain "Quick Links" launcher; the passphrase typed into its filter box unlocks the list.
 
 **Permission justifications**
 
@@ -41,12 +41,14 @@ pnpm store
 |---|---|
 | `storage` | Stores the encrypted list of saved sites, a salted-hash match table used to recognise those sites while the list is locked, and the Quick Links and settings. Local storage only; nothing is synced or sent anywhere. |
 | `history` | The core function: deletes the browsing history of the sites the user saved — right after each visit, when a site is added, at browser start-up and in a periodic scan — and counts the pages that will be deleted before a site is saved. |
-| `tabs` | Reads the active tab's URL and title when the user clicks "Add current page"; opens saved sites in the current or a new tab; and lets the quick-close shortcut find and close the tabs of saved sites. |
+| `tabs` | Reads the active tab's URL and title when the user clicks "Add current page"; opens saved sites in the current or a new tab; lets the quick-close shortcut find and close the tabs of saved sites; and mutes the tabs of saved sites until the user chooses to show them. |
 | `alarms` | Schedules the periodic scan (every 15 minutes) that deletes history of saved sites a visit-time clean-up may have missed. |
 | `bookmarks` | When a site is saved, counts and deletes the bookmarks that point to it, since they would keep it in address bar suggestions; also lets the user import sites from their bookmarks. |
 | `favicon` | Shows each site's icon in the popup, read from the browser's local icon cache. No icon is ever fetched from the network. |
 
-- **Host permissions**：没有申请。
+- **Host permissions**（来自内容脚本的匹配范围 `http://*/*`、`https://*/*`）：
+
+  > A content script runs at document_start in the top frame of every http(s) page to check the page's address against the user's salted-hash match table. On a saved site it covers the page with an opaque overlay and a neutral tab title until the user clicks "Show page". The user saves arbitrary sites, so the script can't be limited to fixed hosts in advance, and requesting each saved site's host separately would list those sites on the extension's details page, which is exactly what the extension avoids. The script does not read page content (apart from the tab title it swaps and restores) and sends nothing anywhere; it only tells the extension's own background whether the page was shown or covered.
 - **Are you using remote code?** No, I am not using remote code.
 
 **Data usage**

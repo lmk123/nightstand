@@ -2,8 +2,10 @@ import {
   migrateStoredVault,
   parseDecoyConfig,
   parseMatchTable,
+  parsePrefs,
   type DecoyConfig,
   type MatchTable,
+  type Prefs,
   type StoredVault
 } from '@nightstand/core'
 
@@ -15,6 +17,7 @@ import {
  * - `index`    hashed match table for the background
  * - `links`    decoy links + icon (plaintext, needed while locked)
  * - `state`    background bookkeeping (written by the background)
+ * - `prefs`    cover / mute preferences (plaintext, needed while locked)
  *
  * The vault key is never stored anywhere.
  *
@@ -25,7 +28,8 @@ const KEY = {
   shelf: 'shelf',
   index: 'index',
   links: 'links',
-  state: 'state'
+  state: 'state',
+  prefs: 'prefs'
 } as const
 
 export const STORAGE_KEYS = KEY
@@ -82,6 +86,15 @@ export async function loadLinks(): Promise<DecoyConfig> {
 
 export async function saveLinks(links: DecoyConfig): Promise<void> {
   await chrome.storage.local.set({[KEY.links]: links})
+}
+
+/** Absent (fresh install) or malformed fields read as their defaults. */
+export async function loadPrefs(): Promise<Prefs> {
+  return parsePrefs(await get(KEY.prefs))
+}
+
+export async function savePrefs(prefs: Prefs): Promise<void> {
+  await chrome.storage.local.set({[KEY.prefs]: prefs})
 }
 
 const RETIRED_KEYS = ['throttle']

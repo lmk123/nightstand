@@ -1,12 +1,14 @@
 // Background: service worker on Chromium, event page on Firefox.
 //
 // Cleans history for protected sites (also while the vault is locked, using
-// only the hashed match table), opens incognito windows for the popup, and
+// only the hashed match table), mutes protected tabs and answers the page
+// script that covers them, opens incognito windows for the popup, and
 // handles the panic shortcut. It never sees the vault key.
 import {applyIcon} from '@/platform/icons'
-import {isBackgroundRequest} from '@/platform/messages'
+import {isBackgroundRequest, isPageRequest} from '@/platform/messages'
 import {loadLinks, removeRetiredKeys} from '@/platform/storage'
 import {fullScan, handleVisited, incrementalScan, purgeEntries} from './cleaner'
+import {coverOpenTabs, handlePageRequest} from './cover'
 import {forgetIncognitoWindows, openIncognito} from './incognito'
 import {panic} from './panic'
 
@@ -17,9 +19,27 @@ chrome.history.onVisited.addListener((item) => {
   if (item.url) handleVisited(item.url).catch(console.error)
 })
 
+const OWN_ORIGIN = new URL(chrome.runtime.getURL('/')).origin
+
+/** Sent from one of Nightstand's own pages (the popup), not a page script on a website. */
+function fromOwnPage(sender: chrome.runtime.MessageSender): boolean {
+  return sender.url?.startsWith(`${OWN_ORIGIN}/`) ?? false
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Only our own popup may ask for anything.
-  if (sender.id !== chrome.runtime.id || !isBackgroundRequest(message)) return
+  if (sender.id !== chrome.runtime.id) return
+  // The page script may only ask about the tab it runs in.
+  if (!fromOwnPage(sender)) {
+    const tabId = sender.tab?.id
+    if (tabId === undefined || sender.frameId !== 0 || !isPageRequest(message)) return
+    handlePageRequest(message, tabId, sender.url).then(sendResponse, (error: unknown) => {
+      console.error(error)
+      sendResponse({inside: false, shown: false})
+    })
+    return true
+  }
+  // Everything else only from our own popup.
+  if (!isBackgroundRequest(message)) return
   const work =
     message.type === 'purge'
       ? purgeEntries(message.hosts, message.urls)
@@ -61,6 +81,7 @@ chrome.runtime.onStartup.addListener(() => {
   forgetIncognitoWindows().catch(console.error)
   restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
+  coverOpenTabs().catch(console.error)
   fullScan().catch(console.error)
 })
 
@@ -68,5 +89,6 @@ chrome.runtime.onInstalled.addListener(() => {
   removeRetiredKeys().catch(console.error)
   restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
+  coverOpenTabs().catch(console.error)
   fullScan().catch(console.error)
 })

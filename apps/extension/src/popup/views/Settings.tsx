@@ -1,9 +1,10 @@
 import {useEffect, useState, type ReactNode} from 'react'
-import type {OpenMode, VaultSettings} from '@nightstand/core'
+import type {OpenMode, Prefs, VaultSettings} from '@nightstand/core'
 import {Label} from '@/components/ui/label'
 import {Switch} from '@/components/ui/switch'
 import {isFirefoxLike} from '@/lib/browser'
 import {t} from '@/platform/i18n'
+import {loadPrefs, savePrefs} from '@/platform/storage'
 import {isIncognitoAllowed} from '@/platform/tabs'
 import {Segmented} from '../components/ChoiceCards'
 import {Header} from '../components/Header'
@@ -44,6 +45,19 @@ export function Settings({
     isIncognitoAllowed().then(setIncognitoAllowed, () => setIncognitoAllowed(false))
   }, [])
 
+  // Cover / mute live outside the vault (the page script needs them while
+  // locked), so they are read and written here directly.
+  const [prefs, setPrefs] = useState<Prefs | null>(null)
+  useEffect(() => {
+    loadPrefs().then(setPrefs, console.error)
+  }, [])
+  const changePrefs = (patch: Partial<Prefs>) => {
+    if (!prefs) return
+    const next = {...prefs, ...patch}
+    setPrefs(next)
+    savePrefs(next).catch(console.error)
+  }
+
   return (
     <div className={viewClass}>
       <Header title={t('settingsTitle')} onBack={onBack} />
@@ -62,6 +76,20 @@ export function Settings({
           />
           {settings.openMode === 'incognito' && incognitoAllowed === false && <IncognitoHelp />}
         </section>
+        {prefs && (
+          <section className="grid grid-cols-1 gap-2">
+            <h2 className="section-label">{t('coverSection')}</h2>
+            <div className="panel divide-line grid grid-cols-1 divide-y">
+              <SwitchRow checked={prefs.cover} onChange={(cover) => changePrefs({cover})}>
+                {t('coverSetting')}
+                <span className="text-muted-foreground mt-1 block text-xs">{t('coverHint')}</span>
+              </SwitchRow>
+              <SwitchRow checked={prefs.mute} onChange={(mute) => changePrefs({mute})}>
+                {t('muteSetting')}
+              </SwitchRow>
+            </div>
+          </section>
+        )}
         <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('saveNoticeSection')}</h2>
           <div className="panel divide-line grid grid-cols-1 divide-y">

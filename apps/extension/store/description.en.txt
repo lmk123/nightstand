@@ -11,6 +11,7 @@ HIGHLIGHTS
 • Open source. The code is public under the MIT license, so anyone can check that Nightstand does what it says and nothing more: https://github.com/lmk123/nightstand
 • No surprises. Before you save a site, Nightstand shows how many pages of history and how many bookmarks it is about to delete.
 • A whole site or a single page. Clean up a site with all its subdomains, or just one URL. Add the other domains a site sends you to — a payment page, a video server — and they are cleaned up too.
+• Covered until you choose. A saved site opens behind a plain cover, with a neutral tab title and its sound muted, until you click Show. Switch tabs, leave the browser window or stop using the page for a minute, and it is covered again. A saved site that starts playing in a background tab stays silent.
 • Quick close. One shortcut (Alt+Shift+Q by default) closes the tabs of saved sites and the Incognito windows Nightstand opened, and cleans their history right away.
 • Open saved sites in the current tab, a new tab, or an Incognito window.
 • Encrypted backups that restore with your passphrase or recovery code, and import straight from your bookmarks.
