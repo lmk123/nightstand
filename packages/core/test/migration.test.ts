@@ -11,8 +11,7 @@ import fixture from './fixtures/v1.json' with {type: 'json'}
 
 // The v1 payload as the current build reads it: v2 gave every entry
 // `extraHosts`, v3 dropped `note` and `tags`, v4 added an optional `icon`
-// (absent here), and the `openMode` setting was retired later (entries always
-// open in a new tab).
+// (absent here), and the retired `openMode` setting is dropped.
 const expected = {
   ...fixture.expected,
   version: 4,

@@ -244,7 +244,7 @@ describe('entryCoversUrl', () => {
 })
 
 describe('migrateVaultData', () => {
-  it('accepts a valid payload and defaults unknown settings', () => {
+  it('accepts a valid payload and drops unknown settings', () => {
     const data = {...emptyVaultData(), entries: [createEntry({url: 'example.com'}, NOW, 'x')]}
     expect(migrateVaultData(JSON.parse(JSON.stringify(data)))).toEqual(data)
     expect(migrateVaultData({version: 1, entries: [], settings: {extra: 1}}).settings).toEqual({})
