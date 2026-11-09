@@ -322,12 +322,6 @@ async function shoot(locale: Locale) {
     await tab.close()
     await p.bringToFront()
 
-    await p.click(`button[aria-label="${m('settings')}"]`)
-    await waitText(p, m('shortcutSection'))
-    await keep('settings')
-    await p.click(`button[aria-label="${m('back')}"]`)
-    await waitText(p, m('addCurrentTab'))
-
     await p.click(`button[aria-label="${m('lock')}"]`)
     await waitText(p, m('popupTitle'))
     await waitIcons(p)

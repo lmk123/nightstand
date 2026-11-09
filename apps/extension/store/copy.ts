@@ -6,7 +6,7 @@
 export const LOCALES = ['en', 'zh_CN'] as const
 export type Locale = (typeof LOCALES)[number]
 
-export type ShotName = 'decoy' | 'vault' | 'cover' | 'form' | 'notice' | 'settings'
+export type ShotName = 'decoy' | 'vault' | 'cover' | 'form' | 'notice'
 
 export interface Caption {
   /** `\n` marks a line break (Chinese has no spaces to balance lines on). */
@@ -22,7 +22,7 @@ export interface Site {
 
 interface Copy {
   tagline: string
-  /** Store screenshots, in the order they are uploaded. */
+  /** Store screenshots, in the order they are uploaded. The store takes at most 5 per locale. */
   shots: [ShotName, Caption][]
   /** Quick Links shown while locked. */
   links: Site[]
@@ -67,13 +67,6 @@ export const COPY: Record<Locale, Copy> = {
         {
           title: 'A whole site, or just one page',
           body: 'Clean up a site with all its subdomains, or a single URL — plus the other domains a site sends you to.'
-        }
-      ],
-      [
-        'settings',
-        {
-          title: 'Close the popup and it locks',
-          body: 'A quick-close shortcut shuts the tabs of saved sites and cleans history right away.'
         }
       ]
     ],
@@ -132,13 +125,6 @@ export const COPY: Record<Locale, Copy> = {
         {
           title: '整个站点，\n或者只是一个网址',
           body: '可以清理一个网站和它的所有子域名，也可以只清理一个网址；网站会跳去的其他域名也能一起清理。'
-        }
-      ],
-      [
-        'settings',
-        {
-          title: '关掉弹窗就上锁',
-          body: '按一下快速收起快捷键，受保护网站的标签页立即关闭，浏览记录马上清理。'
         }
       ]
     ],
