@@ -285,30 +285,6 @@
   "settingsTitle": {
     "message": "设置"
   },
-  "openModeLabel": {
-    "message": "打开方式"
-  },
-  "openCurrent": {
-    "message": "当前标签页"
-  },
-  "openNewTab": {
-    "message": "新标签页"
-  },
-  "openIncognito": {
-    "message": "无痕窗口"
-  },
-  "openPrivateFirefox": {
-    "message": "隐私窗口"
-  },
-  "incognitoNeeded": {
-    "message": "要用无痕窗口打开，需要在扩展详情页打开“在无痕模式下启用”。无痕窗口从根本上不会产生浏览记录，是最干净的方式。"
-  },
-  "privateNeededFirefox": {
-    "message": "要用隐私窗口打开，需要在“附加组件和主题”（about:addons）里找到 Nightstand，把“在隐私窗口中运行”设为“允许”。隐私窗口从根本上不会产生浏览记录，是最干净的方式。"
-  },
-  "incognitoOpenDetails": {
-    "message": "打开扩展详情页"
-  },
   "newPassLabel": {
     "message": "新口令"
   },
@@ -406,7 +382,7 @@
     "message": "当前没有设置快捷键。"
   },
   "shortcutHint": {
-    "message": "按下后会关闭受保护站点的标签页和 Nightstand 打开的无痕窗口，立即清理历史记录，并关闭弹窗（即上锁）。"
+    "message": "按下后会关闭受保护站点的标签页，立即清理历史记录，并关闭弹窗（即上锁）。"
   },
   "shortcutChange": {
     "message": "修改快捷键"

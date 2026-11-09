@@ -1,14 +1,10 @@
 import {useEffect, useState, type ReactNode} from 'react'
-import type {OpenMode, Prefs, VaultSettings} from '@nightstand/core'
+import type {Prefs, VaultSettings} from '@nightstand/core'
 import {Label} from '@/components/ui/label'
 import {Switch} from '@/components/ui/switch'
-import {isFirefoxLike} from '@/lib/browser'
 import {t} from '@/platform/i18n'
 import {loadPrefs, savePrefs} from '@/platform/storage'
-import {isIncognitoAllowed} from '@/platform/tabs'
-import {Segmented} from '../components/ChoiceCards'
 import {Header} from '../components/Header'
-import {IncognitoHelp} from '../components/IncognitoHelp'
 import {ShortcutInfo} from '../components/ShortcutInfo'
 import {viewClass} from '../components/styles'
 
@@ -52,11 +48,6 @@ export function Settings({
   onBack: () => void
   children?: ReactNode
 }) {
-  const [incognitoAllowed, setIncognitoAllowed] = useState<boolean | null>(null)
-  useEffect(() => {
-    isIncognitoAllowed().then(setIncognitoAllowed, () => setIncognitoAllowed(false))
-  }, [])
-
   // Cover / mute live outside the vault (the page script needs them while
   // locked), so they are read and written here directly.
   const [prefs, setPrefs] = useState<Prefs | null>(null)
@@ -78,20 +69,6 @@ export function Settings({
     <div className={viewClass}>
       <Header title={t('settingsTitle')} onBack={onBack} />
       <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4 *:shrink-0">
-        <section className="grid grid-cols-1 gap-2">
-          <h2 className="section-label">{t('openModeLabel')}</h2>
-          <Segmented
-            label={t('openModeLabel')}
-            value={settings.openMode}
-            onChange={(openMode: OpenMode) => onChange({openMode})}
-            options={[
-              {value: 'current', label: t('openCurrent')},
-              {value: 'newTab', label: t('openNewTab')},
-              {value: 'incognito', label: isFirefoxLike ? t('openPrivateFirefox') : t('openIncognito')}
-            ]}
-          />
-          {settings.openMode === 'incognito' && incognitoAllowed === false && <IncognitoHelp />}
-        </section>
         {prefs && (
           <section className="grid grid-cols-1 gap-2">
             <h2 className="section-label">{t('coverSection')}</h2>
