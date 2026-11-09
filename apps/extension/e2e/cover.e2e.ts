@@ -34,6 +34,18 @@ async function muted(s: ChromeSession, url: string): Promise<boolean | undefined
   return s.sw.evaluate(async (url) => (await chrome.tabs.query({url}))[0]?.mutedInfo?.muted, url)
 }
 
+/** Dispatches a pointer-leaving event at the page's window, as the browser would (no related target). */
+async function fire(page: Page, type: 'mouseout' | 'dragleave', init: MouseEventInit): Promise<void> {
+  await page.evaluate(
+    (type, init) => {
+      const Event = type === 'dragleave' ? DragEvent : MouseEvent
+      document.body.dispatchEvent(new Event(type, {bubbles: true, relatedTarget: null, ...init}))
+    },
+    type,
+    init
+  )
+}
+
 /** The test server's title for a page: its Host header and request line (Chrome sends absolute URLs here). */
 function serverTitle(url: string): string {
   return new URL(url).host + url
@@ -179,6 +191,76 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await waitCovered(page, true)
     expect(await muted(s, 'http://example.com/switch')).toBe(true)
     await other.close()
+    await page.close()
+  })
+
+  it('covers and mutes again when the mouse leaves the page, before the tab can be hidden', async () => {
+    const page = await s.browser.newPage()
+    const url = 'http://example.com/leave'
+    await page.goto(url)
+    await waitCovered(page, true)
+    await clickShow(page)
+    await waitCovered(page, false)
+    const {w, h} = await page.evaluate(() => ({w: innerWidth, h: innerHeight}))
+
+    // A drag past the edge and back (selecting text) is not leaving.
+    await page.mouse.move(w / 2, h / 2)
+    await page.mouse.down()
+    await page.mouse.move(w / 2, -5)
+    await page.mouse.move(w / 2, h / 2)
+    await page.mouse.up()
+    // Nor is a click on the page's very edge (a window that touches the
+    // screen's edge: its scrollbar, a full-screen player's controls).
+    await page.mouse.click(w - 1, h / 2)
+    await page.mouse.click(w / 2, 0)
+    await page.mouse.click(0, h - 1)
+    // Nor is the pointer going over a menu or bubble on top of the page (the
+    // browser says the mouse left, but it is still within the page), or out
+    // with a button held (the release decides).
+    await fire(page, 'mouseout', {clientX: 40, clientY: 40})
+    await fire(page, 'dragleave', {clientX: 40, clientY: 40})
+    await fire(page, 'mouseout', {clientX: w / 2, clientY: -5, buttons: 1})
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+    expect(await muted(s, url)).toBe(false)
+
+    // Towards the tab strip.
+    await page.mouse.move(w / 2, -5)
+    await waitCovered(page, true)
+    expect(await page.title()).toBe('新标签页')
+    expect(await muted(s, url)).toBe(true)
+
+    // A drag released outside the page: no mouseout comes.
+    await clickShow(page)
+    await waitCovered(page, false)
+    await page.mouse.move(w / 2, h / 2)
+    await page.mouse.down()
+    await page.mouse.move(w / 2, -5)
+    await page.mouse.up()
+    await waitCovered(page, true)
+
+    // A dragged link or file leaving the window.
+    await clickShow(page)
+    await waitCovered(page, false)
+    await fire(page, 'dragleave', {clientX: 0, clientY: 0})
+    await waitCovered(page, true)
+
+    // Zoomed in by pinching: the edge is the visual viewport's, inside the
+    // layout viewport that client coordinates are relative to.
+    await clickShow(page)
+    await waitCovered(page, false)
+    const cdp = await page.createCDPSession()
+    await cdp.send('Input.synthesizePinchGesture', {x: w * 0.75, y: h * 0.75, scaleFactor: 2, gestureSourceType: 'touch'})
+    const view = await page.evaluate(() => {
+      const {offsetLeft: x, offsetTop: y, width: w} = visualViewport ?? {offsetLeft: 0, offsetTop: 0, width: 0}
+      return {x, y, w}
+    })
+    expect(view.y).toBeGreaterThan(10)
+    await fire(page, 'mouseout', {clientX: view.x + view.w / 2, clientY: view.y + 10})
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+    await fire(page, 'mouseout', {clientX: view.x + view.w / 2, clientY: view.y - 2})
+    await waitCovered(page, true)
     await page.close()
   })
 

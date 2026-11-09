@@ -52,7 +52,7 @@ export const COPY: Record<Locale, Copy> = {
         'cover',
         {
           title: 'Covered until you choose to show it',
-          body: "A saved site opens covered and muted, under a plain tab title. Switch tabs or leave it for a minute, and it's covered again."
+          body: "A saved site opens covered and muted, under a plain tab title. Move the mouse off it, switch tabs or leave it for a minute, and it's covered again."
         }
       ],
       [
@@ -110,7 +110,7 @@ export const COPY: Record<Locale, Copy> = {
         'cover',
         {
           title: '收藏的网站，\n先遮住再显示',
-          body: '打开时页面被盖住、标签页静音，点“显示页面”才出现。切换标签页或一分钟不操作，又会重新遮住。'
+          body: '打开时页面被盖住、标签页静音，点“显示页面”才出现。鼠标移开、切换标签页或一分钟不操作，又会重新遮住。'
         }
       ],
       [
