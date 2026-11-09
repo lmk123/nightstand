@@ -276,14 +276,20 @@ export default function main(): (() => void) | undefined {
    * Outside the part of the page on screen. Client coordinates are relative
    * to the layout viewport; when zoomed in by pinching, only the visual
    * viewport (a part of it) is on screen.
+   *
+   * A leave may be reported on the edge itself, so the edge counts as
+   * outside. A release on the edge is a click there (a window that touches
+   * the screen's edge: its scrollbar, a full-screen player's controls), so
+   * for `mouseup` only past the edge counts.
    */
-  function isOutside({clientX: x, clientY: y}: MouseEvent): boolean {
+  function isOutside({type, clientX: x, clientY: y}: MouseEvent): boolean {
     const view = window.visualViewport
     const zoomed = view !== null && view.scale > 1
     const left = zoomed ? view.offsetLeft : 0
     const top = zoomed ? view.offsetTop : 0
     const right = zoomed ? left + view.width : innerWidth
     const bottom = zoomed ? top + view.height : innerHeight
+    if (type === 'mouseup') return x < left || y < top || x >= right || y >= bottom
     return x <= left || y <= top || x >= right - 1 || y >= bottom - 1
   }
 

@@ -209,6 +209,11 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await page.mouse.move(w / 2, -5)
     await page.mouse.move(w / 2, h / 2)
     await page.mouse.up()
+    // Nor is a click on the page's very edge (a window that touches the
+    // screen's edge: its scrollbar, a full-screen player's controls).
+    await page.mouse.click(w - 1, h / 2)
+    await page.mouse.click(w / 2, 0)
+    await page.mouse.click(0, h - 1)
     // Nor is the pointer going over a menu or bubble on top of the page (the
     // browser says the mouse left, but it is still within the page), or out
     // with a button held (the release decides).
