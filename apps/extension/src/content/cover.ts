@@ -258,13 +258,24 @@ export default function main(): (() => void) | undefined {
   }
 
   /**
-   * Decides for the current URL. Entering a protected page asks the
-   * background whether this tab was already shown (a link followed from a
-   * shown page stays shown); `onlyRelease` (preferences or the list changed
-   * while the page is open) never covers, it only uncovers a page that is no
-   * longer protected.
+   * Why the page decides (again):
+   * - `load`: the page loaded, or the background saw its URL change. Entering
+   *   a protected page asks whether this tab was already shown (a link
+   *   followed from a shown page stays shown).
+   * - `release`: preferences or the list changed while the page is open.
+   *   Never covers; only uncovers a page that is no longer protected.
+   * - `activate`: a prerendered page became the tab's page.
+   * - `restore`: the page came back from the back/forward cache, where it
+   *   heard of no change; the tab may have been shown on another page since.
    */
-  async function evaluate(onlyRelease = false): Promise<void> {
+  type Reason = 'load' | 'release' | 'activate' | 'restore'
+
+  /** Decides for the current URL. Every path that uncovers goes through here. */
+  async function evaluate(reason: Reason): Promise<void> {
+    // Nothing to release on a page that isn't covered or shown, and only a
+    // page that covered itself while prerendering has anything to activate.
+    if (reason === 'release' && state !== 'covered' && state !== 'shown') return
+    if (reason === 'activate' && state !== 'covered') return
     let local: boolean | null
     try {
       local = await matchHere()
@@ -278,7 +289,7 @@ export default function main(): (() => void) | undefined {
       return
     }
     const settled = state === 'covered' || state === 'shown'
-    if (local === true && (onlyRelease || settled)) return
+    if (local === true && (reason === 'release' || (reason === 'load' && settled))) return
     const reply = await send({type: 'pageQuery'})
     // Only a clear "not protected" uncovers a page this script couldn't
     // check: no answer (or one the background couldn't give) keeps it covered.
@@ -286,8 +297,23 @@ export default function main(): (() => void) | undefined {
       off()
       return
     }
-    if (onlyRelease || settled) return
-    settle(reply)
+    switch (reason) {
+      case 'release':
+        return
+      case 'load':
+        if (!settled) settle(reply)
+        return
+      case 'activate':
+        // Unless "Show page" was clicked while the answer was on its way.
+        if (state === 'covered') settle(reply)
+        return
+      case 'restore':
+        // Still covered, or no longer shown in this tab: covered, and the
+        // background mutes the tab again.
+        if (state === 'covered' || (state === 'shown' && (reply?.shown !== true || document.visibilityState !== 'visible'))) {
+          coverPage(true)
+        }
+    }
   }
 
   /**
@@ -303,26 +329,16 @@ export default function main(): (() => void) | undefined {
     else coverPage(true)
   }
 
-  const onActivated = () => {
-    pending = pending
-      .then(async () => {
-        if (state !== 'covered') return
-        const reply = await send({type: 'pageQuery'})
-        if (state !== 'covered') return
-        // A plain-http page that got no answer while prerendering covered
-        // itself without knowing; a clear "not protected" uncovers it.
-        if (reply?.inside === false) off()
-        else settle(reply)
-      })
-      .catch(console.error)
-  }
-  if (isPrerendering()) document.addEventListener('prerenderingchange', onActivated, {once: true})
-
   // One evaluation at a time: a URL change can arrive while the first is running.
   let pending: Promise<void> = Promise.resolve()
-  const queueEvaluate = (onlyRelease?: boolean) => {
-    pending = pending.then(() => evaluate(onlyRelease)).catch(console.error)
+  const queueEvaluate = (reason: Reason) => {
+    pending = pending.then(() => evaluate(reason)).catch(console.error)
   }
+
+  // A plain-http page that got no answer while prerendering covered itself
+  // without knowing; it asks again once it is the tab's page.
+  const onActivated = () => queueEvaluate('activate')
+  if (isPrerendering()) document.addEventListener('prerenderingchange', onActivated, {once: true})
 
   // Leaving the page also turns it hidden; that must not count as switching
   // away, or the next page in this tab would open covered. `pagehide` comes
@@ -336,20 +352,7 @@ export default function main(): (() => void) | undefined {
   }
   const onPageShow = (event: PageTransitionEvent) => {
     leaving = false
-    if (!event.persisted) return
-    if (state === 'covered') {
-      // The tab may have been shown on another page since: it is covered
-      // again now, so the background mutes it again.
-      pending = pending.then(() => send({type: 'pageCovered'})).then(() => undefined, console.error)
-      return
-    }
-    if (state !== 'shown') return
-    pending = pending
-      .then(async () => {
-        const reply = await send({type: 'pageQuery'})
-        if (state === 'shown' && (reply?.shown !== true || document.visibilityState !== 'visible')) coverPage(false)
-      })
-      .catch(console.error)
+    if (event.persisted && (state === 'covered' || state === 'shown')) queueEvaluate('restore')
   }
   document.addEventListener('visibilitychange', onVisibility)
   window.addEventListener('pagehide', onPageHide)
@@ -360,18 +363,18 @@ export default function main(): (() => void) | undefined {
     if (message.type === 'cover') {
       if (state === 'shown') coverPage(false)
     } else {
-      queueEvaluate()
+      queueEvaluate('load')
     }
   }
   chrome.runtime.onMessage.addListener(onNotice)
 
   const onStorage = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
     if (area !== 'local') return
-    if (STORAGE_KEYS.index in changes || STORAGE_KEYS.prefs in changes) queueEvaluate(true)
+    if (STORAGE_KEYS.index in changes || STORAGE_KEYS.prefs in changes) queueEvaluate('release')
   }
   chrome.storage.onChanged.addListener(onStorage)
 
-  queueEvaluate()
+  queueEvaluate('load')
 
   return () => {
     off()
