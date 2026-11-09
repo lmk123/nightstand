@@ -65,7 +65,7 @@ describe.skipIf(!hasChrome)('backup, passphrase management, bookmarks (Chrome)',
     await p.type('#np1', 'harbor')
     await p.type('#np2', 'harbor')
     await clickText(p, '保存')
-    await waitText(p, '打开方式')
+    await waitText(p, '快速收起快捷键')
     await clickText(p, '重新生成恢复码')
     await clickText(p, '生成新的恢复码')
     await waitText(p, '只显示这一次')

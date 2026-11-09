@@ -285,30 +285,6 @@
   "settingsTitle": {
     "message": "Settings"
   },
-  "openModeLabel": {
-    "message": "Open in"
-  },
-  "openCurrent": {
-    "message": "Current tab"
-  },
-  "openNewTab": {
-    "message": "New tab"
-  },
-  "openIncognito": {
-    "message": "Incognito"
-  },
-  "openPrivateFirefox": {
-    "message": "Private"
-  },
-  "incognitoNeeded": {
-    "message": "To open links in an Incognito window, turn on \"Allow in Incognito\" on the extension's details page. An Incognito window never creates browsing history in the first place, so it's the cleanest option."
-  },
-  "privateNeededFirefox": {
-    "message": "To open links in a private window, find Nightstand under \"Add-ons and themes\" (about:addons) and set \"Run in Private Windows\" to \"Allow\". A private window never creates browsing history in the first place, so it's the cleanest option."
-  },
-  "incognitoOpenDetails": {
-    "message": "Open extension details"
-  },
   "newPassLabel": {
     "message": "New passphrase"
   },
@@ -406,7 +382,7 @@
     "message": "No shortcut is set."
   },
   "shortcutHint": {
-    "message": "Closes tabs of protected sites and the Incognito windows Nightstand opened, cleans history right away, and closes the popup (which locks it)."
+    "message": "Closes tabs of protected sites, cleans history right away, and closes the popup (which locks it)."
   },
   "shortcutChange": {
     "message": "Change shortcut"

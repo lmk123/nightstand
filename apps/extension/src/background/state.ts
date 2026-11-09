@@ -5,16 +5,12 @@ import {STORAGE_KEYS} from '@/platform/storage'
 export interface BackgroundState {
   /** Epoch ms of the last completed history scan (0 = never). */
   lastScanAt: number
-  /** Incognito / private windows Nightstand opened, closed again on panic. */
-  incognitoWindows: number[]
 }
 
 function parse(raw: unknown): BackgroundState {
-  if (!isRecord(raw)) return {lastScanAt: 0, incognitoWindows: []}
-  return {
-    lastScanAt: isFiniteNumber(raw.lastScanAt) ? raw.lastScanAt : 0,
-    incognitoWindows: Array.isArray(raw.incognitoWindows) ? raw.incognitoWindows.filter(isFiniteNumber) : []
-  }
+  // Only known fields are kept, so an old build's `incognitoWindows` list is
+  // dropped on the next write.
+  return {lastScanAt: isRecord(raw) && isFiniteNumber(raw.lastScanAt) ? raw.lastScanAt : 0}
 }
 
 // Serialize read-modify-write cycles so concurrent events don't clobber each other.

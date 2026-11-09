@@ -41,7 +41,7 @@ pnpm run store
 |---|---|
 | `storage` | Stores the encrypted list of saved sites, a salted-hash match table used to recognise those sites while the list is locked, and the Quick Links and settings. Local storage only; nothing is synced or sent anywhere. |
 | `history` | The core function: deletes the browsing history of the sites the user saved — right after each visit, when a site is added, at browser start-up and in a periodic scan — and counts the pages that will be deleted before a site is saved. |
-| `tabs` | Reads the active tab's URL and title when the user clicks "Add current page"; opens saved sites in the current or a new tab; lets the quick-close shortcut find and close the tabs of saved sites; and mutes the tabs of saved sites until the user chooses to show them. |
+| `tabs` | Reads the active tab's URL and title when the user clicks "Add current page"; lets the quick-close shortcut find and close the tabs of saved sites; and mutes the tabs of saved sites until the user chooses to show them. |
 | `alarms` | Schedules the periodic scan (every 15 minutes) that deletes history of saved sites a visit-time clean-up may have missed. |
 | `bookmarks` | When a site is saved, counts and deletes the bookmarks that point to it, since they would keep it in address bar suggestions; also lets the user import sites from their bookmarks. |
 | `favicon` | Shows each site's icon in the popup, read from the browser's local icon cache. No icon is ever fetched from the network. |

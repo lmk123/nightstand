@@ -22,8 +22,7 @@ import {findMissingIcons, withIcon} from '@/platform/favicon'
 import {t} from '@/platform/i18n'
 import {isPopupNotice, sendToBackground} from '@/platform/messages'
 import {loadLinks, loadShelf} from '@/platform/storage'
-import {getActiveTab, isIncognitoAllowed, openUrl} from '@/platform/tabs'
-import {IncognitoHelp} from './components/IncognitoHelp'
+import {getActiveTab, openUrl} from '@/platform/tabs'
 import {SaveCheck} from './components/SaveCheck'
 import {SettingsLink, SettingsLinks} from './components/SettingsLink'
 import {useOpenHelp} from './help'
@@ -44,7 +43,7 @@ type View =
   | {name: 'onboarding'}
   | {name: 'locked'}
   | {name: 'decoySettings'}
-  | {name: 'vault'; notice?: 'incognito' | 'unsupportedTab' | 'saveCheck'}
+  | {name: 'vault'; notice?: 'unsupportedTab' | 'saveCheck'}
   | {name: 'entry'; editing?: VaultEntry; prefill?: EntryInput}
   | {name: 'settings'}
   | {name: 'resetPassphrase'}
@@ -193,14 +192,9 @@ export default function App() {
 
   async function openEntry(entry: VaultEntry) {
     if (!session) return
-    const mode = session.data.settings.openMode
-    if (mode === 'incognito' && !(await isIncognitoAllowed())) {
-      setView({name: 'vault', notice: 'incognito'})
-      return
-    }
     // Only bookkeeping: failing to record it must not keep the site from opening.
     await update((data) => recordOpen(data, entry.id, Date.now())).catch(console.error)
-    await openUrl(entry.url, mode)
+    await openUrl(entry.url)
     window.close()
   }
 
@@ -263,11 +257,7 @@ export default function App() {
         <VaultList
           entries={session.data.entries}
           notice={
-            view.notice === 'incognito' ? (
-              <div className="px-3 pb-2">
-                <IncognitoHelp />
-              </div>
-            ) : view.notice === 'unsupportedTab' ? (
+            view.notice === 'unsupportedTab' ? (
               <p role="status" className="bg-accent text-accent-foreground mx-3 mb-2 rounded-[10px] p-3 text-xs">
                 {t('currentTabUnsupported')}
               </p>

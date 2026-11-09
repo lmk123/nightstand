@@ -5,9 +5,6 @@ import {hostCandidates, hostOf, normalizeExactUrl, normalizeHost, parseUserUrl} 
 /** `site`: the whole site including every subdomain (default). `exact`: this one address only. */
 export type MatchMode = 'site' | 'exact'
 
-/** Where an entry opens: the current tab, a new tab, or an incognito / private window. */
-export type OpenMode = 'current' | 'newTab' | 'incognito'
-
 export interface VaultEntry {
   id: string
   url: string
@@ -47,7 +44,6 @@ export function isEntryIcon(value: unknown): value is string {
 }
 
 export interface VaultSettings {
-  openMode: OpenMode
   /**
    * The user ticked "don't show again" on the notice shown before saving an
    * entry (saving wipes that site's / URL's existing history). Absent means
@@ -69,7 +65,11 @@ export interface VaultSettings {
  * `tags`; 4 — entries gain an optional `icon`. Optional fields whose loss
  * on an older build only costs a preference (`skipSaveNotice`,
  * `skipSaveCheck`) were added without a bump (see the storage-format rule
- * in CLAUDE.md).
+ * in CLAUDE.md). Settings once had an `openMode` (current tab / new tab /
+ * incognito); entries now always open in a new tab. It was removed without a
+ * bump too, as that rule allows: older builds read its absence as their
+ * default, a new tab, which is the current behaviour. `migrateVaultData`
+ * drops it from older payloads.
  */
 export interface VaultData {
   version: 4
@@ -79,10 +79,8 @@ export interface VaultData {
 
 export const VAULT_DATA_VERSION = 4
 
-export const DEFAULT_SETTINGS: VaultSettings = {openMode: 'newTab'}
-
 export function emptyVaultData(): VaultData {
-  return {version: VAULT_DATA_VERSION, entries: [], settings: {...DEFAULT_SETTINGS}}
+  return {version: VAULT_DATA_VERSION, entries: [], settings: {}}
 }
 
 export interface EntryInput {
@@ -292,7 +290,6 @@ export function searchEntries(entries: readonly VaultEntry[], query: string): Va
 }
 
 const MATCH_MODES: readonly string[] = ['site', 'exact']
-const OPEN_MODES: readonly string[] = ['current', 'newTab', 'incognito']
 
 /** Fields every payload version's entries have, checked without `note` / `tags` / `extraHosts`. */
 function hasCommonEntryFields(value: Record<string, unknown>): boolean {
@@ -396,11 +393,8 @@ export function migrateVaultData(raw: unknown): VaultData {
       throw new CoreError('unsupported-version', `payload version ${String(raw.version)}`)
   }
   const settings = isRecord(raw.settings) ? raw.settings : {}
-  const openMode =
-    isString(settings.openMode) && OPEN_MODES.includes(settings.openMode)
-      ? (settings.openMode as OpenMode)
-      : DEFAULT_SETTINGS.openMode
-  const out: VaultSettings = {openMode}
+  // Only known settings are copied, so the retired `openMode` is dropped.
+  const out: VaultSettings = {}
   if (typeof settings.skipSaveNotice === 'boolean') out.skipSaveNotice = settings.skipSaveNotice
   if (typeof settings.skipSaveCheck === 'boolean') out.skipSaveCheck = settings.skipSaveCheck
   return {version: VAULT_DATA_VERSION, entries, settings: out}
