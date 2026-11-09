@@ -4,7 +4,6 @@ import {
   parseMatchTable,
   parsePrefs,
   type DecoyConfig,
-  type IconSet,
   type MatchTable,
   type Prefs,
   type StoredVault
@@ -97,17 +96,10 @@ export async function loadPrefs(): Promise<Prefs> {
   return parsePrefs(await get(KEY.prefs))
 }
 
-/**
- * What the page script needs on every page load, in one read: preferences,
- * the match table, and the toolbar icon (shown on the cover's button).
- */
-export async function loadPageConfig(): Promise<{prefs: Prefs; index: MatchTable | null; icon: IconSet}> {
-  const result = await chrome.storage.local.get([KEY.prefs, KEY.index, KEY.links])
-  return {
-    prefs: parsePrefs(result[KEY.prefs]),
-    index: parseStoredIndex(result[KEY.index]),
-    icon: parseDecoyConfig(result[KEY.links]).icon
-  }
+/** Preferences and match table in one read: the page script needs both on every page load. */
+export async function loadPrefsAndIndex(): Promise<{prefs: Prefs; index: MatchTable | null}> {
+  const result = await chrome.storage.local.get([KEY.prefs, KEY.index])
+  return {prefs: parsePrefs(result[KEY.prefs]), index: parseStoredIndex(result[KEY.index])}
 }
 
 export async function savePrefs(prefs: Prefs): Promise<void> {

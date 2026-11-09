@@ -82,7 +82,7 @@ pnpm run store          # 构建并打 zip，再生成 Chrome 网上应用店的
 - `extension-env.d.ts` 由 Extension.js 生成并被 gitignore；`env.d.ts` 带着同样的引用，保证新克隆的仓库上 `type-check` 也能通过。
 - shadcn/ui：在 `apps/extension` 下运行 `pnpm dlx shadcn@latest add <name>`；组件会生成在 `src/components/ui`。保持 CLI 生成的代码原样——它从官方的 [`cn`](https://github.com/shadcn-ui/cn) 包导入 `cn`（shadcn 用来替代 clsx + tailwind-merge 的包）；应用代码里也用同样的导入。`assets.d.ts` 必须保持为脚本（不能有顶层 import/export）。
 - 单列竖排布局用 `grid grid-cols-1`（Tailwind v4 生成一列 `minmax(0, 1fr)`），不要用裸 `grid`：裸 `grid` 的隐式 `auto` 列会被内容的 min-content 撑宽，一段不断行的长文本（文件名、拿网址当标题）即使套了 `truncate` 也会把视图撑出 360px 的 popup。同理，自定义列宽里不要写裸 `fr`（它的最小值是 `auto`），写成 `minmax(0,1fr)`，例如 `grid-cols-[96px_minmax(0,1fr)]`。`tools/check-grid.mjs` 在 `lint` 里检查 `src/popup` 下的这两点；shadcn 组件（如 `RadioGroup`）本身带裸 `grid`，在调用处传 `grid-cols-1`。
-- Chromium 不接受 SVG 作为 action/manifest 图标：编辑 `icons-src/*.svg`，运行 `icons` 脚本，提交生成的 PNG。
+- Chromium 不接受 SVG 作为 action/manifest 图标：编辑 `icons-src/*.svg`，运行 `icons` 脚本，提交生成的 PNG。遮罩按钮上的图标是 `src/content/cover-icons.ts` 里的同一组形状，要一起改——`tools/check-cover-icons.mjs` 在 `lint` 里检查两边一致。
 
 ## 手动验收清单
 

@@ -6,15 +6,15 @@
 // when the browser window loses focus (the background says so) or after a
 // minute without input on the page.
 //
-// It only reads the hashed match table, the cover/mute preferences and the
-// toolbar icon (shown on the button, so the user sees what covered the page),
-// never the vault, and sends nothing anywhere except "shown"/"covered" for its own
-// tab to the background. On any other page it removes its pre-load hiding as
+// It only reads the hashed match table, the cover/mute preferences and, on a
+// page it may cover, the toolbar icon (shown on the button, so the user sees
+// what covered the page), never the vault, and sends nothing anywhere except
+// "shown"/"covered" for its own tab to the background. On any other page it removes its pre-load hiding as
 // soon as the lookup answers and then stays idle.
 import {createMatcher, parseDecoyConfig, type IconSet, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
 import {isPageNotice, type PageReply, type PageRequest} from '@/platform/messages'
-import {loadPageConfig, STORAGE_KEYS} from '@/platform/storage'
+import {loadLinks, loadPrefsAndIndex, STORAGE_KEYS} from '@/platform/storage'
 import {createIcon} from './cover-icons'
 
 /** A shown page is covered again after this long without input on it. */
@@ -61,7 +61,8 @@ button {
   padding: 6px 14px 6px 10px; border-radius: 8px;
   border: 1px solid #d4d4d8; background: #fff;
 }
-svg { width: 16px; height: 16px; flex: none; }
+.icon { display: block; width: 16px; height: 16px; flex: none; }
+svg { display: block; width: 100%; height: 100%; }
 button:hover { background: #fafafa; }
 button:focus-visible { outline: 2px solid #a1a1aa; outline-offset: 2px; }
 @media (prefers-color-scheme: dark) {
@@ -126,21 +127,40 @@ export default function main(): (() => void) | undefined {
   const button = document.createElement('button')
   button.type = 'button'
   button.title = t('coverShowTitle', t('extName'))
-  let iconSet: IconSet = 'nightstand'
-  let icon = createIcon(iconSet)
+  // Holds the icon's place, so the label doesn't move when the icon arrives.
+  const iconBox = document.createElement('span')
+  iconBox.className = 'icon'
   const label = document.createElement('span')
   label.textContent = t('coverShow')
-  button.append(icon, label)
+  button.append(iconBox, label)
   button.addEventListener('click', () => show(true))
   cover.append(button)
   shadow.append(style, cover)
 
+  // The icon is read only for a page that may cover (most pages never do),
+  // off the path that holds every page invisible. A newer icon from a storage
+  // change wins over a read still on its way.
+  let iconSet: IconSet | null = null
+  let iconVersion = 0
+  let iconRead: Promise<void> | null = null
+
   function setIcon(set: IconSet): void {
+    iconVersion++
     if (set === iconSet) return
     iconSet = set
-    const next = createIcon(set)
-    icon.replaceWith(next)
-    icon = next
+    iconBox.replaceChildren(createIcon(set))
+  }
+
+  function loadIcon(): void {
+    if (iconSet) return
+    iconRead ??= (async () => {
+      const version = iconVersion
+      const {icon} = await loadLinks()
+      if (version === iconVersion) setIcon(icon)
+    })().catch((error: unknown) => {
+      iconRead = null
+      console.error(error)
+    })
   }
 
   function raise(): void {
@@ -228,6 +248,7 @@ export default function main(): (() => void) | undefined {
   function coverPage(report: boolean): void {
     clearTimeout(idleTimer)
     state = 'covered'
+    loadIcon()
     raise()
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined)
     maskTitle()
@@ -260,8 +281,7 @@ export default function main(): (() => void) | undefined {
   }
 
   async function lookup(): Promise<{cover: boolean; matcher: UrlMatcher | null}> {
-    const {prefs, index, icon: toolbarIcon} = await loadPageConfig()
-    setIcon(toolbarIcon)
+    const {prefs, index} = await loadPrefsAndIndex()
     // No vault yet, or a damaged table: nothing is protected.
     return {cover: prefs.cover, matcher: index ? createMatcher(index) : null}
   }
@@ -311,6 +331,8 @@ export default function main(): (() => void) | undefined {
       return
     }
     if (local === true && reason === 'release') return
+    // Likely to cover: fetch the icon while the background answers.
+    loadIcon()
     const settled = state === 'covered' || state === 'shown'
     const reply = await send({type: 'pageQuery'})
     // Only a clear "not protected" uncovers a page this script couldn't
@@ -403,7 +425,8 @@ export default function main(): (() => void) | undefined {
   const onStorage = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
     if (area !== 'local') return
     const links = changes[STORAGE_KEYS.links]
-    if (links) setIcon(parseDecoyConfig(links.newValue).icon)
+    // Only once the icon is shown or on its way; otherwise the next read gets it.
+    if (links && (iconSet || iconRead)) setIcon(parseDecoyConfig(links.newValue).icon)
     if (STORAGE_KEYS.index in changes || STORAGE_KEYS.prefs in changes) queueEvaluate('release')
   }
   chrome.storage.onChanged.addListener(onStorage)

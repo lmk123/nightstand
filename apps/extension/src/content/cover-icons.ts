@@ -7,16 +7,17 @@ import type {IconSet} from '@nightstand/core'
  * `web_accessible_resources`, which would let pages detect the extension) and
  * no HTML parsing (pages with Trusted Types refuse `innerHTML`).
  *
- * Keep in step with `icons-src/*.svg`.
+ * Must match `icons-src/*.svg`: `tools/check-cover-icons.mjs` (in `lint`)
+ * compares them.
  */
-type Shape = readonly [tag: 'rect' | 'path', attributes: Readonly<Record<string, string>>]
+export type Shape = readonly [tag: 'rect' | 'path', attributes: Readonly<Record<string, string>>]
 
 const rect = (x: number, y: number, width: number, height: number, rx: number, fill: string): Shape => [
   'rect',
   {x: String(x), y: String(y), width: String(width), height: String(height), rx: String(rx), fill}
 ]
 
-const SHAPES: Record<IconSet, readonly Shape[]> = {
+export const SHAPES: Record<IconSet, readonly Shape[]> = {
   nightstand: [
     rect(12, 18, 104, 14, 5, '#3d5a4f'),
     rect(20, 32, 88, 72, 6, '#4f7264'),

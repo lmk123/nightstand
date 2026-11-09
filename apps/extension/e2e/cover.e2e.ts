@@ -1,8 +1,8 @@
-import type {Page} from 'puppeteer-core'
+import type {Page, Protocol} from 'puppeteer-core'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {launchChrome, openPopup, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {addEntry, onboard, sleep, submitUnlock} from './support/popup'
+import {addEntry, clickText, hasText, onboard, sleep, submitUnlock, waitText} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp} from './support/temp'
 
@@ -44,6 +44,50 @@ async function clickShow(page: Page): Promise<void> {
   const {w, h} = await page.evaluate(() => ({w: innerWidth, h: innerHeight}))
   await page.mouse.click(w / 2, h / 2)
 }
+
+/**
+ * The cover's button, read through CDP because it sits in a closed shadow
+ * root: its tooltip and the fill colours its icon draws (none until the icon
+ * has loaded).
+ */
+async function coverButton(page: Page): Promise<{title: string | null; fills: string[]}> {
+  const cdp = await page.createCDPSession()
+  try {
+    const {root} = await cdp.send('DOM.getDocument', {depth: -1, pierce: true})
+    const attribute = (node: Protocol.DOM.Node, name: string) => {
+      const list = node.attributes ?? []
+      const i = list.findIndex((value, index) => index % 2 === 0 && value === name)
+      return i === -1 ? null : (list[i + 1] ?? null)
+    }
+    const children = (node: Protocol.DOM.Node) => [...(node.shadowRoots ?? []), ...(node.children ?? [])]
+    const find = (node: Protocol.DOM.Node, test: (n: Protocol.DOM.Node) => boolean): Protocol.DOM.Node[] =>
+      [...(test(node) ? [node] : []), ...children(node).flatMap((child) => find(child, test))]
+    // The cover is the dialog under the root element; page dialogs live in the body.
+    const html = find(root, (n) => n.nodeName === 'HTML')[0]
+    const cover = html?.children?.find((n) => n.nodeName === 'DIALOG')
+    const button = cover && find(cover, (n) => n.nodeName === 'BUTTON')[0]
+    if (!button) return {title: null, fills: []}
+    const fills = find(button, (n) => n.nodeName === 'rect' || n.nodeName === 'path')
+      .map((n) => attribute(n, 'fill'))
+      .filter((fill) => fill !== null)
+    return {title: attribute(button, 'title'), fills}
+  } finally {
+    await cdp.detach()
+  }
+}
+
+/** Waits until the cover's icon draws this colour. */
+async function waitIconFill(page: Page, fill: string): Promise<void> {
+  const deadline = Date.now() + 5000
+  while (!(await coverButton(page)).fills.includes(fill)) {
+    if (Date.now() > deadline) throw new Error(`cover icon never drew ${fill}: ${JSON.stringify(await coverButton(page))}`)
+    await sleep(100)
+  }
+}
+
+/** A colour only the "nightstand" icon uses, and one only "book" uses. */
+const NIGHTSTAND_FILL = '#4f7264'
+const BOOK_FILL = '#3f5f8a'
 
 describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () => {
   let s: ChromeSession
@@ -248,5 +292,56 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await waitCovered(page, true)
     expect(await muted(s, 'http://example.net/reload')).toBe(true)
     await page.close()
+  })
+
+  it('shows the toolbar icon on the button, follows a change of icon, and says who covered the page on hover', async () => {
+    const page = await s.browser.newPage()
+    await page.goto('http://example.com/icon')
+    await waitCovered(page, true)
+    await waitIconFill(page, NIGHTSTAND_FILL)
+    expect((await coverButton(page)).title).toBe('Nightstand 暂时遮住了这个页面')
+
+    // The decoy settings write `links`; the open cover follows, and so does a page loaded after.
+    const links = await s.sw.evaluate(async () => (await chrome.storage.local.get('links')).links as Record<string, unknown>)
+    try {
+      await s.sw.evaluate((links) => chrome.storage.local.set({links: {...links, icon: 'book'}}), links)
+      await waitIconFill(page, BOOK_FILL)
+      expect((await coverButton(page)).fills).not.toContain(NIGHTSTAND_FILL)
+      const next = await s.browser.newPage()
+      await next.goto('http://example.com/icon-next')
+      await waitCovered(next, true)
+      await waitIconFill(next, BOOK_FILL)
+      await next.close()
+    } finally {
+      await s.sw.evaluate((links) => chrome.storage.local.set({links}), links)
+    }
+    await page.close()
+  })
+
+  it('mentions the cover (and the mute) in the save notice only when they are on', async () => {
+    const cover = '打开它的网页时会先遮住页面，点“显示页面”后才显示（可在设置里关闭）'
+    const coverMute = '打开它的网页时会先遮住页面并静音，点“显示页面”后才显示（可在设置里关闭）'
+    const p = await openPopup(s)
+    await submitUnlock(p, 'notes')
+    await clickText(p, '手动添加')
+    await p.type('#url', 'example.org')
+    try {
+      for (const [prefs, expected] of [
+        [{cover: true, mute: true}, coverMute],
+        [{cover: true, mute: false}, cover],
+        [{cover: false, mute: true}, null]
+      ] as const) {
+        await s.sw.evaluate((prefs) => chrome.storage.local.set({prefs}), prefs)
+        await clickText(p, '保存')
+        await waitText(p, '确认保存')
+        expect(await hasText(p, cover)).toBe(expected === cover)
+        expect(await hasText(p, coverMute)).toBe(expected === coverMute)
+        await clickText(p, '返回修改')
+        await p.waitForFunction(() => !document.body.textContent?.includes('确认保存'))
+      }
+    } finally {
+      await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
+      await p.close()
+    }
   })
 })
