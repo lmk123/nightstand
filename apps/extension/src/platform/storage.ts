@@ -45,14 +45,17 @@ export async function loadShelf(): Promise<StoredVault | null> {
   return raw === undefined ? null : migrateStoredVault(raw)
 }
 
-export async function loadIndex(): Promise<MatchTable | null> {
-  const raw = await get(KEY.index)
+function parseStoredIndex(raw: unknown): MatchTable | null {
   if (raw === undefined) return null
   try {
     return parseMatchTable(raw)
   } catch {
     return null
   }
+}
+
+export async function loadIndex(): Promise<MatchTable | null> {
+  return parseStoredIndex(await get(KEY.index))
 }
 
 /**
@@ -91,6 +94,12 @@ export async function saveLinks(links: DecoyConfig): Promise<void> {
 /** Absent (fresh install) or malformed fields read as their defaults. */
 export async function loadPrefs(): Promise<Prefs> {
   return parsePrefs(await get(KEY.prefs))
+}
+
+/** Preferences and match table in one read: the page script needs both on every page load. */
+export async function loadPrefsAndIndex(): Promise<{prefs: Prefs; index: MatchTable | null}> {
+  const result = await chrome.storage.local.get([KEY.prefs, KEY.index])
+  return {prefs: parsePrefs(result[KEY.prefs]), index: parseStoredIndex(result[KEY.index])}
 }
 
 export async function savePrefs(prefs: Prefs): Promise<void> {

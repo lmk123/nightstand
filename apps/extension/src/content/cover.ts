@@ -13,7 +13,7 @@
 import {createMatcher, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
 import {isPageNotice, type PageReply, type PageRequest} from '@/platform/messages'
-import {loadIndex, loadPrefs, STORAGE_KEYS} from '@/platform/storage'
+import {loadPrefsAndIndex, STORAGE_KEYS} from '@/platform/storage'
 
 /** A shown page is covered again after this long without input on it. */
 const IDLE_MS = 60_000
@@ -240,9 +240,9 @@ export default function main(): (() => void) | undefined {
   }
 
   async function lookup(): Promise<{cover: boolean; matcher: UrlMatcher | null}> {
-    const [prefs, table] = await Promise.all([loadPrefs(), loadIndex()])
+    const {prefs, index} = await loadPrefsAndIndex()
     // No vault yet, or a damaged table: nothing is protected.
-    return {cover: prefs.cover, matcher: table ? createMatcher(table) : null}
+    return {cover: prefs.cover, matcher: index ? createMatcher(index) : null}
   }
 
   /**
@@ -261,7 +261,8 @@ export default function main(): (() => void) | undefined {
    * Why the page decides (again):
    * - `load`: the page loaded, or the background saw its URL change. Entering
    *   a protected page asks whether this tab was already shown (a link
-   *   followed from a shown page stays shown).
+   *   followed from a shown page stays shown); a page that had already
+   *   decided follows the background's record of the tab.
    * - `release`: preferences or the list changed while the page is open.
    *   Never covers; only uncovers a page that is no longer protected.
    * - `activate`: a prerendered page became the tab's page.
@@ -288,8 +289,8 @@ export default function main(): (() => void) | undefined {
       off()
       return
     }
+    if (local === true && reason === 'release') return
     const settled = state === 'covered' || state === 'shown'
-    if (local === true && (reason === 'release' || (reason === 'load' && settled))) return
     const reply = await send({type: 'pageQuery'})
     // Only a clear "not protected" uncovers a page this script couldn't
     // check: no answer (or one the background couldn't give) keeps it covered.
@@ -301,18 +302,28 @@ export default function main(): (() => void) | undefined {
       case 'release':
         return
       case 'load':
-        if (!settled) settle(reply)
+        if (settled) reconcile(reply)
+        else settle(reply)
         return
       case 'activate':
         // Unless "Show page" was clicked while the answer was on its way.
         if (state === 'covered') settle(reply)
         return
       case 'restore':
-        // Still covered, or no longer shown in this tab: covered, and the
-        // background mutes the tab again.
-        if (state === 'covered' || (state === 'shown' && (reply?.shown !== true || document.visibilityState !== 'visible'))) {
-          coverPage(true)
-        }
+        reconcile(reply)
+    }
+  }
+
+  /**
+   * Brings a page that had already decided in line with the background,
+   * which may have recorded the tab as covered (and muted it) meanwhile: the
+   * tab left protected pages and came back, by the history API or from the
+   * back/forward cache. Still covered, or no longer shown in this tab:
+   * covered, and reported so the background mutes the tab again.
+   */
+  function reconcile(reply: Partial<PageReply> | undefined): void {
+    if (state === 'covered' || (state === 'shown' && (reply?.shown !== true || document.visibilityState !== 'visible'))) {
+      coverPage(true)
     }
   }
 
