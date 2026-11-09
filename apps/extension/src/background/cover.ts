@@ -276,6 +276,8 @@ async function unmuteAll(): Promise<void> {
  * goes. Muting back on (covering on): covered tabs are muted again.
  */
 async function onPrefsChange(before: Prefs, after: Prefs): Promise<void> {
+  // The idle time is the page script's alone.
+  if (before.cover === after.cover && before.mute === after.mute) return
   await updateTabs(async (tabs) => {
     if (!after.cover) {
       for (const key of Object.keys(tabs)) delete tabs[key]

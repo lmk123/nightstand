@@ -28,6 +28,12 @@ export function patchedCopy(
     backgroundFile?: string
     appendToBackground?: string
     onlyLocale?: string
+    /**
+     * Text replaced in the page script, each `[from, to, times]`: it must
+     * occur exactly `times` times, so a change in the built code fails loudly
+     * instead of leaving the copy unpatched.
+     */
+    pageScript?: [from: string, to: string, times: number][]
   }
 ): string {
   const dir = tempDir('ext')
@@ -49,6 +55,16 @@ export function patchedCopy(
   if (patch.backgroundFile && patch.appendToBackground) {
     const file = join(dir, patch.backgroundFile)
     writeFileSync(file, `${readFileSync(file, 'utf8')}\n;${patch.appendToBackground}\n`)
+  }
+  if (patch.pageScript) {
+    const file = join(dir, 'content_scripts', 'content-0.js')
+    let code = readFileSync(file, 'utf8')
+    for (const [from, to, times] of patch.pageScript) {
+      const found = code.split(from).length - 1
+      if (found !== times) throw new Error(`page script: expected ${from} ${times} times, found ${found}`)
+      code = code.replaceAll(from, to)
+    }
+    writeFileSync(file, code)
   }
   return dir
 }
