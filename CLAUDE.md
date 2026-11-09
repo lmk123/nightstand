@@ -51,13 +51,13 @@ pnpm store              # 构建并打 zip，再生成 Chrome 网上应用店的
 - **`packages/core` 保持纯净。** 不用浏览器扩展 API，不碰 DOM，不用 React。它的 `tsconfig.json` 设了 `lib: ["ES2024", "WebWorker"]` 和 `types: []`，所以在那里用 `window`、`document`、`chrome` 都是类型错误；它也没有 React/chrome 依赖。只用标准 Web API（`URL`、`crypto.subtle`、`TextEncoder`、`btoa`/`atob`）。core 返回错误码，从不返回给用户看的文案。
 - **只用 Web Crypto。** 不引入第三方加密库。
 - **只能离线。** 没有后端、账号、统计分析或任何远程请求。
-- **唯一的界面是 action popup。** 没有 options 页、侧边栏、新标签页覆盖，也绝不打开扩展自己的标签页。所有界面（引导、伪装界面、伪装设置、锁屏、保险箱列表、真正的设置……）都是 popup 里的视图。
-- **没有 content script，没有 host 权限。** 权限：`storage`、`history`、`tabs`、`alarms`、`bookmarks`（必需而非可选：保存条目会删除它的书签，而 Chrome 的权限弹窗会在保存中途关掉 popup），以及仅 Chromium 的 `favicon`（manifest 里的 `chromium:permissions` 会在那边替换掉普通列表，所以两份列表要保持同步）。
+- **唯一的界面是 action popup。** 没有 options 页、侧边栏、新标签页覆盖，也绝不打开扩展自己的标签页。所有界面（引导、伪装界面、伪装设置、锁屏、保险箱列表、真正的设置……）都是 popup 里的视图。唯一的例外是受保护网页上的遮罩（见下一条）：它只有一个“显示页面”按钮，不承载任何别的功能或设置。
+- **只有一个 content script：遮罩（`src/content/cover.ts`）。** 它在所有 http/https 网页的顶层框架、`document_start` 时运行（事先不知道用户收藏什么网站；按站点申请权限会把域名写进扩展详情页）。它只读 `index` 和 `prefs`，不读网页内容（标签页标题除外），只和后台交换“是否受保护 / 已显示 / 已遮住”；任何解密数据都不进入网页脚本。纯 http 页面没有 `crypto.subtle`，由后台按发消息的框架网址匹配。不要再加别的网页脚本或 host 权限。权限：`storage`、`history`、`tabs`、`alarms`、`bookmarks`（必需而非可选：保存条目会删除它的书签，而 Chrome 的权限弹窗会在保存中途关掉 popup），以及仅 Chromium 的 `favicon`（manifest 里的 `chromium:permissions` 会在那边替换掉普通列表，所以两份列表要保持同步）。
 - **网站图标只来自浏览器本地缓存**（Chromium 的 `_favicon`），绝不走网络（不抓 `/favicon.ico`，不用图标服务）。Chrome 删除一个网页的历史时会连带删掉它缓存的图标，所以保险箱条目的图标在保存时、清理之前截取，存进加密条目（`icon`，有大小上限的 `data:` URL——见 `isEntryIcon`）。还没有图标的条目在解锁时再查一次：之后某次访问的图标通常能留下来，因为清理器在图标从网络到达之前就删掉了那次访问（这是竞态——先写入的图标会随历史一起被删；e2e 因此故意延迟测试图标）。快捷链接实时查询。Firefox 显示首字母图块。
 - **保险箱密钥（DEK）只存在于 popup 内存里。** 绝不写入任何存储（包括 `storage.session`），也绝不发给 background。关闭 popup 就销毁它——这*就是*上锁。没有“保持解锁 N 分钟”，没有定时器，不用 `idle`。
 - **磁盘上不能有明文。** 不要把编辑草稿或其他解密后的数据持久化到存储里。
 - **引导在最后一步之前什么都不写。** 引导中途关闭 popup，存储必须是空的。
-- **旁人可能看到的地方一律用中性措辞。** manifest 的 name/description/title/命令描述绝不能含 private、hide、secret、隐私、隐藏、私密之类的词——`apps/extension/tools/check-manifest-words.mjs` 在 `lint` 里强制检查。存储键也是中性的（`shelf`、`index`、`links`、`state`）。
+- **旁人可能看到的地方一律用中性措辞。** manifest 的 name/description/title/命令描述绝不能含 private、hide、secret、隐私、隐藏、私密之类的词——`apps/extension/tools/check-manifest-words.mjs` 在 `lint` 里强制检查。存储键也是中性的（`shelf`、`index`、`links`、`state`、`prefs`）。
 - **从第一天起就做 i18n。** 所有界面字符串都经过 `apps/extension/src/platform/i18n.ts` 的 `t()`；组件里不能有硬编码文案。语言：`en`（`default_locale`，也是推导 `MessageKey` 的那个文件，所以那里缺 key 就是类型错误）和 `zh_CN`。每个 key 都要同时写进两份 `_locales/*/messages.json`，占位符一致——`tools/check-locales.mjs` 在 `lint` 里强制检查。没有对应语言包的浏览器（包括繁体中文）显示英文。chrome.i18n 没有复数形式：英文里的计数写成 "Label: $COUNT$" 或 "(…$COUNT$)"。
 - **存储格式带版本号，迁移要有测试。** 改动存储的保险箱、它的载荷或备份格式时，如果旧版本会误读数据、或丢掉某个重要内容，就需要新版本号、一个迁移步骤，以及一个仍能解开仓库里 v1 测试数据的测试。这些情况包括：删除、重命名字段，或改变字段的含义、类型；新增必填字段；新增字段一旦丢失（旧版本重新保存时不带它）会丢条目或缩小清理范围。新增一个旧版本可以忽略、丢失也只损失一个偏好设置的*可选*字段（例如 `skipSaveNotice`），不需要升版本号——但需要测试它能完整往返，并且格式错误的值会被丢弃而不是让整个保险箱失败。
 - 属于用户的决定（界面风格、默认值、体验取舍），列出选项问用户，不要自行假设。
@@ -97,6 +97,7 @@ pnpm store              # 构建并打 zip，再生成 Chrome 网上应用店的
 7. 全新安装，第一次打开 popup：进入引导（而不是伪装界面）。引导中途关闭 popup 再打开：引导从头开始，存储里没有保险箱数据。
 8. 按下快速收起（panic）快捷键：匹配的标签页和 Nightstand 打开的无痕窗口被关闭，打开着的 popup 也关闭。
 9. 扩展管理页上没有任何暴露用途的信息（名称、描述、图标），使用过程中从未打开过扩展标签页。
+10. 打开受保护站点（https 和 http 各一个）：加载过程中任何时刻都看不到页面内容，直接出现遮罩；标签页标题是“新标签页”、已静音。点“显示页面”后内容和声音恢复；切换标签页、切到别的应用、60 秒不操作后都重新遮住并静音。普通网站加载时没有可察觉的闪白。
 
 另外还要验证，并记录到 `docs/design.md` 的“已知限制”里：历史删除后，Chrome 地址栏是否仍会从书签、已打开的标签页、搜索引擎联想（服务端，和 Google 账户活动有关）或地址栏的“快捷方式”数据库提示受保护站点；以及开启 Chrome 同步时 `history.deleteUrl` 是否也会删除其他设备上的记录。
 
@@ -104,6 +105,7 @@ pnpm store              # 构建并打 zip，再生成 Chrome 网上应用店的
 
 Vitest + `puppeteer-core`，驱动本机安装的 Google Chrome 和 Firefox（可用 `CHROME_PATH` / `FIREFOX_PATH` 覆盖；缺少对应浏览器或构建产物时，该套测试会自动跳过）。共享的辅助代码在 `e2e/support/`；所有临时 profile、下载文件和打过补丁的构建副本都放在系统临时目录下，每个测试文件结束后删除。测试依赖下面这些事实，原因如下：
 
+- **遮罩**（`e2e/cover.e2e.ts`）：遮罩是用 `showModal()` 打开的 `<dialog>`，测试用 `:modal` 判断是否遮住，按视口中心点击“显示页面”（按钮在封闭的 shadow root 里）。测试服务器是纯 http，走“问后台”的路径；`http://localhost` 是安全上下文，用来覆盖网页脚本自己算哈希的路径。窗口失焦用 `chrome.windows.onFocusChanged.dispatch(WINDOW_ID_NONE)` 模拟。60 秒无操作没有自动化测试。
 - **Chrome**：用 `puppeteer.launch({pipe: true, enableExtensions: [dist/chromium]})` 和全新 profile。扩展 id 从 service worker target 获取；`sw.evaluate()` 可以在 background 里调用 `chrome.*`。popup 界面以标签页形式驱动，地址是 `chrome-extension://<id>/action/index.html`（关闭标签页 = 关闭 popup）。`--host-resolver-rules=MAP * 127.0.0.1:<port>` 加上 `e2e/support/server.ts`，让 `example.com` 等成为真实访问并进入历史。panic 用 `chrome.commands.onCommand.dispatch('panic')` 触发。
 - **真实 popup**（`e2e/real-popup.e2e.ts`，仅在 `E2E_HEADED=1` 时运行）：先聚焦一个普通窗口，再从 service worker 调用 `chrome.action.openPopup({windowId})`。它固定住了界面设计所依赖的几个事实：文件选择器**不会**关掉 popup（macOS 上的 Chrome）；blob 下载在 popup 关闭后仍能完成。（`permissions.request` 的弹窗**会**关掉 popup——这就是 `bookmarks` 是必需权限的原因。）
 - **Firefox**：WebDriver BiDi 能安装附加组件（`browser.installExtension`），但拒绝导航到或暴露 `moz-extension://` 页面，所以没法驱动 popup 界面。`e2e/firefox-history.e2e.ts` 改为检查 background：一个打过补丁的副本预置匹配表，访问通过测试服务器（作为 HTTP 代理）进行，关闭浏览器后用 `sqlite3` 命令行读取 `places.sqlite`，看历史里还剩什么。只在 popup 里的 Firefox 分支（粘贴式备份导入、隐私窗口的措辞）仍需用 `pnpm dev:firefox` 手动过一遍。

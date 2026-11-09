@@ -363,6 +363,24 @@
   "saveCheckSetting": {
     "message": "保存后提醒：马上检查地址栏里还有没有这个网站"
   },
+  "coverSection": {
+    "message": "打开受保护的网页时"
+  },
+  "coverSetting": {
+    "message": "先遮住页面，点“显示页面”后才显示"
+  },
+  "coverHint": {
+    "message": "切换标签页、离开浏览器窗口，或一分钟没有操作时，会重新遮住。"
+  },
+  "muteSetting": {
+    "message": "自动静音（页面显示后恢复声音）"
+  },
+  "coverShow": {
+    "message": "显示页面"
+  },
+  "coverTitle": {
+    "message": "新标签页"
+  },
   "shortcutSection": {
     "message": "快速收起快捷键"
   },

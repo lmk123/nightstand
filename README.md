@@ -23,7 +23,8 @@ Nightstand protects against **people who can see your screen**:
 - the browser's history page;
 - the bookmarks bar;
 - the name, description and icon on the extensions page;
-- someone curiously clicking the extension's icon.
+- someone curiously clicking the extension's icon;
+- a saved site you open by accident, or one that starts playing in a background tab: it opens covered and muted until you click to show it, and is covered again when you switch away or leave it alone for a minute.
 
 It doesn't protect against:
 
@@ -31,6 +32,7 @@ It doesn't protect against:
 - cloud-side records such as Google account "Web & App Activity" and search engine suggestions;
 - network-level records: your workplace network, router, DNS;
 - operating-system records;
+- the address and icon of a covered page, which the address bar and tab strip still show;
 - the extension's page in the Chrome Web Store, which the extension's details page links to: it says what Nightstand does.
 
 ## Development

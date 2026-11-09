@@ -2,6 +2,7 @@ import {addressVariants, createMatcher, emptyMatchTable, hostOf, type UrlMatcher
 import {isChromiumLike} from '@/lib/browser'
 import {historySince} from '@/platform/history'
 import {loadIndex, STORAGE_KEYS} from '@/platform/storage'
+import {cached} from './cached'
 import {readState, updateState} from './state'
 
 /**
@@ -9,26 +10,15 @@ import {readState, updateState} from './state'
  * hashed match table (`index`), never the vault or its key.
  */
 
-let matcherPromise: Promise<UrlMatcher> | null = null
+/** Cached matcher; dropped whenever the popup rewrites the match table. */
+const matcherCache = cached(() => loadIndex().then((table) => createMatcher(table ?? emptyMatchTable())))
 
-/**
- * Cached matcher; dropped whenever the popup rewrites the match table. A
- * failed load is not kept, so the next event tries again instead of every
- * later cleanup failing on the same rejected promise.
- */
 export function getMatcher(): Promise<UrlMatcher> {
-  if (!matcherPromise) {
-    const loading = loadIndex().then((table) => createMatcher(table ?? emptyMatchTable()))
-    matcherPromise = loading
-    loading.catch(() => {
-      if (matcherPromise === loading) matcherPromise = null
-    })
-  }
-  return matcherPromise
+  return matcherCache.get()
 }
 
 export function invalidateMatcher(): void {
-  matcherPromise = null
+  matcherCache.invalidate()
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
@@ -38,8 +28,36 @@ chrome.storage.onChanged.addListener((changes, area) => {
 /** Nightstand's own pages (popup) must never linger in history either. */
 const OWN_ORIGIN = new URL(chrome.runtime.getURL('/')).origin
 
-function isOwnPage(url: string): boolean {
+export function isOwnPage(url: string): boolean {
   return url.startsWith(`${OWN_ORIGIN}/`)
+}
+
+/**
+ * A tab on a protected page, or loading one. Both addresses count: `url` is
+ * the page still on screen ("" before a new tab's first page commits),
+ * `pendingUrl` the one it is heading to.
+ */
+export async function isProtectedTab(tab: chrome.tabs.Tab): Promise<boolean> {
+  const matcher = await getMatcher()
+  if (matcher.isEmpty) return false
+  for (const url of [tab.url, tab.pendingUrl]) {
+    if (url && (await matcher.matches(url))) return true
+  }
+  return false
+}
+
+/** The open tabs on (or loading) protected pages. */
+export async function protectedTabs(): Promise<chrome.tabs.Tab[]> {
+  const found: chrome.tabs.Tab[] = []
+  for (const tab of await chrome.tabs.query({})) {
+    if (tab.id !== undefined && (await isProtectedTab(tab))) found.push(tab)
+  }
+  return found
+}
+
+/** Ids of the open tabs on (or loading) protected pages. */
+export async function protectedTabIds(): Promise<number[]> {
+  return (await protectedTabs()).flatMap((tab) => (tab.id === undefined ? [] : [tab.id]))
 }
 
 /**

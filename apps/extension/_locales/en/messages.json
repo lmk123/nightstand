@@ -363,6 +363,24 @@
   "saveCheckSetting": {
     "message": "After saving, remind me to check the address bar"
   },
+  "coverSection": {
+    "message": "Opening protected pages"
+  },
+  "coverSetting": {
+    "message": "Cover the page until I click \"Show page\""
+  },
+  "coverHint": {
+    "message": "It is covered again when you switch tabs, leave the browser window, or stop using the page for a minute."
+  },
+  "muteSetting": {
+    "message": "Mute the tab (sound comes back when the page is shown)"
+  },
+  "coverShow": {
+    "message": "Show page"
+  },
+  "coverTitle": {
+    "message": "New Tab"
+  },
   "shortcutSection": {
     "message": "Quick close shortcut"
   },

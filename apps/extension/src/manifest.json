@@ -27,6 +27,18 @@
       "background/index.ts"
     ]
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content/cover.ts"
+      ],
+      "run_at": "document_start"
+    }
+  ],
   "permissions": [
     "storage",
     "history",

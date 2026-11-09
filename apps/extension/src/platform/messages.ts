@@ -12,6 +12,45 @@ export type BackgroundRequest =
 /** Background → popup. */
 export type PopupNotice = {type: 'panic'}
 
+/**
+ * Page script (content script on every http(s) page) → background. Only the
+ * tab that sent it is ever affected, and only while it is on a protected
+ * page (the background checks the tab's URL itself).
+ */
+export type PageRequest =
+  /**
+   * Is this page protected, and was this tab showing a protected page
+   * already? Reply: `{inside: boolean, shown: boolean}`.
+   */
+  | {type: 'pageQuery'}
+  /** The user chose to show the page: unmute the tab. */
+  | {type: 'pageShown'}
+  /** The page covered itself again (tab hidden, idle): mute the tab. */
+  | {type: 'pageCovered'}
+
+/**
+ * Background → page script, the answer to every `PageRequest`. `{}` means
+ * the background couldn't tell: the page script keeps the page covered.
+ */
+export type PageReply = {inside: boolean; shown: boolean} | Record<string, never>
+
+/** Background → page script. */
+export type PageNotice =
+  /** Cover now (the browser window lost focus). */
+  | {type: 'cover'}
+  /** The tab's URL changed without a new document (history API): match again. */
+  | {type: 'recheck'}
+
+export function isPageRequest(message: unknown): message is PageRequest {
+  const type = (message as {type?: unknown} | null)?.type
+  return type === 'pageQuery' || type === 'pageShown' || type === 'pageCovered'
+}
+
+export function isPageNotice(message: unknown): message is PageNotice {
+  const type = (message as {type?: unknown} | null)?.type
+  return type === 'cover' || type === 'recheck'
+}
+
 export function sendToBackground(request: BackgroundRequest): Promise<unknown> {
   return chrome.runtime.sendMessage(request)
 }
