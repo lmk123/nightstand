@@ -7,9 +7,10 @@
 // minute without input on the page.
 //
 // It only reads the hashed match table, the cover/mute preferences and, on a
-// page it may cover, the toolbar icon (shown on the button, so the user sees
-// what covered the page), never the vault, and sends nothing anywhere except
-// "shown"/"covered" for its own tab to the background. On any other page it removes its pre-load hiding as
+// page it covers, the plaintext decoy config `links` for its toolbar icon
+// (shown on the button, so the user sees what covered the page), never the
+// vault, and sends nothing anywhere except "shown"/"covered" for its own tab
+// to the background. On any other page it removes its pre-load hiding as
 // soon as the lookup answers and then stays idle.
 import {createMatcher, parseDecoyConfig, type IconSet, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
@@ -137,15 +138,13 @@ export default function main(): (() => void) | undefined {
   cover.append(button)
   shadow.append(style, cover)
 
-  // The icon is read only for a page that may cover (most pages never do),
-  // off the path that holds every page invisible. A newer icon from a storage
-  // change wins over a read still on its way.
+  // The icon is read only for a page that covers (most pages never do), off
+  // the path that holds every page invisible. An icon from a storage change
+  // that arrives while the read is on its way wins over the read.
   let iconSet: IconSet | null = null
-  let iconVersion = 0
   let iconRead: Promise<void> | null = null
 
   function setIcon(set: IconSet): void {
-    iconVersion++
     if (set === iconSet) return
     iconSet = set
     iconBox.replaceChildren(createIcon(set))
@@ -154,9 +153,8 @@ export default function main(): (() => void) | undefined {
   function loadIcon(): void {
     if (iconSet) return
     iconRead ??= (async () => {
-      const version = iconVersion
       const {icon} = await loadLinks()
-      if (version === iconVersion) setIcon(icon)
+      if (!iconSet) setIcon(icon)
     })().catch((error: unknown) => {
       iconRead = null
       console.error(error)
@@ -331,8 +329,9 @@ export default function main(): (() => void) | undefined {
       return
     }
     if (local === true && reason === 'release') return
-    // Likely to cover: fetch the icon while the background answers.
-    loadIcon()
+    // Matched here: fetch the icon while the background answers. A page that
+    // couldn't check (every plain-http page) waits for the answer, in `coverPage`.
+    if (local === true) loadIcon()
     const settled = state === 'covered' || state === 'shown'
     const reply = await send({type: 'pageQuery'})
     // Only a clear "not protected" uncovers a page this script couldn't

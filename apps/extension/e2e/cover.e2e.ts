@@ -2,7 +2,7 @@ import type {Page, Protocol} from 'puppeteer-core'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {launchChrome, openPopup, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {addEntry, clickText, hasText, onboard, sleep, submitUnlock, waitText} from './support/popup'
+import {addEntry, clearAndType, clickText, hasText, onboard, sleep, submitUnlock, waitText} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp} from './support/temp'
 
@@ -303,45 +303,84 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
 
     // The decoy settings write `links`; the open cover follows, and so does a page loaded after.
     const links = await s.sw.evaluate(async () => (await chrome.storage.local.get('links')).links as Record<string, unknown>)
+    const next = await s.browser.newPage()
     try {
       await s.sw.evaluate((links) => chrome.storage.local.set({links: {...links, icon: 'book'}}), links)
       await waitIconFill(page, BOOK_FILL)
       expect((await coverButton(page)).fills).not.toContain(NIGHTSTAND_FILL)
-      const next = await s.browser.newPage()
       await next.goto('http://example.com/icon-next')
       await waitCovered(next, true)
       await waitIconFill(next, BOOK_FILL)
-      await next.close()
     } finally {
+      await next.close()
+      await page.close()
       await s.sw.evaluate((links) => chrome.storage.local.set({links}), links)
     }
-    await page.close()
   })
 
-  it('mentions the cover (and the mute) in the save notice only when they are on', async () => {
+  describe('the save notice', () => {
     const cover = '打开它的网页时会先遮住页面，点“显示页面”后才显示（可在设置里关闭）'
     const coverMute = '打开它的网页时会先遮住页面并静音，点“显示页面”后才显示（可在设置里关闭）'
-    const p = await openPopup(s)
-    await submitUnlock(p, 'notes')
-    await clickText(p, '手动添加')
-    await p.type('#url', 'example.org')
-    try {
-      for (const [prefs, expected] of [
-        [{cover: true, mute: true}, coverMute],
-        [{cover: true, mute: false}, cover],
-        [{cover: false, mute: true}, null]
-      ] as const) {
-        await s.sw.evaluate((prefs) => chrome.storage.local.set({prefs}), prefs)
+    let savedPrefs: unknown
+
+    beforeAll(async () => {
+      savedPrefs = await s.sw.evaluate(async () => (await chrome.storage.local.get('prefs')).prefs)
+    })
+
+    afterAll(async () => {
+      await s.sw.evaluate(async (prefs) => {
+        if (prefs === undefined) await chrome.storage.local.remove('prefs')
+        else await chrome.storage.local.set({prefs})
+      }, savedPrefs)
+    })
+
+    it('mentions the cover (and the mute) only when they are on', async () => {
+      const p = await openPopup(s)
+      try {
+        await submitUnlock(p, 'notes')
+        await clickText(p, '手动添加')
+        await p.type('#url', 'example.org')
+        for (const [prefs, expected] of [
+          [{cover: true, mute: true}, coverMute],
+          [{cover: true, mute: false}, cover],
+          [{cover: false, mute: true}, null]
+        ] as const) {
+          await s.sw.evaluate((prefs) => chrome.storage.local.set({prefs}), prefs)
+          await clickText(p, '保存')
+          await waitText(p, '确认保存')
+          expect(await hasText(p, cover)).toBe(expected === cover)
+          expect(await hasText(p, coverMute)).toBe(expected === coverMute)
+          await clickText(p, '返回修改')
+          await p.waitForFunction(() => !document.body.textContent?.includes('确认保存'))
+        }
+      } finally {
+        await p.close()
+      }
+    })
+
+    it('leaves the cover out when an edit protects nothing new', async () => {
+      // A bookmark under every protected site, so a title-only edit still gets the notice.
+      const urls = ['http://example.com/bm', 'http://example.net/bm', 'http://localhost/bm']
+      const ids = await s.sw.evaluate(
+        async (urls) => Promise.all(urls.map(async (url) => (await chrome.bookmarks.create({title: 'bm', url})).id)),
+        urls
+      )
+      const p = await openPopup(s)
+      try {
+        await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
+        await submitUnlock(p, 'notes')
+        const [firstEdit] = await p.$$('button[aria-label="编辑"]')
+        await firstEdit?.click()
+        await clearAndType(p, '#title', 'Renamed')
         await clickText(p, '保存')
         await waitText(p, '确认保存')
-        expect(await hasText(p, cover)).toBe(expected === cover)
-        expect(await hasText(p, coverMute)).toBe(expected === coverMute)
-        await clickText(p, '返回修改')
-        await p.waitForFunction(() => !document.body.textContent?.includes('确认保存'))
+        expect(await hasText(p, '1 个书签')).toBe(true)
+        expect(await hasText(p, coverMute)).toBe(false)
+        expect(await hasText(p, cover)).toBe(false)
+      } finally {
+        await p.close()
+        await s.sw.evaluate(async (ids) => Promise.all(ids.map((id) => chrome.bookmarks.remove(id))), ids)
       }
-    } finally {
-      await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
-      await p.close()
-    }
+    })
   })
 })

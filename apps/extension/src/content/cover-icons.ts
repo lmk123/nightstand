@@ -55,12 +55,15 @@ export const SHAPES: Record<IconSet, readonly Shape[]> = {
   ]
 }
 
+/** The canvas every icon in `icons-src` is drawn on. */
+export const VIEW_BOX = '0 0 128 128'
+
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
 /** A fresh, decorative (aria-hidden) `<svg>` of the icon set. */
 export function createIcon(set: IconSet): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, 'svg')
-  svg.setAttribute('viewBox', '0 0 128 128')
+  svg.setAttribute('viewBox', VIEW_BOX)
   svg.setAttribute('aria-hidden', 'true')
   for (const [tag, attributes] of SHAPES[set]) {
     const shape = document.createElementNS(SVG_NS, tag)

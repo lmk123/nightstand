@@ -1,10 +1,12 @@
 // Keeps the cover's icon shapes (src/content/cover-icons.ts, drawn with
 // createElementNS so the page script loads nothing) identical to
 // icons-src/*.svg, which the toolbar PNGs are rendered from. Runs in `pnpm lint`.
+// Imports the .ts module directly: Node strips its types (22.18+, hence
+// `engines` in the root package.json).
 import {readdirSync, readFileSync} from 'node:fs'
 import {basename, dirname, join} from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {SHAPES} from '../src/content/cover-icons.ts'
+import {SHAPES, VIEW_BOX} from '../src/content/cover-icons.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const problems = []
@@ -30,7 +32,11 @@ for (const name of sources) {
     problems.push(`icons-src/${name}.svg has no shapes in cover-icons.ts`)
     continue
   }
-  const want = JSON.stringify(shapesOf(readFileSync(join(root, 'icons-src', `${name}.svg`), 'utf8')))
+  const svg = readFileSync(join(root, 'icons-src', `${name}.svg`), 'utf8')
+  // createIcon draws every set on VIEW_BOX; another canvas would crop or shrink it.
+  const viewBox = /<svg\b[^>]*?\bviewBox="([^"]*)"/.exec(svg)?.[1]
+  if (viewBox !== VIEW_BOX) problems.push(`icons-src/${name}.svg has viewBox "${viewBox}", the cover draws on "${VIEW_BOX}"`)
+  const want = JSON.stringify(shapesOf(svg))
   const got = JSON.stringify(SHAPES[name].map(([tag, attributes]) => [tag, sorted(attributes)]))
   if (want !== got) problems.push(`${name}: cover-icons.ts differs from icons-src/${name}.svg\n      svg:   ${want}\n      cover: ${got}`)
 }

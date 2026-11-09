@@ -15,7 +15,7 @@ import {
  *
  * - `shelf`    encrypted vault (absent until onboarding completes)
  * - `index`    hashed match table for the background
- * - `links`    decoy links + icon (plaintext, needed while locked; the page script reads the icon)
+ * - `links`    decoy links + icon (plaintext, needed while locked; the page script reads it on a page it covers, for the icon)
  * - `state`    background bookkeeping (written by the background)
  * - `prefs`    cover / mute preferences (plaintext, needed while locked)
  *

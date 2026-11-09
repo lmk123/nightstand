@@ -283,8 +283,8 @@ export function EntryForm({
               <RefreshCw className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
               {t('saveNoticeAutoClean')}
             </p>
-            {/* So the first covered page isn't a surprise. Says nothing when the cover is off. */}
-            {pending.prefs.cover && (
+            {/* So the first covered page isn't a surprise: only for pages not protected before, and only when the cover is on. */}
+            {pending.prefs.cover && widensScope(editing, pending.entry) && (
               <p className="text-foreground flex items-start gap-2 text-[13px] leading-snug font-semibold">
                 <EyeOff className="mt-0.5 size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
                 {t(pending.prefs.mute ? 'saveNoticeCoverMute' : 'saveNoticeCover')}
