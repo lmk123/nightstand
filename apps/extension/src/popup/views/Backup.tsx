@@ -49,6 +49,12 @@ export function Backup({
   const [busy, setBusy] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  /**
+   * Bumped whenever a new source (a picked file, pasted text) replaces the
+   * backup: a file read or an import still running for the old one then
+   * leaves the view to the new one.
+   */
+  const source = useRef(0)
 
   function exportEncrypted() {
     const text = serializeBackup(createBackup(session.stored, Date.now()))
@@ -74,28 +80,36 @@ export function Backup({
   async function importBackup(event: React.FormEvent) {
     event.preventDefault()
     if (!backup) return
+    const started = source.current
+    const current = () => started === source.current
     setBusy(true)
     try {
       let merged: MergeResult
       try {
         const data = await openBackup(backup, secret)
+        if (!current()) return
         if (!data) return setError(t('errBackupSecret'))
         merged = mergeEntries(session.data.entries, data.entries)
       } catch (e) {
         // The file itself parsed, so a newer payload only shows up here, after decrypting.
-        return setError(isCoreError(e, 'unsupported-version') ? t('errBackupNewer') : t('errBackupInvalid'))
+        if (current()) setError(isCoreError(e, 'unsupported-version') ? t('errBackupNewer') : t('errBackupInvalid'))
+        return
       }
       try {
         await onImported(merged)
       } catch (e) {
         // The backup is fine; writing the merged vault failed.
         console.error(e)
-        return setError(t('errSaveFailed'))
+        if (current()) setError(t('errSaveFailed'))
+        return
       }
+      // Imported either way; only the form still belongs to this backup if no new one replaced it.
       setResult(merged)
+      if (!current()) return
       setBackup(null)
       setSecret('')
       setPasted('')
+      setFileName(null)
       setError(null)
     } finally {
       setBusy(false)
@@ -106,9 +120,9 @@ export function Backup({
     <div className={viewClass}>
       <Header title={t('backupTitle')} onBack={onBack} />
       <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4 *:shrink-0">
-        <section className="grid gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('backupExportSection')}</h2>
-          <div className="panel grid gap-3 p-3.5">
+          <div className="panel grid grid-cols-1 gap-3 p-3.5">
             <p className="text-subtle-foreground text-[12.5px] leading-relaxed">{t('backupExportHint')}</p>
             <Button className={cn(buttonClass, 'justify-self-start')} onClick={exportEncrypted}>
               <Download />
@@ -117,9 +131,9 @@ export function Backup({
           </div>
         </section>
 
-        <section className="grid gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('backupImportSection')}</h2>
-          <div className="panel grid gap-3 p-3.5">
+          <div className="panel grid grid-cols-1 gap-3 p-3.5">
             <p className="text-subtle-foreground text-[12.5px] leading-relaxed">{t('backupImportHint')}</p>
             {isFirefoxLike ? (
               <Field label={t('backupPasteLabel')} htmlFor="paste" hint={t('backupPasteHint')}>
@@ -130,6 +144,7 @@ export function Backup({
                   className="bg-background dark:bg-background rounded-lg font-mono text-xs md:text-xs"
                   value={pasted}
                   onChange={(e) => {
+                    source.current++
                     setPasted(e.target.value)
                     if (e.target.value.trim()) load(e.target.value)
                     else setBackup(null)
@@ -147,8 +162,23 @@ export function Backup({
                     const file = e.target.files?.[0]
                     e.target.value = ''
                     if (!file) return
+                    // Drop the previous file's backup, passphrase and message at once,
+                    // and ignore a read that a later pick overtook.
+                    const pick = ++source.current
                     setFileName(file.name)
-                    load(await file.text())
+                    setBackup(null)
+                    setSecret('')
+                    setError(null)
+                    setResult(null)
+                    let text: string
+                    try {
+                      text = await file.text()
+                    } catch (err) {
+                      console.error(err)
+                      if (pick === source.current) setError(t('errBackupInvalid'))
+                      return
+                    }
+                    if (pick === source.current) load(text)
                   }}
                 />
                 <FileText className="text-subtle-foreground size-[18px] shrink-0" aria-hidden />
@@ -165,7 +195,7 @@ export function Backup({
               </div>
             )}
             {backup && (
-              <form className="grid gap-3" onSubmit={importBackup}>
+              <form className="grid grid-cols-1 gap-3" onSubmit={importBackup}>
                 <Field label={t('backupSecretLabel')} htmlFor="secret" hint={t('backupSecretHint')}>
                   <Input
                     id="secret"
@@ -191,10 +221,10 @@ export function Backup({
           </div>
         </section>
 
-        <section className="grid gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('plainExportSection')}</h2>
           {confirmPlain ? (
-            <div role="alert" className="bg-destructive-soft border-destructive-line grid gap-2 rounded-xl border p-3.5">
+            <div role="alert" className="bg-destructive-soft border-destructive-line grid grid-cols-1 gap-2 rounded-xl border p-3.5">
               <p className="text-destructive flex items-center gap-2 text-[13px] font-semibold">
                 <TriangleAlert className="size-[18px] shrink-0" aria-hidden />
                 {t('plainExportWarningTitle')}

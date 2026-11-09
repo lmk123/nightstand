@@ -164,7 +164,7 @@ export function EntryForm({
             />
             <HelpLink topic="matchMode" label="faqMatchLink" />
           </Field>
-          <div className="panel grid">
+          <div className="panel grid grid-cols-1">
             <button
               type="button"
               className="focus-visible:ring-ring/50 flex min-h-11 items-center justify-between rounded-xl px-3 text-left text-[13px] font-medium outline-none focus-visible:ring-2"
@@ -180,7 +180,7 @@ export function EntryForm({
               )}
             </button>
             {extraOpen && (
-              <div className="grid gap-2 px-3 pb-3">
+              <div className="grid grid-cols-1 gap-2 px-3 pb-3">
                 <Textarea
                   id="extra-hosts"
                   aria-label={t('fieldExtraHosts', String(parseExtraHosts(extraHosts).hosts.length))}
@@ -255,7 +255,7 @@ export function EntryForm({
           <section
             role="alertdialog"
             aria-labelledby="save-notice-title"
-            className="bg-card absolute inset-x-0 bottom-0 grid max-h-full gap-3.5 overflow-y-auto rounded-t-[18px] px-4 pt-2.5 pb-4 shadow-[0_-8px_24px_rgb(0_0_0/0.14)]"
+            className="bg-card absolute inset-x-0 bottom-0 grid grid-cols-1 max-h-full gap-3.5 overflow-y-auto rounded-t-[18px] px-4 pt-2.5 pb-4 shadow-[0_-8px_24px_rgb(0_0_0/0.14)]"
           >
             <span aria-hidden className="bg-input h-1 w-9 justify-self-center rounded-full" />
             <h2 id="save-notice-title" className="text-base font-semibold">

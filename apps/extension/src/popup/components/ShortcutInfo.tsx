@@ -22,7 +22,7 @@ export function ShortcutInfo() {
   const keys = shortcut ? (shortcut.includes('+') ? shortcut.split('+') : [...shortcut]) : []
 
   return (
-    <div className="panel grid gap-2.5 p-3 text-xs leading-relaxed">
+    <div className="panel grid grid-cols-1 gap-2.5 p-3 text-xs leading-relaxed">
       {shortcut === null ? null : shortcut ? (
         <p className="flex items-center justify-between gap-2 text-[13px]">
           <span>{t('shortcutCurrentLabel')}</span>

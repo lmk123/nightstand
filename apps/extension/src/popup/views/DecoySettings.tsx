@@ -55,10 +55,10 @@ export function DecoySettings({
     <div className={viewClass}>
       <Header title={t('decoySettingsTitle')} onBack={onBack} />
       <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-3 py-4 *:shrink-0">
-        <section className="grid gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('decoyLinksSection')}</h2>
           {config.links.length > 0 && (
-            <ul className="panel grid p-1">
+            <ul className="panel grid grid-cols-1 p-1">
               {config.links.map((link) => (
                 <li key={link.id} className="flex items-center gap-2.5 py-1.5 pr-1 pl-2">
                   <SiteAvatar text={link.title} pageUrl={link.url} />
@@ -80,8 +80,8 @@ export function DecoySettings({
               ))}
             </ul>
           )}
-          <form className="bg-muted grid gap-2 rounded-xl p-3" onSubmit={addLink}>
-            <div className="grid grid-cols-[2fr_3fr] gap-2">
+          <form className="bg-muted grid grid-cols-1 gap-2 rounded-xl p-3" onSubmit={addLink}>
+            <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-2">
               <Input
                 className={small}
                 aria-label={t('decoyLinkTitle')}
@@ -118,7 +118,7 @@ export function DecoySettings({
             </div>
           </form>
         </section>
-        <section className="grid gap-2">
+        <section className="grid grid-cols-1 gap-2">
           <h2 className="section-label">{t('iconSection')}</h2>
           <IconPicker links={config} onChange={onChange} />
         </section>

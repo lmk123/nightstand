@@ -80,7 +80,7 @@ export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void})
                 />
               </button>
               {expanded && (
-                <div className="text-subtle-foreground grid gap-3 px-3 pb-3.5 text-[12.5px] leading-relaxed [&_strong]:text-foreground">
+                <div className="text-subtle-foreground grid grid-cols-1 gap-3 px-3 pb-3.5 text-[12.5px] leading-relaxed [&_strong]:text-foreground">
                   {body[id]}
                 </div>
               )}
