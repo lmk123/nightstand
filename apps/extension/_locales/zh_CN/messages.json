@@ -225,6 +225,12 @@
   "currentTabUnsupported": {
     "message": "当前标签页不是普通网页，无法添加。"
   },
+  "incognitoRetired": {
+    "message": "收藏的网站现在总是在新标签页打开，不再支持用无痕窗口打开。每次访问后，Nightstand 照样会清理它们的浏览记录。"
+  },
+  "privateRetiredFirefox": {
+    "message": "收藏的网站现在总是在新标签页打开，不再支持用隐私窗口打开。每次访问后，Nightstand 照样会清理它们的浏览记录。"
+  },
   "entryAddTitle": {
     "message": "添加链接"
   },

@@ -5,12 +5,21 @@ import {STORAGE_KEYS} from '@/platform/storage'
 export interface BackgroundState {
   /** Epoch ms of the last completed history scan (0 = never). */
   lastScanAt: number
+  /**
+   * Incognito / private windows an older build opened (saved sites can no
+   * longer open in one). Kept so panic still closes windows opened before the
+   * update; it only shrinks: emptied by panic and at browser start-up. Remove
+   * once no installed build can have recorded any.
+   */
+  incognitoWindows: number[]
 }
 
 function parse(raw: unknown): BackgroundState {
-  // Only known fields are kept, so an old build's `incognitoWindows` list is
-  // dropped on the next write.
-  return {lastScanAt: isRecord(raw) && isFiniteNumber(raw.lastScanAt) ? raw.lastScanAt : 0}
+  if (!isRecord(raw)) return {lastScanAt: 0, incognitoWindows: []}
+  return {
+    lastScanAt: isFiniteNumber(raw.lastScanAt) ? raw.lastScanAt : 0,
+    incognitoWindows: Array.isArray(raw.incognitoWindows) ? raw.incognitoWindows.filter(isFiniteNumber) : []
+  }
 }
 
 // Serialize read-modify-write cycles so concurrent events don't clobber each other.

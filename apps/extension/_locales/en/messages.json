@@ -225,6 +225,12 @@
   "currentTabUnsupported": {
     "message": "The current tab isn't a regular web page and can't be added."
   },
+  "incognitoRetired": {
+    "message": "Saved sites now always open in a new tab; opening them in an Incognito window is no longer an option. Nightstand still cleans their history after every visit."
+  },
+  "privateRetiredFirefox": {
+    "message": "Saved sites now always open in a new tab; opening them in a private window is no longer an option. Nightstand still cleans their history after every visit."
+  },
   "entryAddTitle": {
     "message": "Add link"
   },

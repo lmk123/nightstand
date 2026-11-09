@@ -2,13 +2,15 @@
 //
 // Cleans history for protected sites (also while the vault is locked, using
 // only the hashed match table), mutes protected tabs and answers the page
-// script that covers them, and handles the panic shortcut. It never sees the vault key.
+// script that covers them, and handles the panic shortcut. It never sees the
+// vault key.
 import {applyIcon} from '@/platform/icons'
-import {isBackgroundRequest, isPageRequest, type PageReply} from '@/platform/messages'
+import {isBackgroundRequest, isPageRequest, type BackgroundRequest, type PageReply} from '@/platform/messages'
 import {loadLinks, removeRetiredKeys} from '@/platform/storage'
 import {fullScan, handleVisited, incrementalScan, isOwnPage, purgeEntries} from './cleaner'
 import {coverOpenTabs, handlePageRequest} from './cover'
 import {panic} from './panic'
+import {updateState} from './state'
 
 const SCAN_ALARM = 'scan'
 const SCAN_PERIOD_MINUTES = 15
@@ -46,7 +48,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   // Everything else only from our own popup.
   if (!isBackgroundRequest(message)) return
-  purgeEntries(message.hosts, message.urls).then(
+  handleBackgroundRequest(message).then(
     () => sendResponse({ok: true}),
     (error: unknown) => {
       console.error(error)
@@ -55,6 +57,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   )
   return true
 })
+
+function handleBackgroundRequest(request: BackgroundRequest): Promise<void> {
+  switch (request.type) {
+    case 'purge':
+      return purgeEntries(request.hosts, request.urls)
+    default:
+      // A new request type must be handled here: this stops type-checking otherwise.
+      return request.type satisfies never
+  }
+}
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === 'panic') panic().catch(console.error)
@@ -77,6 +89,10 @@ async function restoreIcon(): Promise<void> {
 }
 
 chrome.runtime.onStartup.addListener(() => {
+  // Window ids start over with every browser session: forget the incognito
+  // windows an older build recorded, so panic can't close an ordinary window
+  // that now has one of those ids.
+  updateState((s) => (s.incognitoWindows.length ? {...s, incognitoWindows: []} : s)).catch(console.error)
   restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
   coverOpenTabs().catch(console.error)
