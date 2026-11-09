@@ -6,7 +6,7 @@
 export const LOCALES = ['en', 'zh_CN'] as const
 export type Locale = (typeof LOCALES)[number]
 
-export type ShotName = 'decoy' | 'vault' | 'form' | 'notice' | 'settings'
+export type ShotName = 'decoy' | 'vault' | 'cover' | 'form' | 'notice' | 'settings'
 
 export interface Caption {
   /** `\n` marks a line break (Chinese has no spaces to balance lines on). */
@@ -46,6 +46,13 @@ export const COPY: Record<Locale, Copy> = {
         {
           title: 'Your sites, in an encrypted list',
           body: 'Their browsing history is deleted after every visit, so the address bar stops suggesting them.'
+        }
+      ],
+      [
+        'cover',
+        {
+          title: 'Covered until you choose to show it',
+          body: "A saved site opens covered and muted, under a plain tab title. Switch tabs or leave it for a minute, and it's covered again."
         }
       ],
       [
@@ -104,6 +111,13 @@ export const COPY: Record<Locale, Copy> = {
         {
           title: '你的网站，\n存在加密列表里',
           body: '每次访问后自动删除浏览记录，地址栏就不会再提示它们。'
+        }
+      ],
+      [
+        'cover',
+        {
+          title: '收藏的网站，\n先遮住再显示',
+          body: '打开时页面被盖住、标签页静音，点“显示页面”才出现。切换标签页或一分钟不操作，又会重新遮住。'
         }
       ],
       [

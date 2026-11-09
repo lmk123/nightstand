@@ -1,4 +1,4 @@
-import {mkdirSync, readFileSync, writeFileSync} from 'node:fs'
+import {mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs'
 import http from 'node:http'
 import type {AddressInfo} from 'node:net'
 import {join} from 'node:path'
@@ -116,6 +116,38 @@ async function render(s: ChromeSession, file: string, width: number, height: num
 
 const escape = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
+/** The caption on the left of every screenshot. */
+const captionHtml = (caption: Caption) =>
+  `<div class="copy">
+     <div class="brand"><img src="${BRAND_PNG}">Nightstand</div>
+     <h1>${escape(caption.title)}</h1>
+     <p>${escape(caption.body)}</p>
+   </div>`
+
+const CAPTION_CSS = `.copy { position: absolute; left: 88px; top: 0; bottom: 0; width: 500px; display: flex; flex-direction: column; justify-content: center; gap: 22px }
+  .brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 600; color: ${GREEN} }
+  .brand img { width: 36px; height: 36px }
+  h1 { font-size: 44px; line-height: 1.2; font-weight: 700; text-wrap: balance; white-space: pre-line }
+  p { font-size: 21px; line-height: 1.6; color: ${MUTED}; text-wrap: pretty }`
+
+/** The browser window on the right of every screenshot, and its toolbar. */
+const WINDOW_CSS = `.window { position: absolute; left: 650px; right: 0; top: 56px; bottom: 0; overflow: hidden; background: #fbfaf7; border-radius: 16px 0 0 0; box-shadow: 0 24px 70px rgb(31 48 41 / 0.16) }
+  .bar { height: 56px; display: flex; align-items: center; gap: 14px; padding: 0 20px; background: #f1f2f0; border-bottom: 1px solid #e2e4e1 }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: #d6d9d5 }
+  .omni { flex: 1; height: 34px; border-radius: 17px; background: #fff; border: 1px solid #dde0dc }
+  .ext { width: 36px; height: 36px; border-radius: 50%; background: #dde7e2; display: grid; place-items: center }
+  .ext img { width: 22px; height: 22px }
+  .me { width: 28px; height: 28px; border-radius: 50%; background: #c9d3ce }`
+
+const TOOLBAR = `<div class="omni"></div><div class="ext"><img src="${BRAND_PNG}"></div><div class="me"></div>`
+
+/** The page area of the cover screenshot's window: below a 44px tab strip and the 56px toolbar. */
+const PAGE_WIDTH = 1280 - 650
+const PAGE_HEIGHT = 800 - 56 - 44 - 56
+
+/** A muted-speaker glyph, like the one on a muted tab. */
+const MUTED_SVG = `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="${MUTED}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6h2.5l3.5-3v10l-3.5-3h-2.5z" fill="${MUTED}"/><path d="M11 6l4 4M15 6l-4 4"/></svg>`
+
 /** A browser corner with the popup open under the toolbar icon, next to the caption. */
 async function renderScreenshot(s: ChromeSession, file: string, popup: string, popupHeight: number, caption: Caption) {
   const top = 124
@@ -125,32 +157,48 @@ async function renderScreenshot(s: ChromeSession, file: string, popup: string, p
     file,
     1280,
     800,
-    `<div class="copy">
-       <div class="brand"><img src="${BRAND_PNG}">Nightstand</div>
-       <h1>${escape(caption.title)}</h1>
-       <p>${escape(caption.body)}</p>
-     </div>
+    `${captionHtml(caption)}
      <div class="window"><div class="bar">
        <i class="dot"></i><i class="dot"></i><i class="dot"></i>
-       <div class="omni"></div>
-       <div class="ext"><img src="${BRAND_PNG}"></div>
-       <div class="me"></div>
+       ${TOOLBAR}
      </div></div>
      <img class="popup" src="${popup}" style="width:${360 * scale}px">`,
-    `.copy { position: absolute; left: 88px; top: 0; bottom: 0; width: 500px; display: flex; flex-direction: column; justify-content: center; gap: 22px }
-     .brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 600; color: ${GREEN} }
-     .brand img { width: 36px; height: 36px }
-     h1 { font-size: 44px; line-height: 1.2; font-weight: 700; text-wrap: balance; white-space: pre-line }
-     p { font-size: 21px; line-height: 1.6; color: ${MUTED}; text-wrap: pretty }
-     .window { position: absolute; left: 650px; right: 0; top: 56px; bottom: 0; background: #fbfaf7; border-radius: 16px 0 0 0; box-shadow: 0 24px 70px rgb(31 48 41 / 0.16) }
-     .bar { height: 56px; display: flex; align-items: center; gap: 14px; padding: 0 20px; background: #f1f2f0; border-radius: 16px 0 0 0; border-bottom: 1px solid #e2e4e1 }
-     .dot { width: 12px; height: 12px; border-radius: 50%; background: #d6d9d5 }
+    `${CAPTION_CSS}
+     ${WINDOW_CSS}
      .dot:nth-child(3) { margin-right: 8px }
-     .omni { flex: 1; height: 34px; border-radius: 17px; background: #fff; border: 1px solid #dde0dc }
-     .ext { width: 36px; height: 36px; border-radius: 50%; background: #dde7e2; display: grid; place-items: center }
-     .ext img { width: 22px; height: 22px }
-     .me { width: 28px; height: 28px; border-radius: 50%; background: #c9d3ce }
      .popup { position: absolute; right: 52px; top: ${top}px; border-radius: 12px; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.06), 0 18px 48px rgb(31 48 41 / 0.28) }`
+  )
+}
+
+/**
+ * A browser window showing a covered page: the tab strip shows the neutral
+ * title the page script swapped in and the muted tab; the site's own icon stays
+ * on the tab, as it does in the browser.
+ */
+async function renderCoverScreenshot(s: ChromeSession, file: string, page: string, site: Site, title: string, caption: Caption) {
+  await render(
+    s,
+    file,
+    1280,
+    800,
+    `${captionHtml(caption)}
+     <div class="window">
+       <div class="tabs">
+         <i class="dot"></i><i class="dot"></i><i class="dot"></i>
+         <div class="tab"><span class="favicon">${site.emoji}</span><span class="title">${escape(title)}</span>${MUTED_SVG}</div>
+       </div>
+       <div class="bar">${TOOLBAR}</div>
+       <img class="page" src="${page}">
+     </div>`,
+    `${CAPTION_CSS}
+     ${WINDOW_CSS}
+     .tabs { height: 44px; display: flex; align-items: flex-end; gap: 8px; padding: 0 20px; background: #e2e5e1 }
+     .tabs .dot { align-self: center; margin-top: 2px }
+     .tabs .dot:nth-child(3) { margin-right: 18px }
+     .tab { width: 240px; height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: #f1f2f0; border-radius: 10px 10px 0 0; font-size: 14px }
+     .favicon { font-size: 16px; line-height: 1 }
+     .tab .title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+     .page { display: block; width: ${PAGE_WIDTH}px; height: ${PAGE_HEIGHT}px }`
   )
 }
 
@@ -261,6 +309,19 @@ async function shoot(locale: Locale) {
     await rows[1]?.click()
     await keep('vault')
 
+    // A saved site, opened after it was saved: the page script covers it.
+    const coverSite = saved.find((site) => site.host === 'gifts.example')!
+    const tab = await s.browser.newPage()
+    await tab.setViewport({width: PAGE_WIDTH, height: PAGE_HEIGHT, deviceScaleFactor: 2})
+    await tab.emulateMediaFeatures([{name: 'prefers-color-scheme', value: 'light'}])
+    await tab.goto(url(coverSite))
+    await tab.waitForSelector(':root > dialog:modal')
+    await sleep(500)
+    const coverTitle = await tab.title()
+    const coverPng = `data:image/png;base64,${Buffer.from(await tab.screenshot({type: 'png'})).toString('base64')}`
+    await tab.close()
+    await p.bringToFront()
+
     await p.click(`button[aria-label="${m('settings')}"]`)
     await waitText(p, m('shortcutSection'))
     await keep('settings')
@@ -273,8 +334,13 @@ async function shoot(locale: Locale) {
     await keep('decoy')
 
     for (const [i, [name, caption]] of shots.entries()) {
+      const file = join(dir, `screenshot-${i + 1}-${name}.png`)
+      if (name === 'cover') {
+        await renderCoverScreenshot(s, file, coverPng, coverSite, coverTitle, caption)
+        continue
+      }
       const shot = captures.get(name)!
-      await renderScreenshot(s, join(dir, `screenshot-${i + 1}-${name}.png`), shot.src, shot.height, caption)
+      await renderScreenshot(s, file, shot.src, shot.height, caption)
     }
     await renderPromos(s, locale, dir, captures.get('decoy')!.src)
   } finally {
@@ -284,7 +350,11 @@ async function shoot(locale: Locale) {
 }
 
 describe.skipIf(!hasChrome)('Chrome Web Store images', () => {
-  beforeAll(() => mkdirSync(OUT, {recursive: true}))
+  // Start empty: screenshots are numbered, so a reordered set would leave stale files behind.
+  beforeAll(() => {
+    rmSync(OUT, {recursive: true, force: true})
+    mkdirSync(OUT, {recursive: true})
+  })
   afterAll(() => cleanupTemp())
 
   it('store icon', () => renderStoreIcon(join(OUT, 'icon-128.png')))

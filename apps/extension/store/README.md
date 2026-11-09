@@ -5,7 +5,7 @@
 ## 生成图片和打包
 
 ```bash
-pnpm store
+pnpm run store
 ```
 
 它会先构建（并打出 `apps/extension/dist/nightstand-<版本>-chromium.zip`），再用真实构建驱动本机的 Chrome 截图，输出到 `apps/extension/dist/store/`：

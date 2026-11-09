@@ -12,6 +12,7 @@ Works in Chrome, Edge and Firefox.
 
 - **Runs entirely on your device**: no account, no server, no network requests. Your list of sites is encrypted with your passphrase and stays in this computer's browser.
 - **Looks like an ordinary tool**: click the icon and all you see is a working "Quick Links" launcher; type your passphrase into its filter box to get to the real list. Close the popup and it locks itself. The name, description and icon on the extensions page are just as unremarkable.
+- **Covered until you choose**: open a saved site — on purpose, by accident, or when it starts playing in a background tab — and it stays covered and muted, under a plain tab title, until you click to show it. Switch tabs or leave it alone for a minute and it's covered again.
 - **Open source**: the code is public under the MIT license, so anyone can check that Nightstand does what it says and nothing more.
 
 ## What it does and doesn't protect against
@@ -24,7 +25,7 @@ Nightstand protects against **people who can see your screen**:
 - the bookmarks bar;
 - the name, description and icon on the extensions page;
 - someone curiously clicking the extension's icon;
-- a saved site you open by accident, or one that starts playing in a background tab: it opens covered and muted until you click to show it, and is covered again when you switch away or leave it alone for a minute.
+- a saved site you open by accident, or one that starts playing in a background tab.
 
 It doesn't protect against:
 
