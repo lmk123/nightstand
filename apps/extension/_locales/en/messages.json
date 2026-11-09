@@ -376,7 +376,7 @@
     "message": "Cover the page until I click \"Show page\""
   },
   "coverHint": {
-    "message": "It is covered again when you switch tabs, leave the browser window, or stop using the page for a minute."
+    "message": "It is covered again when you move the mouse off the page, switch tabs, leave the browser window, or stop using the page for a minute."
   },
   "muteSetting": {
     "message": "Mute the tab (sound comes back when the page is shown)"

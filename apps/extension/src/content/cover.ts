@@ -260,19 +260,52 @@ export default function main(): (() => void) | undefined {
   // paints: a hidden tab paints nothing, so a cover put up only when the tab
   // is hidden misses its last frame, and that frame (the page) is what the
   // browser shows for a moment when the user switches back. Switching tabs
-  // from the keyboard gives no such warning. A pointer still within the
-  // page went over a menu, a picker or a browser bubble on top of it, and a
-  // pressed button is a drag (selecting text past the edge): neither is
-  // leaving.
-  const onMouseOut = (event: MouseEvent) => {
-    if (state !== 'shown' || event.relatedTarget !== null || event.buttons !== 0) return
-    const {clientX: x, clientY: y} = event
-    if (x <= 0 || y <= 0 || x >= innerWidth - 1 || y >= innerHeight - 1) coverPage(true)
+  // from the keyboard gives no such warning.
+  //
+  // Missing a leave flashes the page, covering once too often only costs a
+  // click, so anything that may be a leave counts: the mouse going out, a
+  // button released outside (a drag past the edge: no `mouseout` comes while
+  // it is held, and after release only once the mouse moves again), a
+  // dragged link or file leaving the window. Only a pointer still within the
+  // page is not leaving: it went over a menu, a picker or a browser bubble
+  // on top of the page.
+  // Listened to only while the page is shown.
+  const LEAVE_EVENTS = ['mouseout', 'mouseup', 'dragleave', 'dragend'] as const
+
+  /**
+   * Outside the part of the page on screen. Client coordinates are relative
+   * to the layout viewport; when zoomed in by pinching, only the visual
+   * viewport (a part of it) is on screen.
+   */
+  function isOutside({clientX: x, clientY: y}: MouseEvent): boolean {
+    const view = window.visualViewport
+    const zoomed = view !== null && view.scale > 1
+    const left = zoomed ? view.offsetLeft : 0
+    const top = zoomed ? view.offsetTop : 0
+    const right = zoomed ? left + view.width : innerWidth
+    const bottom = zoomed ? top + view.height : innerHeight
+    return x <= left || y <= top || x >= right - 1 || y >= bottom - 1
   }
-  window.addEventListener('mouseout', onMouseOut, true)
+
+  const onLeave = (event: MouseEvent) => {
+    if (state !== 'shown') return
+    // Moving from one element (or frame) of the page to another.
+    if ((event.type === 'mouseout' || event.type === 'dragleave') && event.relatedTarget !== null) return
+    // Still dragging: where the button is released decides.
+    if (event.type === 'mouseout' && event.buttons !== 0) return
+    if (isOutside(event)) coverPage(true)
+  }
+
+  function watchLeaving(on: boolean): void {
+    for (const type of LEAVE_EVENTS) {
+      if (on) window.addEventListener(type, onLeave, true)
+      else window.removeEventListener(type, onLeave, true)
+    }
+  }
 
   function coverPage(report: boolean): void {
     clearTimeout(idleTimer)
+    watchLeaving(false)
     state = 'covered'
     loadIcon()
     raise()
@@ -296,12 +329,14 @@ export default function main(): (() => void) | undefined {
     state = 'shown'
     release()
     startIdle()
+    watchLeaving(true)
     if (report) void send({type: 'pageShown'})
   }
 
   function off(): void {
     if (state === 'covered') uncover()
     clearTimeout(idleTimer)
+    watchLeaving(false)
     state = 'off'
     release()
   }
@@ -467,7 +502,6 @@ export default function main(): (() => void) | undefined {
     window.removeEventListener('pageshow', onPageShow)
     document.removeEventListener('prerenderingchange', onActivated)
     for (const type of ACTIVITY_EVENTS) window.removeEventListener(type, onActivity, {capture: true})
-    window.removeEventListener('mouseout', onMouseOut, true)
     chrome.runtime.onMessage.removeListener(onNotice)
     chrome.storage.onChanged.removeListener(onStorage)
   }
