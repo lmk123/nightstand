@@ -4,22 +4,38 @@
 // tab a neutral title until the user clicks "Show"; the background keeps the
 // tab muted until then. A shown page is covered again when the mouse leaves
 // it, when its tab is hidden, when the browser window loses focus (the
-// background says so) or after a minute without input on the page.
+// background says so) or after the chosen idle time (a minute by default)
+// without input on the page, unless its tab is playing sound.
 //
-// It only reads the hashed match table, the cover/mute preferences and, on a
-// page it covers, the plaintext decoy config `links` for its toolbar icon
-// (shown on the button, so the user sees what covered the page), never the
-// vault, and sends nothing anywhere except "shown"/"covered" for its own tab
-// to the background. On any other page it removes its pre-load hiding as
-// soon as the lookup answers and then stays idle.
-import {createMatcher, parseDecoyConfig, type IconSet, type UrlMatcher} from '@nightstand/core'
+// It only reads the hashed match table, the cover/mute/idle preferences and,
+// on a page it covers, the plaintext decoy config `links` for its toolbar
+// icon (shown on the button, so the user sees what covered the page), never
+// the vault, and sends nothing anywhere except "shown"/"covered" (and "is it
+// playing?") for its own tab to the background. On any other page it
+// removes its pre-load hiding as soon as the lookup answers and then stays
+// idle.
+import {createMatcher, defaultPrefs, parseDecoyConfig, parsePrefs, type IconSet, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
 import {isPageNotice, type PageReply, type PageRequest} from '@/platform/messages'
 import {loadLinks, loadPrefsAndIndex, STORAGE_KEYS} from '@/platform/storage'
 import {createIcon} from './cover-icons'
 
-/** A shown page is covered again after this long without input on it. */
-const IDLE_MS = 60_000
+/** The unit of the idle time setting. */
+const MINUTE_MS = 60_000
+
+/**
+ * How long a tab that went quiet must stay so before an idle page covers.
+ * `audible` turns false after about two seconds of silence of any kind, not
+ * only a pause: buffering, a silent scene, the gap between two tracks.
+ */
+const QUIET_GRACE_MS = 10_000
+
+/**
+ * While the tab plays sound, the background says when it goes quiet; in case
+ * that notice never comes, the page asks again this often. Long, so a long
+ * video doesn't wake the worker every minute.
+ */
+const PLAYING_RECHECK_MS = 10 * MINUTE_MS
 
 /** Input that counts as using the page. */
 const ACTIVITY_EVENTS = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const
@@ -235,23 +251,70 @@ export default function main(): (() => void) | undefined {
   document.addEventListener('toggle', onTopLayer, true)
   document.addEventListener('fullscreenchange', onTopLayer, true)
 
-  // Idle: a shown page is covered again after IDLE_MS without input.
+  // Idle: a shown page is covered again after `idleMs` without input. Sound
+  // means someone is watching or listening (as with a screen saver): once
+  // the time is up the page asks the background whether its tab is playing,
+  // and while it is, waits for the background to say the tab went quiet;
+  // if it is still quiet `QUIET_GRACE_MS` later and there was no input
+  // meanwhile, the page covers. In case that notice never comes, it asks
+  // again every `PLAYING_RECHECK_MS`.
+  let idleMs = defaultPrefs().idleMinutes * MINUTE_MS
   let lastInput = Date.now()
   let idleTimer: ReturnType<typeof setTimeout> | undefined
+  // Bumped whenever the wait stops or restarts, so an answer about playing
+  // that arrives afterwards is dropped.
+  let idleRun = 0
   const onActivity = () => {
     lastInput = Date.now()
   }
-  function checkIdle(): void {
+  function waitIdle(ms: number): void {
+    idleTimer = setTimeout(() => void checkIdle(), ms)
+  }
+  /** Waits out what is left of the idle time; once it is up, asks about sound. */
+  async function checkIdle(): Promise<void> {
     idleTimer = undefined
     if (state !== 'shown') return
-    const left = lastInput + IDLE_MS - Date.now()
-    if (left > 0) idleTimer = setTimeout(checkIdle, left)
-    else coverPage(true)
+    const left = lastInput + idleMs - Date.now()
+    if (left > 0) {
+      waitIdle(left)
+      return
+    }
+    const run = idleRun
+    const reply = await send({type: 'pagePlaying'})
+    if (run !== idleRun || state !== 'shown') return
+    // No answer (extension updated, background failed): not playing.
+    if (reply?.playing === true) waitIdle(PLAYING_RECHECK_MS)
+    else if (Date.now() - lastInput >= idleMs) coverPage(true)
+    else void checkIdle()
+  }
+  /**
+   * The background saw the tab go quiet. Whatever the page was waiting for
+   * (the idle time, the sound, an answer that may say "playing" from just
+   * before), it now waits at least the grace period and then checks again:
+   * sound that comes back by then keeps the page shown.
+   */
+  function onQuiet(): void {
+    if (state !== 'shown') return
+    stopIdle()
+    waitIdle(Math.max(QUIET_GRACE_MS, lastInput + idleMs - Date.now()))
+  }
+  function stopIdle(): void {
+    idleRun++
+    clearTimeout(idleTimer)
+    idleTimer = undefined
   }
   function startIdle(): void {
     lastInput = Date.now()
-    clearTimeout(idleTimer)
-    idleTimer = setTimeout(checkIdle, IDLE_MS)
+    stopIdle()
+    waitIdle(idleMs)
+  }
+  /** The idle time changed: a shown page waits by the new one from its last input. */
+  function setIdleMs(ms: number): void {
+    if (ms === idleMs) return
+    idleMs = ms
+    if (state !== 'shown') return
+    stopIdle()
+    void checkIdle()
   }
   for (const type of ACTIVITY_EVENTS) window.addEventListener(type, onActivity, {capture: true, passive: true})
 
@@ -310,7 +373,7 @@ export default function main(): (() => void) | undefined {
   }
 
   function coverPage(report: boolean): void {
-    clearTimeout(idleTimer)
+    stopIdle()
     watchLeaving(false)
     state = 'covered'
     loadIcon()
@@ -341,7 +404,7 @@ export default function main(): (() => void) | undefined {
 
   function off(): void {
     if (state === 'covered') uncover()
-    clearTimeout(idleTimer)
+    stopIdle()
     watchLeaving(false)
     state = 'off'
     release()
@@ -349,6 +412,7 @@ export default function main(): (() => void) | undefined {
 
   async function lookup(): Promise<{cover: boolean; matcher: UrlMatcher | null}> {
     const {prefs, index} = await loadPrefsAndIndex()
+    setIdleMs(prefs.idleMinutes * MINUTE_MS)
     // No vault yet, or a damaged table: nothing is protected.
     return {cover: prefs.cover, matcher: index ? createMatcher(index) : null}
   }
@@ -371,7 +435,8 @@ export default function main(): (() => void) | undefined {
    *   a protected page asks whether this tab was already shown (a link
    *   followed from a shown page stays shown); a page that had already
    *   decided follows the background's record of the tab.
-   * - `release`: preferences or the list changed while the page is open.
+   * - `release`: the list changed, or covering was turned on or off, while
+   *   the page is open.
    *   Never covers; only uncovers a page that is no longer protected.
    * - `activate`: a prerendered page became the tab's page.
    * - `restore`: the page came back from the back/forward cache, where it
@@ -481,6 +546,8 @@ export default function main(): (() => void) | undefined {
     if (!isPageNotice(message)) return
     if (message.type === 'cover') {
       if (state === 'shown') coverPage(false)
+    } else if (message.type === 'quiet') {
+      onQuiet()
     } else {
       queueEvaluate('load')
     }
@@ -492,7 +559,13 @@ export default function main(): (() => void) | undefined {
     const links = changes[STORAGE_KEYS.links]
     // Only once the icon is shown or on its way; otherwise the next read gets it.
     if (links && (iconSet || iconLoading)) setIcon(parseDecoyConfig(links.newValue).icon)
-    if (STORAGE_KEYS.index in changes || STORAGE_KEYS.prefs in changes) queueEvaluate('release')
+    // Only the list and turning covering off can release a page; the idle
+    // time is taken as it is, without matching again on every open page.
+    const prefs = changes[STORAGE_KEYS.prefs]
+    if (prefs) setIdleMs(parsePrefs(prefs.newValue).idleMinutes * MINUTE_MS)
+    if (STORAGE_KEYS.index in changes || (prefs && parsePrefs(prefs.oldValue).cover !== parsePrefs(prefs.newValue).cover)) {
+      queueEvaluate('release')
+    }
   }
   chrome.storage.onChanged.addListener(onStorage)
 
@@ -500,7 +573,6 @@ export default function main(): (() => void) | undefined {
 
   return () => {
     off()
-    clearTimeout(idleTimer)
     document.removeEventListener('toggle', onTopLayer, true)
     document.removeEventListener('fullscreenchange', onTopLayer, true)
     document.removeEventListener('visibilitychange', onVisibility)

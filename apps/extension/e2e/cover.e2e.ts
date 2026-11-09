@@ -1,10 +1,10 @@
 import type {Page, Protocol} from 'puppeteer-core'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
-import {launchChrome, openPopup, type ChromeSession} from './support/chrome'
-import {hasChrome} from './support/env'
-import {addEntry, clearAndType, clickText, hasText, onboard, sleep, submitUnlock, waitText} from './support/popup'
+import {launchChrome, openPopup, waitStorage, type ChromeSession} from './support/chrome'
+import {DIST_CHROMIUM, hasChrome} from './support/env'
+import {addEntry, clearAndType, clickText, hasText, onboard, openSettings, sleep, submitUnlock, waitText} from './support/popup'
 import {startTestServer} from './support/server'
-import {cleanupTemp} from './support/temp'
+import {cleanupTemp, patchedCopy} from './support/temp'
 
 /** The page script's cover: a modal dialog it appends to the root element (page dialogs live in the body). */
 const COVER = ':root > dialog:modal'
@@ -14,10 +14,10 @@ function covered(page: Page): Promise<boolean> {
   return page.evaluate((selector) => document.querySelector(selector) !== null, COVER)
 }
 
-async function waitCovered(page: Page, expected: boolean): Promise<void> {
+async function waitCovered(page: Page, expected: boolean, timeout = 5000): Promise<void> {
   await page.waitForFunction(
     (selector, expected) => (document.querySelector(selector) !== null) === expected,
-    {timeout: 5000},
+    {timeout},
     COVER,
     expected
   )
@@ -400,6 +400,52 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     }
   })
 
+  describe('the idle time setting', () => {
+    let savedPrefs: unknown
+
+    beforeAll(async () => {
+      savedPrefs = await s.sw.evaluate(async () => (await chrome.storage.local.get('prefs')).prefs)
+    })
+
+    afterAll(async () => {
+      await s.sw.evaluate(async (prefs) => {
+        if (prefs === undefined) await chrome.storage.local.remove('prefs')
+        else await chrome.storage.local.set({prefs})
+      }, savedPrefs)
+    })
+
+    it('defaults to a minute, saves the choice, and is disabled with covering off', async () => {
+      await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
+      const p = await openPopup(s)
+      try {
+        await submitUnlock(p, 'notes')
+        await openSettings(p)
+        await waitText(p, '无操作多久后重新遮住')
+        const select = 'select[data-slot="native-select"]'
+        await p.waitForSelector(select)
+        expect(await p.$eval(select, (el) => [...(el as HTMLSelectElement).options].map((o) => o.text))).toEqual([
+          '1 分钟',
+          '2 分钟',
+          '5 分钟'
+        ])
+        expect(await p.$eval(select, (el) => (el as HTMLSelectElement).value)).toBe('1')
+        await p.select(select, '5')
+        const prefs = () => s.sw.evaluate(async () => (await chrome.storage.local.get('prefs')).prefs as Record<string, unknown>)
+        await waitStorage(s, (snapshot) => (snapshot.prefs as {idleMinutes?: unknown} | undefined)?.idleMinutes === 5)
+        expect(await prefs()).toEqual({cover: true, mute: true, idleMinutes: 5})
+
+        // The first switch in settings is "cover the page".
+        const [coverSwitch] = await p.$$('[role="switch"]')
+        if (!coverSwitch) throw new Error('no switch in settings')
+        await coverSwitch.click()
+        await p.waitForFunction((select) => (document.querySelector(select) as HTMLSelectElement).disabled, {timeout: 5000}, select)
+        expect(await prefs()).toEqual({cover: false, mute: true, idleMinutes: 5})
+      } finally {
+        await p.close()
+      }
+    })
+  })
+
   describe('the save notice', () => {
     const cover = '打开它的网页时会先遮住页面，点“显示页面”后才显示（可在设置里关闭）'
     const coverMute = '打开它的网页时会先遮住页面并静音，点“显示页面”后才显示（可在设置里关闭）'
@@ -465,5 +511,124 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
         await s.sw.evaluate(async (ids) => Promise.all(ids.map((id) => chrome.bookmarks.remove(id))), ids)
       }
     })
+  })
+})
+
+/**
+ * The idle time, in a copy of the build where a minute of it takes a second
+ * and the grace after the tab goes quiet 1.5 seconds. Sound comes from an
+ * oscillator far below hearing (high pitch, -60 dB), still loud enough for
+ * Chrome to call the tab `audible`.
+ */
+describe.skipIf(!hasChrome)('covering a shown page again after the idle time (Chrome, sped up)', () => {
+  let s: ChromeSession
+  let server: Awaited<ReturnType<typeof startTestServer>>
+
+  beforeAll(async () => {
+    server = await startTestServer()
+    const extension = patchedCopy(DIST_CHROMIUM, {
+      onlyLocale: 'zh_CN',
+      pageScript: [
+        ['6e4*', '1e3*', 3],
+        ['Math.max(1e4,', 'Math.max(1500,', 1]
+      ]
+    })
+    s = await launchChrome({serverPort: server.port, extension, audible: true})
+    const p = await openPopup(s)
+    await onboard(p, 'notes')
+    await addEntry(p, 'example.com')
+    await p.close()
+  })
+  afterAll(async () => {
+    await s?.browser.close()
+    await server?.close()
+    cleanupTemp()
+  })
+
+  /** Opens a protected page and shows it; the click is the last input on it. */
+  async function shownPage(url: string): Promise<Page> {
+    const page = await s.browser.newPage()
+    await page.goto(url)
+    await waitCovered(page, true)
+    await clickShow(page)
+    await waitCovered(page, false)
+    return page
+  }
+
+  async function waitAudible(url: string, expected: boolean): Promise<void> {
+    const deadline = Date.now() + 8000
+    while ((await s.sw.evaluate(async (url) => (await chrome.tabs.query({url}))[0]?.audible === true, url)) !== expected) {
+      if (Date.now() > deadline) throw new Error(`tab never turned audible=${expected}`)
+      await sleep(100)
+    }
+  }
+
+  /** Starts a tone the page can turn on and off (the Show click allows it to play). */
+  async function startTone(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      const context = new AudioContext()
+      const oscillator = context.createOscillator()
+      oscillator.frequency.value = 17_000
+      const gain = context.createGain()
+      gain.gain.value = 0.001
+      oscillator.connect(gain).connect(context.destination)
+      oscillator.start()
+      ;(window as unknown as {tone: GainNode}).tone = gain
+    })
+  }
+
+  function setTone(page: Page, on: boolean): Promise<void> {
+    return page.evaluate((on) => {
+      ;(window as unknown as {tone: GainNode}).tone.gain.value = on ? 0.001 : 0
+    }, on)
+  }
+
+  it('covers and mutes a page without input once the idle time is up', async () => {
+    const url = 'http://example.com/idle'
+    const page = await shownPage(url)
+    await waitCovered(page, true)
+    expect(await page.title()).toBe('新标签页')
+    expect(await muted(s, url)).toBe(true)
+    await page.close()
+  })
+
+  it('stays shown while the tab plays sound, through a short silence, and covers once it stays quiet', async () => {
+    const url = 'http://example.com/playing'
+    const page = await shownPage(url)
+    await startTone(page)
+    await waitAudible(url, true)
+    await sleep(2500)
+    expect(await covered(page)).toBe(false)
+
+    // A gap shorter than the grace (buffering, a silent scene) keeps it shown.
+    await setTone(page, false)
+    await waitAudible(url, false)
+    await sleep(300)
+    await setTone(page, true)
+    await waitAudible(url, true)
+    await sleep(2500)
+    expect(await covered(page)).toBe(false)
+
+    // Quiet for good: covered about two seconds plus the grace later.
+    await setTone(page, false)
+    await waitCovered(page, true, 10_000)
+    expect(await muted(s, url)).toBe(true)
+    await page.close()
+  })
+
+  it('takes a new idle time on a shown page at once, counted from its last input', async () => {
+    const prefs = (idleMinutes: number) =>
+      s.sw.evaluate((idleMinutes) => chrome.storage.local.set({prefs: {cover: true, mute: true, idleMinutes}}), idleMinutes)
+    await prefs(5)
+    try {
+      const page = await shownPage('http://example.com/longer')
+      await sleep(2500)
+      expect(await covered(page)).toBe(false)
+      await prefs(1)
+      await waitCovered(page, true, 2000)
+      await page.close()
+    } finally {
+      await s.sw.evaluate(() => chrome.storage.local.remove('prefs'))
+    }
   })
 })

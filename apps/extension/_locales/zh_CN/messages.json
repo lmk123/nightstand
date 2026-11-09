@@ -352,10 +352,22 @@
     "message": "先遮住页面，点“显示页面”后才显示"
   },
   "coverHint": {
-    "message": "鼠标移出页面、切换标签页、离开浏览器窗口，或一分钟没有操作时，会重新遮住。"
+    "message": "鼠标移出页面、切换标签页、离开浏览器窗口，或一段时间没有操作（播放声音时除外）时，会重新遮住。"
   },
   "muteSetting": {
     "message": "自动静音（页面显示后恢复声音）"
+  },
+  "idleSetting": {
+    "message": "无操作多久后重新遮住"
+  },
+  "idleMinutesOption": {
+    "message": "$COUNT$ 分钟",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
   },
   "coverShow": {
     "message": "显示页面"

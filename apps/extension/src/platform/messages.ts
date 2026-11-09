@@ -25,12 +25,18 @@ export type PageRequest =
   | {type: 'pageShown'}
   /** The page covered itself again (tab hidden, idle): mute the tab. */
   | {type: 'pageCovered'}
+  /**
+   * The page has gone without input for the idle time: is its tab playing
+   * sound? (Then it stays shown until the background sends `quiet`.) Reply
+   * adds `playing`.
+   */
+  | {type: 'pagePlaying'}
 
 /**
  * Background → page script, the answer to every `PageRequest`. `{}` means
  * the background couldn't tell: the page script keeps the page covered.
  */
-export type PageReply = {inside: boolean; shown: boolean} | Record<string, never>
+export type PageReply = {inside: boolean; shown: boolean; playing?: boolean} | Record<string, never>
 
 /** Background → page script. */
 export type PageNotice =
@@ -38,15 +44,17 @@ export type PageNotice =
   | {type: 'cover'}
   /** The tab's URL changed without a new document (history API): match again. */
   | {type: 'recheck'}
+  /** The shown tab stopped playing sound (`audible` turned false). */
+  | {type: 'quiet'}
 
 export function isPageRequest(message: unknown): message is PageRequest {
   const type = (message as {type?: unknown} | null)?.type
-  return type === 'pageQuery' || type === 'pageShown' || type === 'pageCovered'
+  return type === 'pageQuery' || type === 'pageShown' || type === 'pageCovered' || type === 'pagePlaying'
 }
 
 export function isPageNotice(message: unknown): message is PageNotice {
   const type = (message as {type?: unknown} | null)?.type
-  return type === 'cover' || type === 'recheck'
+  return type === 'cover' || type === 'recheck' || type === 'quiet'
 }
 
 export function sendToBackground(request: BackgroundRequest): Promise<unknown> {

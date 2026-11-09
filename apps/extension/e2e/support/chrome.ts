@@ -46,6 +46,12 @@ export async function launchChrome(
      * Without it the build is pinned to zh_CN (see `zhOnlyBuild`).
      */
     lang?: string
+    /**
+     * Lets pages produce sound, so tabs can turn `audible` (puppeteer passes
+     * --mute-audio, which keeps every tab silent). Tests keep the volume far
+     * below hearing.
+     */
+    audible?: boolean
   } = {}
 ): Promise<ChromeSession> {
   const {lang} = options
@@ -64,6 +70,7 @@ export async function launchChrome(
     executablePath: CHROME_PATH,
     headless: options.headless ?? true,
     pipe: true,
+    ignoreDefaultArgs: options.audible ? ['--mute-audio'] : undefined,
     enableExtensions: [options.extension ?? (lang ? DIST_CHROMIUM : zhOnlyBuild())],
     userDataDir: options.userDataDir ?? tempDir('chrome'),
     args,
