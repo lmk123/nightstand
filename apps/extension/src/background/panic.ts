@@ -1,11 +1,9 @@
 import type {PopupNotice} from '@/platform/messages'
 import {fullScan, protectedTabIds} from './cleaner'
-import {readState, updateState} from './state'
 
 /**
- * Panic shortcut: close every tab on a protected site (and any incognito
- * window an older build opened), clean history right away, and tell an open
- * popup to close (which locks it).
+ * Panic shortcut: close every tab on a protected site, clean history right
+ * away, and tell an open popup to close (which locks it).
  */
 export async function panic(): Promise<void> {
   // Close the popup first: it is the most visible thing on screen.
@@ -14,28 +12,8 @@ export async function panic(): Promise<void> {
     // No popup open: nothing to close.
   })
 
-  const {incognitoWindows} = await readState()
-  if (incognitoWindows.length) {
-    await Promise.all(incognitoWindows.map((id) => closeIfIncognito(id)))
-    await updateState((s) => ({...s, incognitoWindows: []}))
-  }
-
   const doomed = await protectedTabIds()
   if (doomed.length) await chrome.tabs.remove(doomed).catch(console.error)
 
   await fullScan()
-}
-
-/**
- * Closes a window an older build recorded, but only while it is still an
- * incognito / private window: a stale id may by now belong to an ordinary
- * window.
- */
-async function closeIfIncognito(id: number): Promise<void> {
-  try {
-    const win = await chrome.windows.get(id)
-    if (win.incognito) await chrome.windows.remove(id)
-  } catch {
-    // Already gone.
-  }
 }

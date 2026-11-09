@@ -57,13 +57,6 @@ export interface VaultSettings {
    * like `skipSaveNotice`, so no payload version bump.
    */
   skipSaveCheck?: boolean
-  /**
-   * Set when an older payload had entries opening in an incognito / private
-   * window, an option since retired: the popup tells the user once, on the
-   * next unlock, that saved sites now open in a new tab, then clears it.
-   * Optional, like `skipSaveNotice`, so no payload version bump.
-   */
-  incognitoRetired?: boolean
 }
 
 /**
@@ -71,13 +64,12 @@ export interface VaultSettings {
  * 1 — initial; 2 — entries gain `extraHosts`; 3 — entries lose `note` and
  * `tags`; 4 — entries gain an optional `icon`. Optional fields whose loss
  * on an older build only costs a preference (`skipSaveNotice`,
- * `skipSaveCheck`, `incognitoRetired`) were added without a bump (see the
- * storage-format rule in CLAUDE.md). Settings once had an `openMode` (current
- * tab / new tab / incognito); entries now always open in a new tab. It was
- * removed without a bump too, as that rule allows: older builds read its
- * absence as their default, a new tab, which is the current behaviour.
- * `migrateVaultData` drops it from older payloads, turning `incognito` into
- * `incognitoRetired`.
+ * `skipSaveCheck`) were added without a bump (see the storage-format rule
+ * in CLAUDE.md). Settings once had an `openMode` (current tab / new tab /
+ * incognito); entries now always open in a new tab. It was removed without a
+ * bump too, as that rule allows: older builds read its absence as their
+ * default, a new tab, which is the current behaviour. `migrateVaultData`
+ * drops it from older payloads.
  */
 export interface VaultData {
   version: 4
@@ -287,13 +279,6 @@ export function updateSettings(data: VaultData, patch: Partial<VaultSettings>): 
   return {...data, settings: {...data.settings, ...patch}}
 }
 
-/** Clears `incognitoRetired` once the user has been told. */
-export function clearIncognitoRetired(data: VaultData): VaultData {
-  const settings = {...data.settings}
-  delete settings.incognitoRetired
-  return {...data, settings}
-}
-
 /** Case-insensitive search over title, URL and extra hosts; every whitespace-separated term must match. */
 export function searchEntries(entries: readonly VaultEntry[], query: string): VaultEntry[] {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
@@ -408,11 +393,9 @@ export function migrateVaultData(raw: unknown): VaultData {
       throw new CoreError('unsupported-version', `payload version ${String(raw.version)}`)
   }
   const settings = isRecord(raw.settings) ? raw.settings : {}
-  // Only known settings are copied, so the retired `openMode` is dropped; a
-  // user who had chosen incognito is told once (see `incognitoRetired`).
+  // Only known settings are copied, so the retired `openMode` is dropped.
   const out: VaultSettings = {}
   if (typeof settings.skipSaveNotice === 'boolean') out.skipSaveNotice = settings.skipSaveNotice
   if (typeof settings.skipSaveCheck === 'boolean') out.skipSaveCheck = settings.skipSaveCheck
-  if (settings.incognitoRetired === true || settings.openMode === 'incognito') out.incognitoRetired = true
   return {version: VAULT_DATA_VERSION, entries, settings: out}
 }

@@ -1,7 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
 import {
   changePassphrase,
-  clearIncognitoRetired,
   entrySiteHosts,
   hostOf,
   recordOpen,
@@ -18,7 +17,6 @@ import {
   type VaultData,
   type VaultEntry
 } from '@nightstand/core'
-import {isFirefoxLike} from '@/lib/browser'
 import {removeBookmarksFor} from '@/platform/bookmarks'
 import {findMissingIcons, withIcon} from '@/platform/favicon'
 import {t} from '@/platform/i18n'
@@ -45,7 +43,7 @@ type View =
   | {name: 'onboarding'}
   | {name: 'locked'}
   | {name: 'decoySettings'}
-  | {name: 'vault'; notice?: 'unsupportedTab' | 'saveCheck' | 'incognitoRetired'}
+  | {name: 'vault'; notice?: 'unsupportedTab' | 'saveCheck'}
   | {name: 'entry'; editing?: VaultEntry; prefill?: EntryInput}
   | {name: 'settings'}
   | {name: 'resetPassphrase'}
@@ -154,20 +152,6 @@ export default function App() {
         console.error(error)
       }
     }
-    // Saved sites used to open in an incognito window for this user; that
-    // option is gone. Tell them once (not on the recovery path, which goes
-    // straight to a new passphrase: the next unlock tells them instead).
-    let notice: 'incognitoRetired' | undefined
-    if (result.via !== 'recovery' && opened.data.settings.incognitoRetired) {
-      notice = 'incognitoRetired'
-      try {
-        opened = await commit(opened, clearIncognitoRetired(opened.data))
-        setBoot((b) => (b ? {...b, stored: opened.stored} : b))
-      } catch (error) {
-        // Shown again on the next unlock.
-        console.error(error)
-      }
-    }
     // The background cleans with the stored match table and can't rebuild it
     // while locked: fix one that is missing, unreadable or out of date now.
     try {
@@ -176,7 +160,7 @@ export default function App() {
       console.error(error)
     }
     setSession(opened)
-    setView(result.via === 'recovery' ? {name: 'resetPassphrase'} : {name: 'vault', notice})
+    setView(result.via === 'recovery' ? {name: 'resetPassphrase'} : {name: 'vault'})
   }
 
   /**
@@ -276,10 +260,6 @@ export default function App() {
             view.notice === 'unsupportedTab' ? (
               <p role="status" className="bg-accent text-accent-foreground mx-3 mb-2 rounded-[10px] p-3 text-xs">
                 {t('currentTabUnsupported')}
-              </p>
-            ) : view.notice === 'incognitoRetired' ? (
-              <p role="status" className="bg-accent text-accent-foreground mx-3 mb-2 rounded-[10px] p-3 text-xs">
-                {isFirefoxLike ? t('privateRetiredFirefox') : t('incognitoRetired')}
               </p>
             ) : view.notice === 'saveCheck' ? (
               <SaveCheck

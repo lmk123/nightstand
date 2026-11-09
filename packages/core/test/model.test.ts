@@ -1,7 +1,6 @@
 import {describe, expect, it} from 'vitest'
 import {
   addEntry,
-  clearIncognitoRetired,
   createEntry,
   editEntry,
   entryCoversUrl,
@@ -251,27 +250,13 @@ describe('migrateVaultData', () => {
     expect(migrateVaultData({version: 1, entries: [], settings: {extra: 1}}).settings).toEqual({})
     expect(migrateVaultData({version: 1, entries: []}).settings).toEqual({})
   })
-  it('drops the retired open-mode setting from older payloads, flagging incognito once', () => {
+  it('drops the retired open-mode setting from older payloads', () => {
     for (const openMode of ['current', 'newTab', 'incognito', 'teleport']) {
       for (const version of [1, 4]) {
         const out = migrateVaultData({version, entries: [], settings: {openMode, skipSaveNotice: true}})
-        expect(out.settings).toEqual(
-          openMode === 'incognito' ? {skipSaveNotice: true, incognitoRetired: true} : {skipSaveNotice: true}
-        )
+        expect(out.settings).toEqual({skipSaveNotice: true})
       }
     }
-  })
-  it('keeps the incognito-retired flag until it is cleared, and only when it is true', () => {
-    const data = updateSettings(emptyVaultData(), {incognitoRetired: true, skipSaveCheck: true})
-    expect(migrateVaultData(JSON.parse(JSON.stringify(data))).settings).toEqual({incognitoRetired: true, skipSaveCheck: true})
-    const cleared = clearIncognitoRetired(data)
-    expect(cleared.settings).toEqual({skipSaveCheck: true})
-    expect(data.settings.incognitoRetired).toBe(true)
-    expect(migrateVaultData(JSON.parse(JSON.stringify(cleared))).settings).toEqual({skipSaveCheck: true})
-    for (const bad of [false, 'yes', 1]) {
-      expect(migrateVaultData({version: 4, entries: [], settings: {incognitoRetired: bad}}).settings).toEqual({})
-    }
-    expect(emptyVaultData().settings).not.toHaveProperty('incognitoRetired')
   })
   it('upgrades v1 entries with empty extra hosts and drops note / tags; v2 entries must carry extra hosts', () => {
     const current = createEntry({url: 'example.com'}, NOW, 'x')
