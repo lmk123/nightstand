@@ -48,8 +48,6 @@ pnpm lint && pnpm type-check && pnpm test
 pnpm test:e2e       # end-to-end tests: builds first, then drives the locally installed Chrome / Firefox
 ```
 
-Design notes and known limitations (in Chinese): [docs/design.md](docs/design.md).
-
 ## License
 
 [MIT](LICENSE)

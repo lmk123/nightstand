@@ -10,7 +10,7 @@ catalog:
   eslint: ^10.14.0
   globals: ^17.14.0
   # TS 6 is what `require('typescript')` resolves to (ESLint, editor tsserver);
-  # TS 7 is the compiler `type-check` runs. See CLAUDE.md.
+  # TS 7 is the compiler `type-check` runs.
   typescript: npm:@typescript/typescript6@^6.0.2
   typescript-7: npm:typescript@^7.0.2
   typescript-eslint: ^8.72.1

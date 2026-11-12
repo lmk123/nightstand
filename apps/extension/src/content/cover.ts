@@ -425,6 +425,8 @@ export default function main(): (() => void) | undefined {
   async function matchHere(): Promise<boolean | null> {
     const {cover, matcher} = await lookup()
     if (!cover || !matcher || matcher.isEmpty) return false
+    // No bundled SHA-256 for plain http: it only saved ~26ms on the first http page after the SW went cold, for +42% page-script size and a non-Web-Crypto dependency.
+    // Before hashing here instead of asking the background, read apps/extension/.context/cover/http-page-hashing.md (measurements, method).
     if (!globalThis.crypto?.subtle) return null
     return matcher.matches(location.href)
   }
