@@ -2,6 +2,7 @@
 paths:
   - "src/content/**"
   - "src/background/cover.ts"
+  - "src/background/index.ts"
   - "src/popup/views/Settings.tsx"
   - "e2e/cover.e2e.ts"
 ---

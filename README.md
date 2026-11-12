@@ -48,7 +48,7 @@ pnpm lint && pnpm type-check && pnpm test
 pnpm test:e2e       # end-to-end tests: builds first, then drives the locally installed Chrome / Firefox
 ```
 
-Design notes and known limitations (in Chinese): [.context/](.context/README.md) and [apps/extension/.context/](apps/extension/.context/README.md).
+Design notes and known limitations (in Chinese): [history cleaning](.context/history/cleaning.md), [encryption](.context/vault/encryption.md), [cover and mute](apps/extension/.context/cover/cover-behavior.md), [popup features](apps/extension/.context/popup/features.md), [site icons](apps/extension/.context/favicon/favicons.md), [permissions](apps/extension/.context/manifest/permissions.md).
 
 ## License
 

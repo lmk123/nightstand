@@ -318,10 +318,12 @@ export default function main(): (() => void) | undefined {
   }
   for (const type of ACTIVITY_EVENTS) window.addEventListener(type, onActivity, {capture: true, passive: true})
 
-  // Leaving: anything that may be a leave covers, while the page still paints:
-  // a missed leave flashes the page on switching back, an extra cover only costs a click.
-  // Before changing what counts as a leave read apps/extension/.context/cover/cover-behavior.md (which events count, edge and zoom rules, extra covers accepted on purpose)
-  // Listened to only while the page is shown.
+  // Leaving: anything that may be a leave covers, while the page still
+  // paints: a missed leave flashes the page on switching back, an extra
+  // cover only costs a click. Listened to only while the page is shown.
+  // Before changing what counts as a leave, read
+  // apps/extension/.context/cover/cover-behavior.md (which events count,
+  // edge and zoom rules, extra covers accepted on purpose).
   const LEAVE_EVENTS = ['mouseout', 'mouseup', 'dragleave', 'dragend'] as const
 
   /**

@@ -12,4 +12,4 @@
 
 网页脚本只读取匹配表、`prefs`，以及在要遮住的网页上读取明文的 `links`（伪装的快捷链接和图标选择，只用其中的图标；`storage` 只能整键读取），不读取网页内容（只读写标签页标题，以便遮住时换成中性标题、显示时还原），只和后台交换“是否受保护 / 已显示 / 已遮住 / 是否在播放声音”这几种消息。整个扩展不发起任何网络请求，完全离线运行。网站图标也不例外：只读 Chrome 本地已缓存的图标，不会去网站上下载（见 `apps/extension/.context/favicon/favicons.md`）。
 
-给商店审核的英文权限说明在 `apps/extension/store/README.md`，改权限时两边一起改。
+给商店审核的英文权限说明在 `apps/extension/store/README.md`，改权限时，`src/manifest.json`、这份文档和它三处一起改。

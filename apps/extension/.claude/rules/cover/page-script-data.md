@@ -2,6 +2,7 @@
 paths:
   - "src/content/**"
   - "src/background/cover.ts"
+  - "src/background/index.ts"
   - "src/platform/messages.ts"
   - "src/platform/storage.ts"
 ---
