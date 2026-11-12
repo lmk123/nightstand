@@ -17,7 +17,7 @@
 
 ## 已知限制
 
-网站图标相关的行为和限制见 `apps/extension/.context/popup/favicons.md`。
+网站图标相关的行为和限制见 `apps/extension/.context/favicon/favicons.md`。
 
 | 事项 | 状态 |
 |---|---|

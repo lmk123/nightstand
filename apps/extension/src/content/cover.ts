@@ -318,20 +318,9 @@ export default function main(): (() => void) | undefined {
   }
   for (const type of ACTIVITY_EVENTS) window.addEventListener(type, onActivity, {capture: true, passive: true})
 
-  // Leaving: the mouse goes past the page's edge (to the tab strip, the
-  // window's buttons, another window). Covered then, while the page still
-  // paints: a hidden tab paints nothing, so a cover put up only when the tab
-  // is hidden misses its last frame, and that frame (the page) is what the
-  // browser shows for a moment when the user switches back. Switching tabs
-  // from the keyboard gives no such warning.
-  //
-  // Missing a leave flashes the page, covering once too often only costs a
-  // click, so anything that may be a leave counts: the mouse going out, a
-  // button released outside (a drag past the edge: no `mouseout` comes while
-  // it is held, and after release only once the mouse moves again), a
-  // dragged link or file leaving the window. Only a pointer still within the
-  // page is not leaving: it went over a menu, a picker or a browser bubble
-  // on top of the page.
+  // Leaving: anything that may be a leave covers, while the page still paints:
+  // a missed leave flashes the page on switching back, an extra cover only costs a click.
+  // Before changing what counts as a leave read apps/extension/.context/cover/cover-behavior.md (which events count, edge and zoom rules, extra covers accepted on purpose)
   // Listened to only while the page is shown.
   const LEAVE_EVENTS = ['mouseout', 'mouseup', 'dragleave', 'dragend'] as const
 
