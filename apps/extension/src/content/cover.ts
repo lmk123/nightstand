@@ -427,7 +427,7 @@ export default function main(): (() => void) | undefined {
     if (!cover || !matcher || matcher.isEmpty) return false
     // Plain http asks the background on purpose: a bundled SHA-256 was
     // measured and rejected. Before hashing here instead, read
-    // apps/extension/.context/cover/http-page-hashing.md.
+    // apps/extension/.context/cover/http-page-hashing.md (measurements).
     if (!globalThis.crypto?.subtle) return null
     return matcher.matches(location.href)
   }
