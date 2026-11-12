@@ -65,7 +65,8 @@ export interface VaultSettings {
  * `tags`; 4 — entries gain an optional `icon`. Optional fields whose loss
  * on an older build only costs a preference (`skipSaveNotice`,
  * `skipSaveCheck`) were added without a bump (see the storage-format rule
- * in CLAUDE.md). Settings once had an `openMode` (current tab / new tab /
+ * in .claude/rules/storage/format-versioning.md). Settings once had an
+ * `openMode` (current tab / new tab /
  * incognito); entries now always open in a new tab. It was removed without a
  * bump too, as that rule allows: older builds read its absence as their
  * default, a new tab, which is the current behaviour. `migrateVaultData`

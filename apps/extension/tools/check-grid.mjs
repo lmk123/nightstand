@@ -1,4 +1,5 @@
-// Keeps popup grids from widening past the 360px popup (see CLAUDE.md): a
+// Keeps popup grids from widening past the 360px popup (see
+// apps/extension/.claude/rules/ui/popup.md): a
 // bare `grid` gets an implicit `auto` column that a long unbroken string
 // (file name, URL used as a title) stretches even inside `truncate`, and a
 // bare `fr` in a custom track list has the same `auto` minimum. Flags, in
