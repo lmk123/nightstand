@@ -2,6 +2,8 @@
 paths:
   - "src/platform/favicon.ts"
   - "src/popup/components/Avatar.tsx"
+  - "src/popup/App.tsx"
+  - "src/popup/views/BookmarkImport.tsx"
   - "e2e/favicon.e2e.ts"
 ---
 

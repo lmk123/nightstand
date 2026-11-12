@@ -3,14 +3,14 @@
 状态：生效
 
 ## 背景
-On plain-http pages the cover page script has no `crypto.subtle` and asks the background instead.
+纯 http 页面上没有 `crypto.subtle`，遮罩网页脚本没法自己算哈希，改为问后台。
 
 ## 决定
-Adding a JS SHA-256 library was measured and rejected by the user on 2026-11-09.
+2026-11-09 实测后，用户否决了引入 JS SHA-256 库。
 
-Don't re-propose a third-party (or hand-rolled) SHA-256 for this path unless new evidence shows a perceptible delay, e.g. on slow machines.
+除非有新的证据表明存在可察觉的延迟（例如在慢机器上），不要再提议为这条路径引入第三方（或手写的）SHA-256。
 
 ## 放弃的方案
-A JS SHA-256 lib (e.g. @noble/hashes) so the cover page script can hash on plain-http pages. Only the first http page after ≥30s idle gains about 26ms. Cost: @noble/hashes sha256 is 5.7KB min (2.8KB gzip), about 42% more on the 13.5KB content script. It would also add a crypto dependency against the "只用 Web Crypto" rule.
+引入 JS SHA-256 库（例如 `@noble/hashes`），让遮罩网页脚本在纯 http 页面上也能自己算哈希。收益只落在 service worker 冷启动后的第一个 http 页面上（约 25ms，按实测表里冷启动与本地算哈希两行相减得出）；代价是遮罩网页脚本明显变大，还会引入违背“只用 Web Crypto”的加密依赖。
 
-实测数字见 apps/extension/context/data/cover-hold-time.md
+实测数字见 apps/extension/context/data/cover-hold-time.md 和 apps/extension/context/data/js-sha256-bundle-size.md
