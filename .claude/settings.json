@@ -1,6 +1,15 @@
 {
+  "extraKnownMarketplaces": {
+    "lmk123": {
+      "source": {
+        "source": "github",
+        "repo": "lmk123/cc-plugins"
+      }
+    }
+  },
   "enabledPlugins": {
-    "chrome-devtools-mcp@claude-plugins-official": false
+    "chrome-devtools-mcp@claude-plugins-official": false,
+    "context-keeper@lmk123": true
   },
   "enabledMcpjsonServers": [
     "extension-dev",
