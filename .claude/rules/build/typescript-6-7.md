@@ -1,9 +1,9 @@
 ---
 paths:
   - "pnpm-workspace.yaml"
-  - "package.json"
-  - "tsconfig.json"
-  - "eslint.config.ts"
+  - "**/package.json"
+  - "**/tsconfig.json"
+  - "**/eslint.config.ts"
 ---
 
 # TypeScript 6 和 7 并存（有意为之）

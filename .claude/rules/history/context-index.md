@@ -3,6 +3,7 @@ paths:
   - "packages/core/src/url.ts"
   - "packages/core/src/match-table.ts"
   - "apps/extension/src/background/cleaner.ts"
+  - "apps/extension/src/background/index.ts"
   - "apps/extension/src/platform/history.ts"
   - "apps/extension/src/platform/bookmarks.ts"
   - "apps/extension/src/popup/views/EntryForm.tsx"
