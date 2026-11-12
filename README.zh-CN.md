@@ -48,6 +48,8 @@ pnpm lint && pnpm type-check && pnpm test
 pnpm test:e2e       # 端到端测试：先构建，再驱动本机安装的 Chrome / Firefox
 ```
 
+设计细节和已知限制见 [.context/](.context/README.md) 和 [apps/extension/.context/](apps/extension/.context/README.md)。
+
 ## 许可证
 
 [MIT](LICENSE)

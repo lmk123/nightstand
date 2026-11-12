@@ -9,7 +9,8 @@ import {cleanupTemp} from './support/temp'
 /**
  * Focus-related behaviour of the *real* action popup, which only a visible
  * window shows. Opt in: `E2E_HEADED=1 pnpm test:e2e`. These pin down the
- * findings the UI is designed around (see apps/extension/.claude/rules/e2e/e2e-facts.md).
+ * findings the UI is designed around (see
+ * apps/extension/.context/e2e/harness.md).
  */
 describe.skipIf(!hasChrome || !headed)('real action popup (Chrome, headed)', () => {
   let s: ChromeSession | undefined

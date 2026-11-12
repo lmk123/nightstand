@@ -1,9 +1,24 @@
-# 纯 http 页面的匹配：不引入 JS SHA-256
+# 纯 http 页面的匹配：不引入 JS 版 SHA-256
 
-Decided 2026-11-09 not to add a JS SHA-256 lib (e.g. @noble/hashes) so the cover page script can hash on plain-http pages.
+纯 http 页面不是安全上下文，没有 `crypto.subtle`，遮罩的网页脚本改为问后台。2026-11-09 评估过给这条路径打包一个 JS 版 SHA-256（例如 `@noble/hashes`），让网页脚本自己算哈希，实测后用户决定不做。
 
-On plain-http pages the cover page script has no `crypto.subtle` and asks the background instead. Adding a JS SHA-256 library was measured and rejected by the user on 2026-11-09.
+## 实测数字
 
-**Why:** Measured in real Chrome on the user's Mac. Hold time (responseStart → hold released) for unprotected pages was 19.8ms when asking a warm SW, 23.1ms when hashing locally, and 47.8ms when asking a cold SW. Only the first http page after ≥30s idle gains about 26ms. Cost: @noble/hashes sha256 is 5.7KB min (2.8KB gzip), about 42% more on the 13.5KB content script. It would also add a crypto dependency against the "只用 Web Crypto" rule.
+在 macOS 上的真实 Chrome 里测；指标是不受保护的网页从 `responseStart` 到撤掉 `opacity:0` 的时间。具体页面、次数和统计方法未记录。
 
-**How to apply:** Don't re-propose a third-party (or hand-rolled) SHA-256 for this path unless new evidence shows a perceptible delay, e.g. on slow machines.
+| 情况 | 时间 |
+|---|---|
+| 问后台，service worker 已在运行 | 19.8 ms |
+| 网页脚本自己算哈希 | 23.1 ms |
+| 问后台，service worker 已停（空闲 ≥30 秒后的第一个 http 页面） | 47.8 ms |
+
+只有 service worker 停掉之后的第一个 http 页面能快约 26 ms，其他情况本地算反而略慢。
+
+## 代价
+
+- `@noble/hashes` 的 sha256 压缩后 5.7 KB（gzip 后 2.8 KB），让 13.5 KB 的网页脚本大约增加 42%。
+- 多一个非 Web Crypto 的哈希实现，违背根 CLAUDE.md 里“只用 Web Crypto”的硬性规则（手写实现同理）。
+
+## 什么时候重新评估
+
+除非有新证据显示这段延迟能被察觉（例如在慢机器上），不要再提议为这条路径引入第三方或手写的 SHA-256。重新评估时按上面的指标重测，并补上测法。

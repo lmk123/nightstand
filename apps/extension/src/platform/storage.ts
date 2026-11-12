@@ -19,7 +19,8 @@ import {
  * - `state`    background bookkeeping (written by the background)
  * - `prefs`    cover / mute preferences (plaintext, needed while locked)
  *
- * The vault key is never stored anywhere.
+ * The vault key is never stored anywhere. Before changing the stored vault
+ * format, read packages/core/.claude/rules/storage/versioning.md.
  *
  * Retired keys (no longer written; removed on install/update):
  * - `throttle` failed-unlock back-off, dropped because it also locked out the owner

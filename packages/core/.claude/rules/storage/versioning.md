@@ -4,6 +4,7 @@ paths:
   - "src/backup.ts"
   - "src/storage-format.ts"
   - "src/crypto/envelope.ts"
+  - "src/crypto/kdf.ts"
   - "test/migration.test.ts"
   - "test/fixtures/**"
 ---
