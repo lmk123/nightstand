@@ -48,7 +48,7 @@ pnpm lint && pnpm type-check && pnpm test
 pnpm test:e2e       # 端到端测试：先构建，再驱动本机安装的 Chrome / Firefox
 ```
 
-设计细节和已知限制见 [docs/design.md](docs/design.md)。
+设计细节和已知限制：[历史清理](.context/history/cleaning.md)、[加密](.context/vault/encryption.md)、[遮住与静音](apps/extension/.context/cover/cover-behavior.md)、[弹窗功能](apps/extension/.context/popup/features.md)、[网站图标](apps/extension/.context/favicon/favicons.md)、[权限](apps/extension/.context/manifest/permissions.md)。
 
 ## 许可证
 

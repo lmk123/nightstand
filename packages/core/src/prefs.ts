@@ -8,7 +8,8 @@ export type IdleMinutes = (typeof IDLE_MINUTES)[number]
 /**
  * Device preferences the background and the page script need while the vault
  * is locked, so they are kept in plaintext (`prefs`) next to the vault rather
- * than inside it. Nothing here names a site.
+ * than inside it. Nothing here names a site. What each one does on a page:
+ * apps/extension/.context/cover/cover-behavior.md.
  *
  * - `cover`: protected pages open behind an opaque cover until the user
  *   chooses to show them.
