@@ -1,6 +1,15 @@
 import type {Page, Protocol} from 'puppeteer-core'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
-import {launchChrome, openPopup, waitStorage, type ChromeSession} from './support/chrome'
+import {
+  historyUrls,
+  launchChrome,
+  openPopup,
+  pageScriptRegistered,
+  turnCoverOn,
+  waitPageScript,
+  waitStorage,
+  type ChromeSession
+} from './support/chrome'
 import {DIST_CHROMIUM, hasChrome} from './support/env'
 import {addEntry, clearAndType, clickText, hasText, onboard, openSettings, sleep, submitUnlock, waitText} from './support/popup'
 import {startTestServer} from './support/server'
@@ -101,6 +110,57 @@ async function waitIconFill(page: Page, fill: string): Promise<void> {
 const NIGHTSTAND_FILL = '#4f7264'
 const BOOK_FILL = '#3f5f8a'
 
+/**
+ * Covering is off until the user turns it on (it needs the optional
+ * all-sites permission, which the test build holds from the start). Until
+ * then no page script runs anywhere, and protected pages open as they are,
+ * history cleaning aside.
+ */
+describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
+  let s: ChromeSession
+  let server: Awaited<ReturnType<typeof startTestServer>>
+
+  beforeAll(async () => {
+    server = await startTestServer()
+    s = await launchChrome({serverPort: server.port})
+    const p = await openPopup(s)
+    await onboard(p, 'notes')
+    await addEntry(p, 'example.com')
+    await p.close()
+  })
+  afterAll(async () => {
+    await s?.browser.close()
+    await server?.close()
+    cleanupTemp()
+  })
+
+  it('runs no page script and leaves protected pages uncovered and unmuted, while still cleaning their history', async () => {
+    expect(await pageScriptRegistered(s)).toBe(false)
+    const page = await s.browser.newPage()
+    await page.goto('http://example.com/default-off')
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+    expect(await painted(page)).toBe(true)
+    expect(await page.title()).toBe(serverTitle('http://example.com/default-off'))
+    expect(await muted(s, 'http://example.com/default-off')).toBe(false)
+    await page.close()
+    expect((await historyUrls(s)).filter((url) => url.includes('example.com'))).toEqual([])
+  })
+
+  it('covers newly opened protected pages once turned on, and stops injecting once turned off', async () => {
+    await turnCoverOn(s)
+    const page = await s.browser.newPage()
+    await page.goto('http://example.com/turned-on')
+    await waitCovered(page, true)
+    expect(await muted(s, 'http://example.com/turned-on')).toBe(true)
+
+    await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: false, mute: true}}))
+    await waitCovered(page, false)
+    await waitPageScript(s, false)
+    await page.close()
+  })
+})
+
 describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () => {
   let s: ChromeSession
   let server: Awaited<ReturnType<typeof startTestServer>>
@@ -112,6 +172,7 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await onboard(p, 'notes')
     await addEntry(p, 'example.com')
     await p.close()
+    await turnCoverOn(s)
   })
   afterAll(async () => {
     await s?.browser.close()
@@ -304,6 +365,8 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await waitCovered(open, false)
     expect(await open.title()).toBe(serverTitle('http://example.com/cover-off'))
     expect(await muted(s, 'http://example.com/cover-off')).toBe(false)
+    // And the page script is no longer injected anywhere.
+    await waitPageScript(s, false)
 
     const plain = await s.browser.newPage()
     await plain.goto('http://example.com/uncovered')
@@ -311,7 +374,7 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     expect(await covered(plain)).toBe(false)
     expect(await muted(s, 'http://example.com/uncovered')).toBe(false)
 
-    await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
+    await turnCoverOn(s, {mute: true})
     await open.close()
     await plain.close()
   })
@@ -528,6 +591,7 @@ describe.skipIf(!hasChrome)('covering a shown page again after the idle time (Ch
     server = await startTestServer()
     const extension = patchedCopy(DIST_CHROMIUM, {
       onlyLocale: 'zh_CN',
+      grantPageAccess: true,
       pageScript: [
         ['6e4*', '1e3*', 3],
         ['Math.max(1e4,', 'Math.max(1500,', 1]
@@ -538,6 +602,7 @@ describe.skipIf(!hasChrome)('covering a shown page again after the idle time (Ch
     await onboard(p, 'notes')
     await addEntry(p, 'example.com')
     await p.close()
+    await turnCoverOn(s)
   })
   afterAll(async () => {
     await s?.browser.close()

@@ -1,7 +1,19 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {historyUrls, launchChrome, openPopup, visit, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {addEntry, clearAndType, clickText, hasText, listItems, onboard, openSettings, submitUnlock, waitText} from './support/popup'
+import {
+  addEntry,
+  clearAndType,
+  clickText,
+  hasText,
+  listItems,
+  onboard,
+  openSettings,
+  setSwitch,
+  submitUnlock,
+  switchOn,
+  waitText
+} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp} from './support/temp'
 
@@ -102,11 +114,8 @@ describe.skipIf(!hasChrome)('extra hosts (Chrome)', () => {
 
     // The second switch under "保存网址" brings it back.
     await openSettings(p)
-    await waitText(p, '保存后提醒')
-    const toggles = await p.$$('[data-slot=switch]')
-    expect(await toggles[1]?.evaluate((el) => el.getAttribute('aria-checked'))).toBe('false')
-    await toggles[1]?.click()
-    await p.waitForFunction(() => document.querySelectorAll('[data-slot=switch]')[1]?.getAttribute('aria-checked') === 'true')
+    expect(await switchOn(p, '保存后提醒')).toBe(false)
+    await setSwitch(p, '保存后提醒', true)
     await p.click('button[aria-label="返回"]')
     await addEntry(p, 'example.info/three', 'exact')
     await waitText(p, '请马上检查一下地址栏')

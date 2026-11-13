@@ -4,6 +4,7 @@ import {Label} from '@/components/ui/label'
 import {NativeSelect, NativeSelectOption} from '@/components/ui/native-select'
 import {Switch} from '@/components/ui/switch'
 import {t} from '@/platform/i18n'
+import {removePageAccess, requestPageAccess} from '@/platform/page-access'
 import {loadPrefs, savePrefs} from '@/platform/storage'
 import {Header} from '../components/Header'
 import {ShortcutInfo} from '../components/ShortcutInfo'
@@ -79,6 +80,21 @@ export function Settings({
       loadPrefs().then(setPrefs, console.error)
     })
   }
+  // Covering needs the optional all-sites permission. The request has to be
+  // made right in the click. Chrome closes the popup when its prompt opens,
+  // so the background turns covering on once it is granted (and off if it is
+  // ever taken away); an answer that does come back (already granted, or a
+  // browser that keeps the popup open) is saved here too.
+  const changeCover = (cover: boolean) => {
+    if (!cover) {
+      changePrefs({cover})
+      removePageAccess().catch(console.error)
+      return
+    }
+    requestPageAccess().then((granted) => {
+      if (granted) changePrefs({cover})
+    }, console.error)
+  }
 
   return (
     <div className={viewClass}>
@@ -88,9 +104,10 @@ export function Settings({
           <section className="grid grid-cols-1 gap-2">
             <h2 className="section-label">{t('coverSection')}</h2>
             <div className="panel divide-line grid grid-cols-1 divide-y">
-              <SwitchRow checked={prefs.cover} onChange={(cover) => changePrefs({cover})}>
+              <SwitchRow checked={prefs.cover} onChange={changeCover}>
                 {t('coverSetting')}
                 <span className="text-muted-foreground mt-1 block text-xs">{t('coverHint')}</span>
+                <span className="text-muted-foreground mt-1 block text-xs">{t('coverAccessHint')}</span>
               </SwitchRow>
               {/* Muting goes with the cover: with covering off no page is ever shown, so it would never end. */}
               <SwitchRow checked={prefs.cover && prefs.mute} disabled={!prefs.cover} onChange={(mute) => changePrefs({mute})}>

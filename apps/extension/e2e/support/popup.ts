@@ -128,3 +128,47 @@ export async function openSettings(page: Page, link?: string): Promise<void> {
   await page.click('button[aria-label="设置"]')
   if (link) await clickText(page, link)
 }
+
+/**
+ * Whether the settings switch in the row that mentions `text` is on (each
+ * row is a <label> holding its switch). Found by text, not by position: the
+ * cover section above renders only once the preferences are read, which
+ * shifts every index.
+ */
+export async function switchOn(page: Page, text: string): Promise<boolean> {
+  await page.waitForFunction(
+    (text) => [...document.querySelectorAll('label')].some((row) => row.textContent?.includes(text) && row.querySelector('[data-slot=switch]')),
+    {},
+    text
+  )
+  return page.evaluate(
+    (text) =>
+      [...document.querySelectorAll('label')]
+        .find((row) => row.textContent?.includes(text))
+        ?.querySelector('[data-slot=switch]')
+        ?.getAttribute('aria-checked') === 'true',
+    text
+  )
+}
+
+/** Clicks the switch in the row that mentions `text` and waits until it reads `on`. */
+export async function setSwitch(page: Page, text: string, on: boolean): Promise<void> {
+  await switchOn(page, text)
+  await page.evaluate((text) => {
+    const toggle = [...document.querySelectorAll('label')]
+      .find((row) => row.textContent?.includes(text))
+      ?.querySelector<HTMLElement>('[data-slot=switch]')
+    toggle?.scrollIntoView({block: 'nearest'})
+    toggle?.click()
+  }, text)
+  await page.waitForFunction(
+    (text, on) =>
+      [...document.querySelectorAll('label')]
+        .find((row) => row.textContent?.includes(text))
+        ?.querySelector('[data-slot=switch]')
+        ?.getAttribute('aria-checked') === String(on),
+    {},
+    text,
+    on
+  )
+}

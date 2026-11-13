@@ -1,14 +1,15 @@
 // Background: service worker on Chromium, event page on Firefox.
 //
 // Cleans history for protected sites (also while the vault is locked, using
-// only the hashed match table), mutes protected tabs and answers the page
-// script that covers them, and handles the panic shortcut. It never sees the
-// vault key.
+// only the hashed match table), registers the page script while covering is
+// on, mutes protected tabs and answers that page script, and handles the
+// panic shortcut. It never sees the vault key.
 import {applyIcon} from '@/platform/icons'
 import {isBackgroundRequest, isPageRequest, type PageReply} from '@/platform/messages'
 import {loadLinks, removeRetiredKeys} from '@/platform/storage'
 import {fullScan, handleVisited, incrementalScan, isOwnPage, purgeEntries} from './cleaner'
 import {coverOpenTabs, handlePageRequest} from './cover'
+import {reconcilePageScript} from './page-script'
 import {panic} from './panic'
 
 const SCAN_ALARM = 'scan'
@@ -78,6 +79,7 @@ async function restoreIcon(): Promise<void> {
 }
 
 chrome.runtime.onStartup.addListener(() => {
+  reconcilePageScript().catch(console.error)
   restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
   coverOpenTabs().catch(console.error)
@@ -86,6 +88,7 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.runtime.onInstalled.addListener(({reason}) => {
   removeRetiredKeys().catch(console.error)
+  reconcilePageScript().catch(console.error)
   restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
   // Not after an update: pages loaded before it keep a page script that can
