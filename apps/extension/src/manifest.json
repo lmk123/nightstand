@@ -27,24 +27,13 @@
       "background/index.ts"
     ]
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ],
-      "js": [
-        "content/cover.ts"
-      ],
-      "run_at": "document_start"
-    }
-  ],
   "permissions": [
     "storage",
     "history",
     "tabs",
     "alarms",
-    "bookmarks"
+    "bookmarks",
+    "scripting"
   ],
   "chromium:permissions": [
     "storage",
@@ -52,7 +41,12 @@
     "tabs",
     "alarms",
     "bookmarks",
-    "favicon"
+    "favicon",
+    "scripting"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "commands": {
     "panic": {
