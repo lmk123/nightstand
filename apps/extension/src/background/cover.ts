@@ -1,4 +1,5 @@
 import {parsePrefs, type Prefs} from '@nightstand/core'
+import {serialQueue} from '@/lib/concurrency'
 import type {PageNotice, PageReply, PageRequest} from '@/platform/messages'
 import {loadPrefs, STORAGE_KEYS} from '@/platform/storage'
 import {cached} from './cached'
@@ -30,7 +31,7 @@ const SESSION_KEY = 'tabs'
  */
 let mirror: CoverMap | null = null
 
-let queue: Promise<unknown> = Promise.resolve()
+const serial = serialQueue()
 
 /**
  * Serialized read-modify-write of the per-tab map (events arrive
@@ -39,7 +40,7 @@ let queue: Promise<unknown> = Promise.resolve()
  * Written back only when `change` altered the map.
  */
 function updateTabs<T>(change: (tabs: CoverMap) => T | Promise<T>): Promise<T> {
-  const run = queue.then(async () => {
+  return serial(async () => {
     mirror ??= await readTabs()
     const tabs = {...mirror}
     const result = await change(tabs)
@@ -49,8 +50,6 @@ function updateTabs<T>(change: (tabs: CoverMap) => T | Promise<T>): Promise<T> {
     }
     return result
   })
-  queue = run.catch(() => undefined)
-  return run
 }
 
 function sameTabs(a: CoverMap, b: CoverMap): boolean {
@@ -117,10 +116,17 @@ async function openTabs(): Promise<Map<number, chrome.tabs.Tab>> {
   return open
 }
 
-function notify(tabId: number, notice: PageNotice): void {
-  chrome.tabs.sendMessage(tabId, notice).catch(() => {
-    // No page script there (PDF, browser page, still loading): nothing to tell.
-  })
+/**
+ * Tells the tab's page script, if it has one. Resolves false only when no
+ * page script got it (PDF, browser page, still loading, or a page loaded
+ * while covering was off): nothing to tell.
+ */
+function notify(tabId: number, notice: PageNotice): Promise<boolean> {
+  return chrome.tabs.sendMessage(tabId, notice).then(
+    () => true,
+    // Any other failure (no answer: the page script never sends one) means it arrived.
+    (error: unknown) => !String(error).includes('Receiving end does not exist')
+  )
 }
 
 /**
@@ -130,6 +136,16 @@ function notify(tabId: number, notice: PageNotice): void {
  * script is told only when the tab entered or left: anything else, its own
  * check at load (or its current state) already has right.
  *
+ * Entering is recorded only when a page script is there to cover the page:
+ * a mute nothing covers could never be undone by "Show page". So the page
+ * script is told first, and its answer (`pageQuery`, queued behind this
+ * change) finds the tab covered. No page script: a page loaded while
+ * covering was off and moved on by the history API (it is registered only
+ * for pages loaded after), a page no script runs in (PDF), or a new page
+ * whose script isn't there yet, which reports itself covered (`pageCovered`)
+ * in a moment. Chrome reports a history API move as loading too, so the two
+ * can't be told apart here.
+ *
  * A tab outside protected pages with no record can still carry a mute of
  * Nightstand's: an extension update clears `storage.session` but not the
  * mutes. `tab` (from the event) says so without another lookup.
@@ -138,7 +154,7 @@ function notify(tabId: number, notice: PageNotice): void {
  * isn't undone by a decision made before it.
  */
 async function onTabUrl(tabId: number, url: string, tab: chrome.tabs.Tab): Promise<void> {
-  const changed = await updateTabs(async (tabs) => {
+  const left = await updateTabs(async (tabs) => {
     const inside = await covers(url)
     const before = tabs[tabId]
     if (inside === Boolean(before)) {
@@ -146,15 +162,17 @@ async function onTabUrl(tabId: number, url: string, tab: chrome.tabs.Tab): Promi
       return false
     }
     if (inside) {
-      tabs[tabId] = 'covered'
-      await mute(tabId)
-    } else {
-      delete tabs[tabId]
-      await unmuteOurs(tabId)
+      if (await notify(tabId, {type: 'recheck'})) {
+        tabs[tabId] = 'covered'
+        await mute(tabId)
+      }
+      return false
     }
+    delete tabs[tabId]
+    await unmuteOurs(tabId)
     return true
   })
-  if (changed) notify(tabId, {type: 'recheck'})
+  if (left) await notify(tabId, {type: 'recheck'})
 }
 
 /** Covers every shown tab outside the focused window (WINDOW_ID_NONE: none is focused). */
@@ -173,7 +191,7 @@ async function onWindowFocus(windowId: number): Promise<void> {
     }
     return ids
   })
-  for (const id of covered) notify(id, {type: 'cover'})
+  for (const id of covered) void notify(id, {type: 'cover'})
 }
 
 /**
@@ -220,10 +238,9 @@ export function handlePageRequest(request: PageRequest, tabId: number, url: stri
 }
 
 /**
- * Startup / install: tabs already open on protected pages (restored session,
- * or opened before Nightstand was installed) start covered and muted. Pages
- * loaded before an install have no page script, so only the mute applies to
- * them until they reload. (Not after an update: see the caller.)
+ * Startup / install, with covering on: tabs already open on protected pages
+ * (a restored session) start covered and muted. On a fresh install covering
+ * is off, so nothing happens. (Not after an update: see the caller.)
  *
  * A tab that already has a record keeps it: its page script got there first
  * (a restored page loads while the browser starts), and the user may have
@@ -271,9 +288,10 @@ async function unmuteAll(): Promise<void> {
 
 /**
  * Covering off: every mute goes and every tab is forgotten (their page
- * scripts uncover themselves; turned on again, open pages stay as they are
- * until they load again, like newly protected ones). Muting off: every mute
- * goes. Muting back on (covering on): covered tabs are muted again.
+ * scripts uncover themselves). Turned on, open pages stay as they are until
+ * they load again: those loaded while covering was off have no page script
+ * (`onTabUrl` leaves them alone). Muting off: every mute goes. Muting back
+ * on (covering on): covered tabs are muted again.
  */
 async function onPrefsChange(before: Prefs, after: Prefs): Promise<void> {
   // The idle time is the page script's alone.
@@ -297,7 +315,7 @@ async function onPrefsChange(before: Prefs, after: Prefs): Promise<void> {
  * worker awake.
  */
 async function onTabQuiet(tabId: number): Promise<void> {
-  if (await updateTabs((tabs) => tabs[tabId] === 'shown')) notify(tabId, {type: 'quiet'})
+  if (await updateTabs((tabs) => tabs[tabId] === 'shown')) void notify(tabId, {type: 'quiet'})
 }
 
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {

@@ -107,6 +107,16 @@ export async function savePrefs(prefs: Prefs): Promise<void> {
   await chrome.storage.local.set({[KEY.prefs]: prefs})
 }
 
+/** Calls `onChange` with the preferences each time they are written (by anyone). Returns the unsubscribe. */
+export function watchPrefs(onChange: (prefs: Prefs) => void): () => void {
+  const listener = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+    const change = changes[KEY.prefs]
+    if (area === 'local' && change) onChange(parsePrefs(change.newValue))
+  }
+  chrome.storage.onChanged.addListener(listener)
+  return () => chrome.storage.onChanged.removeListener(listener)
+}
+
 const RETIRED_KEYS = ['throttle']
 
 /** Drops keys older builds wrote and nothing reads any more. */

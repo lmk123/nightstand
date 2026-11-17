@@ -1,4 +1,4 @@
-import type {Page} from 'puppeteer-core'
+import type {ElementHandle, Page} from 'puppeteer-core'
 
 // Helpers that act on the popup by its visible (zh_CN) text, like a user would.
 
@@ -151,16 +151,24 @@ export async function switchOn(page: Page, text: string): Promise<boolean> {
   )
 }
 
-/** Clicks the switch in the row that mentions `text` and waits until it reads `on`. */
+/**
+ * Clicks the switch in the row that mentions `text` and waits until it reads
+ * `on`. A real mouse click: the cover switch asks for a permission, which
+ * needs a user gesture.
+ */
 export async function setSwitch(page: Page, text: string, on: boolean): Promise<void> {
   await switchOn(page, text)
-  await page.evaluate((text) => {
-    const toggle = [...document.querySelectorAll('label')]
-      .find((row) => row.textContent?.includes(text))
-      ?.querySelector<HTMLElement>('[data-slot=switch]')
-    toggle?.scrollIntoView({block: 'nearest'})
-    toggle?.click()
-  }, text)
+  const toggle = await page.evaluateHandle(
+    (text) =>
+      [...document.querySelectorAll('label')]
+        .find((row) => row.textContent?.includes(text))
+        ?.querySelector<HTMLElement>('[data-slot=switch]') ?? null,
+    text
+  )
+  const element = toggle.asElement() as ElementHandle<HTMLElement> | null
+  if (!element) throw new Error(`no switch next to "${text}"`)
+  await element.click()
+  await toggle.dispose()
   await page.waitForFunction(
     (text, on) =>
       [...document.querySelectorAll('label')]

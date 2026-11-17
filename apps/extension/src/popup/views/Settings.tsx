@@ -4,8 +4,8 @@ import {Label} from '@/components/ui/label'
 import {NativeSelect, NativeSelectOption} from '@/components/ui/native-select'
 import {Switch} from '@/components/ui/switch'
 import {t} from '@/platform/i18n'
-import {removePageAccess, requestPageAccess} from '@/platform/page-access'
-import {loadPrefs, savePrefs} from '@/platform/storage'
+import {requestPageAccess} from '@/platform/page-access'
+import {loadPrefs, savePrefs, watchPrefs} from '@/platform/storage'
 import {Header} from '../components/Header'
 import {ShortcutInfo} from '../components/ShortcutInfo'
 import {viewClass} from '../components/styles'
@@ -69,6 +69,8 @@ export function Settings({
   const [prefs, setPrefs] = useState<Prefs | null>(null)
   useEffect(() => {
     loadPrefs().then(setPrefs, console.error)
+    // The background changes them too: covering follows the permission.
+    return watchPrefs(setPrefs)
   }, [])
   const changePrefs = (patch: Partial<Prefs>) => {
     if (!prefs) return
@@ -84,11 +86,12 @@ export function Settings({
   // made right in the click. Chrome closes the popup when its prompt opens,
   // so the background turns covering on once it is granted (and off if it is
   // ever taken away); an answer that does come back (already granted, or a
-  // browser that keeps the popup open) is saved here too.
+  // browser that keeps the popup open) is saved here too. Turning it off
+  // only saves the setting: the background gives the permission back
+  // (background/page-script.ts).
   const changeCover = (cover: boolean) => {
     if (!cover) {
       changePrefs({cover})
-      removePageAccess().catch(console.error)
       return
     }
     requestPageAccess().then((granted) => {
