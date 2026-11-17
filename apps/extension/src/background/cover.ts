@@ -177,10 +177,17 @@ async function onWindowFocus(windowId: number): Promise<void> {
 }
 
 /**
- * Answers the page script about its own tab. `url` is the address of the
- * frame that sent it (the top frame), which the page script can't always
- * check itself: plain-http pages have no `crypto.subtle`. Anything about a
+ * Answers the page script about its own tab, which can't always check its
+ * address itself: plain-http pages have no `crypto.subtle`. Anything about a
  * page that is not covered is ignored.
+ *
+ * The page's address is the one it reports, when that is the tab's address:
+ * `frameUrl` (the sending frame's, from the message sender) stays at the
+ * address the document loaded at through history API changes, so going by
+ * it alone would answer "not protected" to a page that moved onto a
+ * protected address that way, leaving the tab muted with nothing to show it.
+ * A report that differs from the tab's address (the page the tab is leaving)
+ * falls back to `frameUrl`.
  *
  * Handled through the queue: a change already under way (the window lost
  * focus, a navigation) is answered as it ends, not as it began. The tab's
@@ -193,10 +200,11 @@ async function onWindowFocus(windowId: number): Promise<void> {
  * which don't finish in order, so a "shown" followed at once by "covered"
  * (Show page, then a tab switch) could otherwise reach the map reversed.
  */
-export function handlePageRequest(request: PageRequest, tabId: number, url: string | undefined): Promise<PageReply> {
+export function handlePageRequest(request: PageRequest, tabId: number, frameUrl: string | undefined): Promise<PageReply> {
   return updateTabs(async (tabs): Promise<PageReply> => {
-    if (!(await covers(url))) return {inside: false, shown: false}
     const tab = await chrome.tabs.get(tabId).catch(() => undefined)
+    const url = tab?.url !== undefined && request.url === tab.url ? tab.url : frameUrl
+    if (!(await covers(url))) return {inside: false, shown: false}
     if (!tab || !(await covers(tab.url))) return {}
     switch (request.type) {
       case 'pageQuery':

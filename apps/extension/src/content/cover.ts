@@ -11,12 +11,12 @@
 // on a page it covers, the plaintext decoy config `links` for its toolbar
 // icon (shown on the button, so the user sees what covered the page), never
 // the vault, and sends nothing anywhere except "shown"/"covered" (and "is it
-// playing?") for its own tab to the background. On any other page it
-// removes its pre-load hiding as soon as the lookup answers and then stays
-// idle.
+// playing?") for its own tab, with the page's own address, to the
+// background. On any other page it removes its pre-load hiding as soon as
+// the lookup answers and then stays idle.
 import {createMatcher, defaultPrefs, parseDecoyConfig, parsePrefs, type IconSet, type UrlMatcher} from '@nightstand/core'
 import {t} from '@/platform/i18n'
-import {isPageNotice, type PageReply, type PageRequest} from '@/platform/messages'
+import {isPageNotice, type PageReply, type PageRequest, type PageRequestBody} from '@/platform/messages'
 import {loadLinks, loadPrefsAndIndex, STORAGE_KEYS} from '@/platform/storage'
 import {createIcon} from './cover-icons'
 
@@ -93,10 +93,14 @@ button:focus-visible { outline: 2px solid #a1a1aa; outline-offset: 2px; }
 
 type State = 'deciding' | 'off' | 'covered' | 'shown'
 
-/** The background's answer, or undefined when there was none. */
-function send(request: PageRequest): Promise<Partial<PageReply> | undefined> {
+/**
+ * The background's answer, or undefined when there was none. Carries the
+ * page's address now: after a history API change, the background only knows
+ * the one the page loaded at.
+ */
+function send(request: PageRequestBody): Promise<Partial<PageReply> | undefined> {
   try {
-    return chrome.runtime.sendMessage<PageRequest, PageReply>(request).catch(() => undefined)
+    return chrome.runtime.sendMessage<PageRequest, PageReply>({...request, url: location.href}).catch(() => undefined)
   } catch {
     // Extension updated or removed since this page loaded.
     return Promise.resolve(undefined)
