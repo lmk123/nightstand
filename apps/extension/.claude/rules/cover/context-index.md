@@ -1,6 +1,8 @@
 ---
 paths:
   - "src/content/**"
+  - "scripts/**"
+  - "src/background/page-script.ts"
   - "src/background/cover.ts"
   - "src/background/index.ts"
   - "src/popup/views/Settings.tsx"

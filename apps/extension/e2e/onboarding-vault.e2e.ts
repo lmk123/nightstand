@@ -10,8 +10,10 @@ import {
   listItems,
   onboard,
   openSettings,
+  setSwitch,
   sleep,
   submitUnlock,
+  switchOn,
   waitText
 } from './support/popup'
 import {cleanupTemp} from './support/temp'
@@ -179,11 +181,8 @@ describe.skipIf(!hasChrome)('onboarding and vault (Chrome)', () => {
 
     // Turning the switch back on restores the notice (exact wording this time).
     await openSettings(p)
-    await waitText(p, '保存网址')
-    const toggle = '[data-slot=switch]'
-    expect(await p.$eval(toggle, (el) => el.getAttribute('aria-checked'))).toBe('false')
-    await p.click(toggle)
-    await p.waitForFunction((sel) => document.querySelector(sel)?.getAttribute('aria-checked') === 'true', {}, toggle)
+    expect(await switchOn(p, '保存前提醒')).toBe(false)
+    await setSwitch(p, '保存前提醒', true)
     await p.click('button[aria-label="返回"]')
     await clickText(p, '手动添加')
     await p.type('#url', 'example.biz/only')

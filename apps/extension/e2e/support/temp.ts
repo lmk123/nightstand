@@ -29,6 +29,13 @@ export function patchedCopy(
     appendToBackground?: string
     onlyLocale?: string
     /**
+     * Makes the page script's optional all-sites permission a required one,
+     * granted at install: headless Chrome can't answer the prompt the
+     * popup's cover switch opens. Covering itself stays off until a test
+     * turns it on (`turnCoverOn`).
+     */
+    grantPageAccess?: boolean
+    /**
      * Text replaced in the page script, each `[from, to, times]`: it must
      * occur exactly `times` times, so a change in the built code fails loudly
      * instead of leaving the copy unpatched.
@@ -45,10 +52,14 @@ export function patchedCopy(
       if (locale !== onlyLocale) rmSync(join(locales, locale), {recursive: true})
     }
   }
-  if (patch.manifest || onlyLocale) {
+  if (patch.manifest || onlyLocale || patch.grantPageAccess) {
     const file = join(dir, 'manifest.json')
     const manifest = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>
     if (onlyLocale) manifest.default_locale = onlyLocale
+    if (patch.grantPageAccess) {
+      manifest.host_permissions = manifest.optional_host_permissions
+      delete manifest.optional_host_permissions
+    }
     patch.manifest?.(manifest)
     writeFileSync(file, JSON.stringify(manifest))
   }
@@ -57,7 +68,7 @@ export function patchedCopy(
     writeFileSync(file, `${readFileSync(file, 'utf8')}\n;${patch.appendToBackground}\n`)
   }
   if (patch.pageScript) {
-    const file = join(dir, 'content_scripts', 'content-0.js')
+    const file = join(dir, 'scripts', 'cover.js')
     let code = readFileSync(file, 'utf8')
     for (const [from, to, times] of patch.pageScript) {
       const found = code.split(from).length - 1

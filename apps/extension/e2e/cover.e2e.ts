@@ -1,8 +1,28 @@
 import type {Page, Protocol} from 'puppeteer-core'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
-import {launchChrome, openPopup, waitStorage, type ChromeSession} from './support/chrome'
+import {
+  historyUrls,
+  launchChrome,
+  openPopup,
+  pageScriptRegistered,
+  turnCoverOn,
+  waitPageScript,
+  waitStorage,
+  type ChromeSession
+} from './support/chrome'
 import {DIST_CHROMIUM, hasChrome} from './support/env'
-import {addEntry, clearAndType, clickText, hasText, onboard, openSettings, sleep, submitUnlock, waitText} from './support/popup'
+import {
+  addEntry,
+  clearAndType,
+  clickText,
+  hasText,
+  onboard,
+  openSettings,
+  setSwitch,
+  sleep,
+  submitUnlock,
+  waitText
+} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp, patchedCopy} from './support/temp'
 
@@ -101,6 +121,106 @@ async function waitIconFill(page: Page, fill: string): Promise<void> {
 const NIGHTSTAND_FILL = '#4f7264'
 const BOOK_FILL = '#3f5f8a'
 
+/**
+ * Covering is off until the user turns it on (it needs the optional
+ * all-sites permission, which the test build holds from the start). Until
+ * then no page script runs anywhere, and protected pages open as they are,
+ * history cleaning aside.
+ */
+describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
+  let s: ChromeSession
+  let server: Awaited<ReturnType<typeof startTestServer>>
+
+  beforeAll(async () => {
+    server = await startTestServer()
+    s = await launchChrome({serverPort: server.port})
+    const p = await openPopup(s)
+    await onboard(p, 'notes')
+    await addEntry(p, 'example.com')
+    await p.close()
+  })
+  afterAll(async () => {
+    await s?.browser.close()
+    await server?.close()
+    cleanupTemp()
+  })
+
+  it('runs no page script and leaves protected pages uncovered and unmuted, while still cleaning their history', async () => {
+    expect(await pageScriptRegistered(s)).toBe(false)
+    const page = await s.browser.newPage()
+    await page.goto('http://example.com/default-off')
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+    expect(await painted(page)).toBe(true)
+    expect(await page.title()).toBe(serverTitle('http://example.com/default-off'))
+    expect(await muted(s, 'http://example.com/default-off')).toBe(false)
+    await page.close()
+    expect((await historyUrls(s)).filter((url) => url.includes('example.com'))).toEqual([])
+  })
+
+  it('turns on and off from the settings switch, which the background keeps in step', async () => {
+    // An exact address on a secure-context host: a page of the same site
+    // moves onto it by the history API, and the page script matches it
+    // itself (on plain http it asks the background, which still knows the
+    // frame by its address from before the move).
+    const origin = `http://localhost:${server.port}`
+    const p = await openPopup(s)
+    await submitUnlock(p, 'notes')
+    await addEntry(p, `localhost:${server.port}/secret`, 'exact')
+    // Loaded while covering is off: no page script.
+    const tab = await s.browser.newPage()
+    await tab.goto(`${origin}/before`)
+
+    // The test build holds the permission already, so the request answers at once.
+    await p.bringToFront()
+    await openSettings(p)
+    await setSwitch(p, '先遮住页面', true)
+    await waitPageScript(s, true)
+    await waitStorage(s, (snapshot) => (snapshot.prefs as {cover?: unknown} | undefined)?.cover === true)
+
+    // That page moves onto the protected address without loading: nothing
+    // can cover it, so it isn't muted either ("Show page" could never undo it).
+    await tab.bringToFront()
+    await tab.evaluate(() => history.pushState(null, '', '/secret'))
+    expect(await muted(s, `${origin}/secret`)).toBe(false)
+    expect(await covered(tab)).toBe(false)
+    // A page loaded now has the page script, which covers it when it moves there.
+    await tab.goto(`${origin}/after`)
+    await tab.evaluate(() => history.pushState(null, '', '/secret'))
+    await waitCovered(tab, true)
+    expect(await muted(s, `${origin}/secret`)).toBe(true)
+    await tab.close()
+
+    // The background turns it off (as when the permission is withdrawn): the switch follows.
+    await p.bringToFront()
+    await s.sw.evaluate(async () => {
+      const {prefs} = await chrome.storage.local.get('prefs')
+      await chrome.storage.local.set({prefs: {...(prefs as object), cover: false}})
+    })
+    await p.waitForFunction(
+      () =>
+        [...document.querySelectorAll('label')]
+          .find((row) => row.textContent?.includes('先遮住页面'))
+          ?.querySelector('[data-slot=switch]')
+          ?.getAttribute('aria-checked') === 'false'
+    )
+    await waitPageScript(s, false)
+
+    // On and off again from the switch: the page script stops being injected.
+    await setSwitch(p, '先遮住页面', true)
+    await waitPageScript(s, true)
+    await setSwitch(p, '先遮住页面', false)
+    await waitPageScript(s, false)
+    const page = await s.browser.newPage()
+    await page.goto('http://example.com/turned-off')
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+    expect(await muted(s, 'http://example.com/turned-off')).toBe(false)
+    await page.close()
+    await p.close()
+  })
+})
+
 describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () => {
   let s: ChromeSession
   let server: Awaited<ReturnType<typeof startTestServer>>
@@ -112,6 +232,7 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await onboard(p, 'notes')
     await addEntry(p, 'example.com')
     await p.close()
+    await turnCoverOn(s)
   })
   afterAll(async () => {
     await s?.browser.close()
@@ -304,6 +425,8 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await waitCovered(open, false)
     expect(await open.title()).toBe(serverTitle('http://example.com/cover-off'))
     expect(await muted(s, 'http://example.com/cover-off')).toBe(false)
+    // And the page script is no longer injected anywhere.
+    await waitPageScript(s, false)
 
     const plain = await s.browser.newPage()
     await plain.goto('http://example.com/uncovered')
@@ -311,7 +434,7 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     expect(await covered(plain)).toBe(false)
     expect(await muted(s, 'http://example.com/uncovered')).toBe(false)
 
-    await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true}}))
+    await turnCoverOn(s, {mute: true})
     await open.close()
     await plain.close()
   })
@@ -528,6 +651,7 @@ describe.skipIf(!hasChrome)('covering a shown page again after the idle time (Ch
     server = await startTestServer()
     const extension = patchedCopy(DIST_CHROMIUM, {
       onlyLocale: 'zh_CN',
+      grantPageAccess: true,
       pageScript: [
         ['6e4*', '1e3*', 3],
         ['Math.max(1e4,', 'Math.max(1500,', 1]
@@ -538,6 +662,7 @@ describe.skipIf(!hasChrome)('covering a shown page again after the idle time (Ch
     await onboard(p, 'notes')
     await addEntry(p, 'example.com')
     await p.close()
+    await turnCoverOn(s)
   })
   afterAll(async () => {
     await s?.browser.close()

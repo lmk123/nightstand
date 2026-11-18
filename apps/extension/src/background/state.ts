@@ -1,4 +1,5 @@
 import {isFiniteNumber, isRecord} from '@nightstand/core'
+import {serialQueue} from '@/lib/concurrency'
 import {STORAGE_KEYS} from '@/platform/storage'
 
 /** Background bookkeeping in `storage.local` (`state`). Nothing here is secret. */
@@ -14,17 +15,15 @@ function parse(raw: unknown): BackgroundState {
 }
 
 // Serialize read-modify-write cycles so concurrent events don't clobber each other.
-let queue: Promise<unknown> = Promise.resolve()
+const serial = serialQueue()
 
 export function updateState(change: (state: BackgroundState) => BackgroundState): Promise<BackgroundState> {
-  const run = queue.then(async () => {
+  return serial(async () => {
     const result = await chrome.storage.local.get(STORAGE_KEYS.state)
     const next = change(parse(result[STORAGE_KEYS.state]))
     await chrome.storage.local.set({[STORAGE_KEYS.state]: next})
     return next
   })
-  queue = run.catch(() => undefined)
-  return run
 }
 
 export async function readState(): Promise<BackgroundState> {

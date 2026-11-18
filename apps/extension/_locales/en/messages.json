@@ -354,6 +354,9 @@
   "coverHint": {
     "message": "It is covered again when you move the mouse off the page, switch tabs, leave the browser window, or stop using the page for a while (not while it plays sound)."
   },
+  "coverAccessHint": {
+    "message": "Turning this on asks the browser for access to all websites, used only to cover pages. This window may close while the browser asks; covering starts once you allow it. Turning it off gives that access back."
+  },
   "muteSetting": {
     "message": "Mute the tab (sound comes back when the page is shown)"
   },

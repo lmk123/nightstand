@@ -1,4 +1,7 @@
-// Page script: runs at document_start in the top frame of every http(s) page.
+// Page script: runs at document_start in the top frame of every http(s) page,
+// but only while covering is on. The background registers it then (built
+// from scripts/cover.ts; see background/page-script.ts), so its all-sites
+// host permission stays optional.
 //
 // On a protected page it draws an opaque cover over everything and gives the
 // tab a neutral title until the user clicks "Show"; the background keeps the
@@ -536,8 +539,9 @@ export default function main(): (() => void) | undefined {
   window.addEventListener('pagehide', onPageHide)
   window.addEventListener('pageshow', onPageShow)
 
-  const onNotice = (message: unknown) => {
+  const onNotice = (message: unknown, _sender: chrome.runtime.MessageSender, reply: (answer: boolean) => void) => {
     if (!isPageNotice(message)) return
+    reply(true)
     if (message.type === 'cover') {
       if (state === 'shown') coverPage(false)
     } else if (message.type === 'quiet') {

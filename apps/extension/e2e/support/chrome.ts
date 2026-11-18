@@ -17,10 +17,11 @@ let zhBuild: string | undefined
  * The suite finds buttons by their zh_CN labels, so it runs a copy of the
  * build whose only (and default) catalog is zh_CN: the machine's language
  * can't switch it to English. One copy per test file, so a relaunch with the
- * same profile gets the same extension id.
+ * same profile gets the same extension id. The copy also holds the page
+ * script's permission from the start (see `grantPageAccess`).
  */
 function zhOnlyBuild(): string {
-  if (!zhBuild || !existsSync(zhBuild)) zhBuild = patchedCopy(DIST_CHROMIUM, {onlyLocale: 'zh_CN'})
+  if (!zhBuild || !existsSync(zhBuild)) zhBuild = patchedCopy(DIST_CHROMIUM, {onlyLocale: 'zh_CN', grantPageAccess: true})
   return zhBuild
 }
 
@@ -132,4 +133,31 @@ export async function waitStorage(
     if (Date.now() > deadline) throw new Error(`storage did not reach the expected state: ${JSON.stringify(snapshot)}`)
     await new Promise((r) => setTimeout(r, 100))
   }
+}
+
+/** Whether the background has registered the page script (only while covering is on). */
+export function pageScriptRegistered(session: ChromeSession): Promise<boolean> {
+  return session.sw.evaluate(async () => (await chrome.scripting.getRegisteredContentScripts()).length > 0)
+}
+
+/** Waits until the page script is registered, or not. */
+export async function waitPageScript(session: ChromeSession, registered: boolean, timeout = 5000): Promise<void> {
+  const deadline = Date.now() + timeout
+  while ((await pageScriptRegistered(session)) !== registered) {
+    if (Date.now() > deadline) throw new Error(`page script never became ${registered ? 'registered' : 'unregistered'}`)
+    await new Promise((r) => setTimeout(r, 100))
+  }
+}
+
+/**
+ * Turns covering on, as the popup's switch does once the permission is
+ * granted (the test build holds it from the start: `grantPageAccess`), and
+ * waits for the page script to be registered, so pages opened next get it.
+ */
+export async function turnCoverOn(session: ChromeSession, prefs: Record<string, unknown> = {}): Promise<void> {
+  await session.sw.evaluate(async (patch) => {
+    const stored = (await chrome.storage.local.get('prefs')).prefs as Record<string, unknown> | undefined
+    await chrome.storage.local.set({prefs: {...stored, ...patch, cover: true}})
+  }, prefs)
+  await waitPageScript(session, true)
 }

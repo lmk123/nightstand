@@ -15,3 +15,17 @@ export async function mapConcurrent<T, R>(
   await Promise.all(Array.from({length: Math.min(limit, items.length)}, worker))
   return results
 }
+
+/**
+ * A queue that runs the tasks given to it one at a time, in call order, for
+ * read-modify-write cycles that events start concurrently. A failed task
+ * rejects only its own call; the next one still runs.
+ */
+export function serialQueue(): <T>(task: () => T | Promise<T>) => Promise<T> {
+  let tail: Promise<unknown> = Promise.resolve()
+  return (task) => {
+    const run = tail.then(task)
+    tail = run.catch(() => undefined)
+    return run
+  }
+}
