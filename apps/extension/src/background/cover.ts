@@ -177,27 +177,37 @@ async function onWindowFocus(windowId: number): Promise<void> {
 }
 
 /**
- * Answers the page script about its own tab. `url` is the address of the
- * frame that sent it (the top frame), which the page script can't always
- * check itself: plain-http pages have no `crypto.subtle`. Anything about a
+ * Answers the page script about its own tab, which can't always check its
+ * address itself: plain-http pages have no `crypto.subtle`. Anything about a
  * page that is not covered is ignored.
+ *
+ * The page's address is the one it reports (`request.url`), not the sending
+ * frame's from the message sender: that one stays at the address the
+ * document loaded at through history API changes, so going by it would
+ * answer "not protected" to a page that moved onto a protected address that
+ * way, leaving the tab muted with nothing to show it. Only our own page
+ * script can send this (a page's own scripts can't reach the extension), and
+ * the reply is booleans about its own tab either way.
  *
  * Handled through the queue: a change already under way (the window lost
  * focus, a navigation) is answered as it ends, not as it began. The tab's
  * current address must be covered too: a message from the page the tab is
  * leaving (sent just before the next page committed) must not mark or mute
  * a tab that has already moved off protected pages. That case gets "can't
- * tell", which no page script reads as "not protected".
+ * tell", which no page script reads as "not protected"; so does a page on a
+ * protected address whose tab hasn't caught up with it yet. A page whose own
+ * address is not protected is answered without looking up the tab: that is
+ * almost every plain-http page, held invisible until the answer comes.
  *
  * Queued as soon as it arrives, before any matching: matching awaits hashes,
  * which don't finish in order, so a "shown" followed at once by "covered"
  * (Show page, then a tab switch) could otherwise reach the map reversed.
  */
-export function handlePageRequest(request: PageRequest, tabId: number, url: string | undefined): Promise<PageReply> {
+export function handlePageRequest(request: PageRequest, tabId: number): Promise<PageReply> {
   return updateTabs(async (tabs): Promise<PageReply> => {
-    if (!(await covers(url))) return {inside: false, shown: false}
+    if (!(await covers(request.url))) return {inside: false, shown: false}
     const tab = await chrome.tabs.get(tabId).catch(() => undefined)
-    if (!tab || !(await covers(tab.url))) return {}
+    if (!tab || (tab.url !== request.url && !(await covers(tab.url)))) return {}
     switch (request.type) {
       case 'pageQuery':
         return {inside: true, shown: tabs[tabId] === 'shown'}
