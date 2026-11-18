@@ -411,6 +411,30 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await page.close()
   })
 
+  it('unmutes a secure page shown after it entered a protected address by the history API', async () => {
+    // 127.0.0.1 is a secure context: the page script matches by itself, and
+    // only "shown" / "covered" go by the address it reports.
+    const base = `http://127.0.0.1:${server.port}`
+    const p = await openPopup(s)
+    await submitUnlock(p, 'notes')
+    await addEntry(p, `${base}/hidden`, 'exact')
+    await p.close()
+
+    const page = await s.browser.newPage()
+    await page.goto(`${base}/start`)
+    expect(await page.evaluate(() => isSecureContext)).toBe(true)
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+
+    await page.evaluate(() => history.pushState(null, '', '/hidden'))
+    await waitCovered(page, true)
+    expect(await muted(s, `${base}/hidden`)).toBe(true)
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await muted(s, `${base}/hidden`)).toBe(false)
+    await page.close()
+  })
+
   it('shows the toolbar icon on the button, follows a change of icon, and says who covered the page on hover', async () => {
     const page = await s.browser.newPage()
     await page.goto('http://example.com/icon')
@@ -523,7 +547,13 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
 
     it('leaves the cover out when an edit protects nothing new', async () => {
       // A bookmark under every protected site and address, so a title-only edit still gets the notice.
-      const urls = ['http://example.com/bm', 'http://example.net/bm', 'http://localhost/bm', 'http://example.edu/secret']
+      const urls = [
+        'http://example.com/bm',
+        'http://example.net/bm',
+        'http://localhost/bm',
+        'http://example.edu/secret',
+        `http://127.0.0.1:${server.port}/hidden`
+      ]
       const ids = await s.sw.evaluate(
         async (urls) => Promise.all(urls.map(async (url) => (await chrome.bookmarks.create({title: 'bm', url})).id)),
         urls
