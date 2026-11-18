@@ -38,7 +38,10 @@ export type PageRequest =
  */
 export type PageReply = {inside: boolean; shown: boolean; playing?: boolean} | Record<string, never>
 
-/** Background → page script. */
+/**
+ * Background → page script. The page script answers every notice with
+ * `true`, so the background knows one got it (no answer: there is none).
+ */
 export type PageNotice =
   /** Cover now (the browser window lost focus). */
   | {type: 'cover'}

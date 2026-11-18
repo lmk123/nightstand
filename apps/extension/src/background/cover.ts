@@ -117,15 +117,17 @@ async function openTabs(): Promise<Map<number, chrome.tabs.Tab>> {
 }
 
 /**
- * Tells the tab's page script, if it has one. Resolves false only when no
- * page script got it (PDF, browser page, still loading, or a page loaded
- * while covering was off): nothing to tell.
+ * Tells the tab's page script, if it has one. Resolves whether one got it
+ * (it answers every notice): not in a PDF, a browser page, a page still
+ * loading, or a page loaded while covering was off.
+ *
+ * Never awaited inside `updateTabs`: a page that can't answer yet (held by
+ * an `alert()`) would hold up every other tab's change.
  */
 function notify(tabId: number, notice: PageNotice): Promise<boolean> {
   return chrome.tabs.sendMessage(tabId, notice).then(
-    () => true,
-    // Any other failure (no answer: the page script never sends one) means it arrived.
-    (error: unknown) => !String(error).includes('Receiving end does not exist')
+    (answer: unknown) => answer === true,
+    () => false
   )
 }
 
@@ -138,10 +140,11 @@ function notify(tabId: number, notice: PageNotice): Promise<boolean> {
  *
  * Entering is recorded only when a page script is there to cover the page:
  * a mute nothing covers could never be undone by "Show page". So the page
- * script is told first, and its answer (`pageQuery`, queued behind this
- * change) finds the tab covered. No page script: a page loaded while
- * covering was off and moved on by the history API (it is registered only
- * for pages loaded after), a page no script runs in (PDF), or a new page
+ * script is told first, outside the queue, and the tab recorded once it has
+ * answered, unless something recorded it meanwhile (the page script's own
+ * report, which covers the tab either way). No page script: a page loaded
+ * while covering was off and moved on by the history API (it is registered
+ * only for pages loaded after), a page no script runs in (PDF), or a new page
  * whose script isn't there yet, which reports itself covered (`pageCovered`)
  * in a moment. Chrome reports a history API move as loading too, so the two
  * can't be told apart here.
@@ -154,25 +157,29 @@ function notify(tabId: number, notice: PageNotice): Promise<boolean> {
  * isn't undone by a decision made before it.
  */
 async function onTabUrl(tabId: number, url: string, tab: chrome.tabs.Tab): Promise<void> {
-  const left = await updateTabs(async (tabs) => {
+  const move = await updateTabs(async (tabs): Promise<'entered' | 'left' | undefined> => {
     const inside = await covers(url)
     const before = tabs[tabId]
     if (inside === Boolean(before)) {
       if (!inside && isOurMute(tab)) await unmuteOurs(tabId)
-      return false
+      return undefined
     }
-    if (inside) {
-      if (await notify(tabId, {type: 'recheck'})) {
-        tabs[tabId] = 'covered'
-        await mute(tabId)
-      }
-      return false
-    }
+    if (inside) return 'entered'
     delete tabs[tabId]
     await unmuteOurs(tabId)
-    return true
+    return 'left'
   })
-  if (left) await notify(tabId, {type: 'recheck'})
+  if (!move) return
+  const heard = await notify(tabId, {type: 'recheck'})
+  if (move !== 'entered' || !heard) return
+  await updateTabs(async (tabs) => {
+    if (tabs[tabId]) return
+    // Still on a covered page: the tab may have moved on while it was told.
+    const now = await chrome.tabs.get(tabId).catch(() => undefined)
+    if (!now || !(await covers(now.url))) return
+    tabs[tabId] = 'covered'
+    await mute(now)
+  })
 }
 
 /** Covers every shown tab outside the focused window (WINDOW_ID_NONE: none is focused). */

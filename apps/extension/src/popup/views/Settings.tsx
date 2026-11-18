@@ -1,10 +1,10 @@
-import {useEffect, useState, type ReactNode} from 'react'
+import {useCallback, useEffect, useRef, useState, type ReactNode} from 'react'
 import {IDLE_MINUTES, isIdleMinutes, type Prefs, type VaultSettings} from '@nightstand/core'
 import {Label} from '@/components/ui/label'
 import {NativeSelect, NativeSelectOption} from '@/components/ui/native-select'
 import {Switch} from '@/components/ui/switch'
 import {t} from '@/platform/i18n'
-import {requestPageAccess} from '@/platform/page-access'
+import {removePageAccess, requestPageAccess} from '@/platform/page-access'
 import {loadPrefs, savePrefs, watchPrefs} from '@/platform/storage'
 import {Header} from '../components/Header'
 import {ShortcutInfo} from '../components/ShortcutInfo'
@@ -65,38 +65,54 @@ export function Settings({
   children?: ReactNode
 }) {
   // Cover / mute live outside the vault (the page script needs them while
-  // locked), so they are read and written here directly.
+  // locked), so they are read and written here directly. Changes build on
+  // `latest`, not on the render's `prefs`: a permission answer comes back
+  // after other changes may have landed.
   const [prefs, setPrefs] = useState<Prefs | null>(null)
-  useEffect(() => {
-    loadPrefs().then(setPrefs, console.error)
-    // The background changes them too: covering follows the permission.
-    return watchPrefs(setPrefs)
-  }, [])
-  const changePrefs = (patch: Partial<Prefs>) => {
-    if (!prefs) return
-    const next = {...prefs, ...patch}
+  const latest = useRef<Prefs | null>(null)
+  const show = useCallback((next: Prefs) => {
+    latest.current = next
     setPrefs(next)
+  }, [])
+  useEffect(() => {
+    // The background changes them too (covering follows the permission). A
+    // change seen before the first read returns is newer than that read.
+    let changed = false
+    const stop = watchPrefs((next) => {
+      changed = true
+      show(next)
+    })
+    loadPrefs().then((next) => {
+      if (!changed) show(next)
+    }, console.error)
+    return stop
+  }, [show])
+  const changePrefs = (patch: Partial<Prefs>) => {
+    if (!latest.current) return
+    const next = {...latest.current, ...patch}
+    show(next)
     savePrefs(next).catch((error: unknown) => {
       console.error(error)
       // Show what is actually stored, not a change that never landed.
-      loadPrefs().then(setPrefs, console.error)
+      loadPrefs().then(show, console.error)
     })
   }
-  // Covering needs the optional all-sites permission. The request has to be
-  // made right in the click. Chrome closes the popup when its prompt opens,
-  // so the background turns covering on once it is granted (and off if it is
-  // ever taken away); an answer that does come back (already granted, or a
-  // browser that keeps the popup open) is saved here too. Turning it off
-  // only saves the setting: the background gives the permission back
-  // (background/page-script.ts).
+  // Covering needs the optional all-sites permission, asked for right in the
+  // click. Chrome closes the popup when its prompt opens, so the background
+  // turns covering on once it is granted (background/page-script.ts); an
+  // answer that does come back is saved here too. Turning it off gives the
+  // permission back in the click as well, so turning it straight back on
+  // asks again instead of racing a removal still under way.
   const changeCover = (cover: boolean) => {
-    if (!cover) {
-      changePrefs({cover})
+    if (cover) {
+      requestPageAccess().then((granted) => {
+        if (granted) changePrefs({cover})
+      }, console.error)
       return
     }
-    requestPageAccess().then((granted) => {
-      if (granted) changePrefs({cover})
-    }, console.error)
+    // Fails only where the permission is a required one (the e2e build).
+    removePageAccess().catch(() => undefined)
+    changePrefs({cover})
   }
 
   return (

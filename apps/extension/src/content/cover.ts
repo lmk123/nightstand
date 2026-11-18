@@ -539,8 +539,9 @@ export default function main(): (() => void) | undefined {
   window.addEventListener('pagehide', onPageHide)
   window.addEventListener('pageshow', onPageShow)
 
-  const onNotice = (message: unknown) => {
+  const onNotice = (message: unknown, _sender: chrome.runtime.MessageSender, reply: (answer: boolean) => void) => {
     if (!isPageNotice(message)) return
+    reply(true)
     if (message.type === 'cover') {
       if (state === 'shown') coverPage(false)
     } else if (message.type === 'quiet') {

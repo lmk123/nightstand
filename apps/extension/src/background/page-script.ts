@@ -5,25 +5,12 @@ import {loadPrefs, savePrefs, STORAGE_KEYS} from '@/platform/storage'
 
 /**
  * Registers the page script (`scripts/cover.ts`) only while covering is on
- * and its all-sites host permission is granted. It is not declared in the
- * manifest: Chrome would make a declared script's hosts a required
- * permission, shown when installing ("read and change all your data on all
- * websites") and on the details page even with covering off.
- *
- * `prefs.cover` is the setting; the permission follows it:
- * - granted (from the popup's switch, or by the user on the details page):
- *   covering turns on. The popup can't do it itself: Chrome closes it when
- *   the permission prompt opens.
- * - withdrawn (by the user on the details page): covering turns off, which
- *   also unmutes and forgets tabs (background/cover.ts).
- * - covering turned off (the popup's switch): the permission is given back
- *   here, not in the popup, so that it is decided on the setting as it is
- *   when it runs: turned off and straight back on (still granted, so the
- *   popup saves "on" without a prompt) keeps it.
- * - on install, update and startup the two are reconciled the same way:
- *   covering on with no permission (refused, or not kept by an update) turns
- *   off; covering off with the permission (an update from a build that
- *   declared the script and covered by default) gives the permission back.
+ * and its optional all-sites permission is granted; not declared in the
+ * manifest, which would make that permission a required one. The permission
+ * and `prefs.cover` are kept in step here: a grant turns covering on (Chrome
+ * closes the popup when its prompt opens), a withdrawal turns it off, and
+ * install / update / startup reconcile the two. Why each way round: read
+ * `apps/extension/.context/cover/cover-behavior.md` before changing it.
  */
 const SCRIPT_ID = 'cover'
 
@@ -52,31 +39,27 @@ async function setRegistered(on: boolean): Promise<void> {
 
 /**
  * Brings the registration and the permission in line with the setting as it
- * is now (read inside the queue, not taken from the change that started it).
- * Runs on install / startup and when the setting changes, never right after
- * a grant: the setting may not say "on" yet then (see `follow`), and giving
- * the permission back would undo the grant.
+ * is now (read inside the queue): on install, update and startup, and when
+ * the setting changes. Never right after a grant, when the setting may not
+ * say "on" yet (see `follow`): giving the permission back would undo it.
  */
-function sync(): Promise<void> {
+export function reconcilePageScript(): Promise<void> {
   return serial(async () => {
     const [prefs, access] = await Promise.all([loadPrefs(), hasPageAccess()])
     if (prefs.cover && !access) {
-      // The change to `prefs` syncs again; nothing is registered meanwhile.
+      // The change to `prefs` reconciles again; nothing is registered meanwhile.
       await savePrefs({...prefs, cover: false})
       await setRegistered(false)
       return
     }
     if (!prefs.cover && access) {
-      // Fails only where the permission is a required one (the e2e build).
+      // The popup gives it back when covering is turned off; this is for an
+      // update from a build that required it, and fails only where it still
+      // is required (the e2e build).
       await removePageAccess().catch(() => undefined)
     }
     await setRegistered(prefs.cover && access)
   })
-}
-
-/** Install, update or startup. */
-export function reconcilePageScript(): Promise<void> {
-  return sync()
 }
 
 /** Turns covering on or off to follow the permission. */
@@ -107,5 +90,5 @@ chrome.permissions.onRemoved.addListener(() => {
 chrome.storage.onChanged.addListener((changes, area) => {
   const prefs = changes[STORAGE_KEYS.prefs]
   if (area !== 'local' || !prefs) return
-  if (parsePrefs(prefs.oldValue).cover !== parsePrefs(prefs.newValue).cover) sync().catch(console.error)
+  if (parsePrefs(prefs.oldValue).cover !== parsePrefs(prefs.newValue).cover) reconcilePageScript().catch(console.error)
 })
