@@ -122,6 +122,44 @@ const NIGHTSTAND_FILL = '#4f7264'
 const BOOK_FILL = '#3f5f8a'
 
 /**
+ * The build as shipped, without `grantPageAccess`: the all-sites permission
+ * is optional, so nothing grants it at install. Every other suite runs a
+ * copy that holds it, and couldn't tell if it became required again. The
+ * prompt itself and `onAdded` / `onRemoved` are left to manual acceptance.
+ */
+describe.skipIf(!hasChrome)('site access is optional in the shipped build (Chrome)', () => {
+  let s: ChromeSession
+
+  beforeAll(async () => {
+    s = await launchChrome({extension: patchedCopy(DIST_CHROMIUM, {onlyLocale: 'zh_CN'})})
+  })
+  afterAll(async () => {
+    await s?.browser.close()
+    cleanupTemp()
+  })
+
+  it('holds no site access at install and declares the page script nowhere in the manifest', async () => {
+    const {manifest, access, origins} = await s.sw.evaluate(async () => ({
+      manifest: chrome.runtime.getManifest() as unknown as Record<string, unknown>,
+      access: await chrome.permissions.contains({origins: ['http://*/*', 'https://*/*']}),
+      origins: (await chrome.permissions.getAll()).origins ?? []
+    }))
+    expect(manifest.content_scripts).toBeUndefined()
+    expect(manifest.host_permissions).toBeUndefined()
+    expect(manifest.optional_host_permissions).toEqual(['http://*/*', 'https://*/*'])
+    expect(access).toBe(false)
+    expect(origins).toEqual([])
+    expect(await pageScriptRegistered(s)).toBe(false)
+  })
+
+  it('turns covering back off when it is on without the permission, and registers nothing', async () => {
+    await s.sw.evaluate(() => chrome.storage.local.set({prefs: {cover: true, mute: true, idleMinutes: 1}}))
+    await waitStorage(s, (snapshot) => (snapshot.prefs as {cover?: unknown} | undefined)?.cover === false)
+    expect(await pageScriptRegistered(s)).toBe(false)
+  })
+})
+
+/**
  * Covering is off until the user turns it on (it needs the optional
  * all-sites permission, which the test build holds from the start). Until
  * then no page script runs anywhere, and protected pages open as they are,

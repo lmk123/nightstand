@@ -15,7 +15,9 @@ import {getMatcher, invalidateMatcher, isProtectedTab} from './cleaner'
  * browser session) because the service worker may stop between events:
  * - `covered`: on a protected page, not shown (muted when muting is on)
  * - `shown`: on a protected page the user chose to show
- * - absent: not on a protected page, or covering is off
+ * - absent: not on a protected page, covering is off, or no page script has
+ *   asked about this page yet (none can: a PDF, a page loaded while
+ *   covering was off). Recorded on that `pageQuery`, see `onTabUrl`.
  *
  * Only tab ids are kept, never URLs or hosts.
  */
@@ -134,6 +136,9 @@ function notify(tabId: number, notice: PageNotice): void {
  * the mute): not in a PDF, nor in a page loaded while covering was off. So
  * entering is not recorded here but on the `pageQuery` the page script
  * sends on this notice (or at load), which carries its current address.
+ * That mutes a little later than this event would (accepted: read the known
+ * limits in `apps/extension/.context/cover/cover-behavior.md` before
+ * muting here again).
  *
  * A tab outside protected pages with no record can still carry a mute of
  * Nightstand's: an extension update clears `storage.session` but not the

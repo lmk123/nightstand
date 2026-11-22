@@ -8,6 +8,7 @@ import {
   type Prefs,
   type StoredVault
 } from '@nightstand/core'
+import {serialQueue} from '@/lib/concurrency'
 
 /**
  * Everything Nightstand keeps lives in `storage.local` (never `sync`), under
@@ -107,13 +108,19 @@ export async function savePrefs(prefs: Prefs): Promise<void> {
   await chrome.storage.local.set({[KEY.prefs]: prefs})
 }
 
+const prefsWrites = serialQueue()
+
 /**
  * Writes only the fields in `patch`, onto the preferences as stored now: the
  * popup and the background both change them, and writing a whole copy read
- * earlier would undo the other's change.
+ * earlier would undo the other's change. Queued, so two changes from the
+ * same context (quick clicks in the popup) can't read the same old copy.
+ * Between the popup and the background it is not atomic (`storage` has no
+ * transactions); that window is a few milliseconds, and the background
+ * only writes `cover`, when the permission changes.
  */
-export async function updatePrefs(patch: Partial<Prefs>): Promise<void> {
-  await savePrefs({...(await loadPrefs()), ...patch})
+export function updatePrefs(patch: Partial<Prefs>): Promise<void> {
+  return prefsWrites(async () => savePrefs({...(await loadPrefs()), ...patch}))
 }
 
 /** Calls `onChange` with the preferences each time they are written (by anyone). Returns the unsubscribe. */

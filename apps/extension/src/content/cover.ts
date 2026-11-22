@@ -489,11 +489,11 @@ export default function main(): (() => void) | undefined {
   }
 
   /**
-   * Brings a page that had already decided in line with the background,
-   * which may have recorded the tab as covered (and muted it) meanwhile: the
-   * tab left protected pages and came back, by the history API or from the
-   * back/forward cache. Still covered, or no longer shown in this tab:
-   * covered, and reported so the background mutes the tab again.
+   * Brings a page that had already decided in line with the background:
+   * the tab left protected pages and came back, by the history API or from
+   * the back/forward cache, and the background, having forgotten it, records
+   * it as covered (and mutes it) on the `pageQuery` this answers. Still
+   * covered, or no longer shown in this tab: covered.
    */
   function reconcile(reply: Partial<PageReply> | undefined): void {
     if (state === 'covered' || (state === 'shown' && (reply?.shown !== true || document.visibilityState !== 'visible'))) {
@@ -503,10 +503,11 @@ export default function main(): (() => void) | undefined {
 
   /**
    * Covers or shows a protected page that has just loaded (or was just
-   * activated). Covering is reported so the background mutes the tab even
-   * when it saw no URL change (a reload after the site was added). A
-   * prerendered page only covers itself and says nothing: it isn't in the
-   * tab yet, whose state is the page on screen. It decides again when shown.
+   * activated). The background has already recorded and muted the tab on
+   * the `pageQuery` this answers, unless it couldn't tell (the tab's address
+   * hadn't caught up): covering is reported for that case. A prerendered
+   * page only covers itself and says nothing: it isn't in the tab yet, whose
+   * state is the page on screen. It decides again when shown.
    */
   function settle(reply: Partial<PageReply> | undefined): void {
     if (isPrerendering()) coverPage(false)
