@@ -182,6 +182,8 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     // can cover it, so it isn't muted either ("Show page" could never undo it).
     await tab.bringToFront()
     await tab.evaluate(() => history.pushState(null, '', '/secret'))
+    // Long enough for the background to act on the move, so a mute it set would show.
+    await sleep(500)
     expect(await muted(s, `${origin}/secret`)).toBe(false)
     expect(await covered(tab)).toBe(false)
     // A page loaded now has the page script, which covers it when it moves there.

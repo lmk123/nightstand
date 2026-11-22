@@ -47,7 +47,7 @@ export async function isProtectedTab(tab: chrome.tabs.Tab): Promise<boolean> {
 }
 
 /** The open tabs on (or loading) protected pages. */
-export async function protectedTabs(): Promise<chrome.tabs.Tab[]> {
+async function protectedTabs(): Promise<chrome.tabs.Tab[]> {
   const found: chrome.tabs.Tab[] = []
   for (const tab of await chrome.tabs.query({})) {
     if (tab.id !== undefined && (await isProtectedTab(tab))) found.push(tab)

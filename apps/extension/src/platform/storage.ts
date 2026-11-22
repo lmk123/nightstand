@@ -107,6 +107,15 @@ export async function savePrefs(prefs: Prefs): Promise<void> {
   await chrome.storage.local.set({[KEY.prefs]: prefs})
 }
 
+/**
+ * Writes only the fields in `patch`, onto the preferences as stored now: the
+ * popup and the background both change them, and writing a whole copy read
+ * earlier would undo the other's change.
+ */
+export async function updatePrefs(patch: Partial<Prefs>): Promise<void> {
+  await savePrefs({...(await loadPrefs()), ...patch})
+}
+
 /** Calls `onChange` with the preferences each time they are written (by anyone). Returns the unsubscribe. */
 export function watchPrefs(onChange: (prefs: Prefs) => void): () => void {
   const listener = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {

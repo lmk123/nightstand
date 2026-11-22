@@ -1,7 +1,7 @@
 import {parsePrefs} from '@nightstand/core'
 import {serialQueue} from '@/lib/concurrency'
 import {hasPageAccess, PAGE_ORIGINS, removePageAccess} from '@/platform/page-access'
-import {loadPrefs, savePrefs, STORAGE_KEYS} from '@/platform/storage'
+import {loadPrefs, STORAGE_KEYS, updatePrefs} from '@/platform/storage'
 
 /**
  * Registers the page script (`scripts/cover.ts`) only while covering is on
@@ -38,26 +38,26 @@ async function setRegistered(on: boolean): Promise<void> {
 }
 
 /**
- * Brings the registration and the permission in line with the setting as it
- * is now (read inside the queue): on install, update and startup, and when
- * the setting changes. Never right after a grant, when the setting may not
- * say "on" yet (see `follow`): giving the permission back would undo it.
+ * Brings the registration in line with the setting and the permission as
+ * they are now (read inside the queue): on install, update and startup, and
+ * when the setting changes. Covering on without the permission is turned off.
+ *
+ * The permission is given back (`giveBack`) only on an update, from a build
+ * that required it; the popup gives it back itself when covering is turned
+ * off. Never on a setting change: one queued by turning covering off could
+ * run after the user has turned it straight back on and granted it again.
  */
-export function reconcilePageScript(): Promise<void> {
+export function reconcilePageScript({giveBack = false}: {giveBack?: boolean} = {}): Promise<void> {
   return serial(async () => {
     const [prefs, access] = await Promise.all([loadPrefs(), hasPageAccess()])
     if (prefs.cover && !access) {
       // The change to `prefs` reconciles again; nothing is registered meanwhile.
-      await savePrefs({...prefs, cover: false})
+      await updatePrefs({cover: false})
       await setRegistered(false)
       return
     }
-    if (!prefs.cover && access) {
-      // The popup gives it back when covering is turned off; this is for an
-      // update from a build that required it, and fails only where it still
-      // is required (the e2e build).
-      await removePageAccess().catch(() => undefined)
-    }
+    // Fails only where the permission is still required (the e2e build).
+    if (giveBack && !prefs.cover && access) await removePageAccess().catch(() => undefined)
     await setRegistered(prefs.cover && access)
   })
 }
@@ -65,8 +65,7 @@ export function reconcilePageScript(): Promise<void> {
 /** Turns covering on or off to follow the permission. */
 function follow(cover: boolean): Promise<void> {
   return serial(async () => {
-    const prefs = await loadPrefs()
-    if (prefs.cover !== cover) await savePrefs({...prefs, cover})
+    if ((await loadPrefs()).cover !== cover) await updatePrefs({cover})
   })
 }
 

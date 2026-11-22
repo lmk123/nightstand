@@ -5,7 +5,7 @@ import {NativeSelect, NativeSelectOption} from '@/components/ui/native-select'
 import {Switch} from '@/components/ui/switch'
 import {t} from '@/platform/i18n'
 import {removePageAccess, requestPageAccess} from '@/platform/page-access'
-import {loadPrefs, savePrefs, watchPrefs} from '@/platform/storage'
+import {loadPrefs, updatePrefs, watchPrefs} from '@/platform/storage'
 import {Header} from '../components/Header'
 import {ShortcutInfo} from '../components/ShortcutInfo'
 import {viewClass} from '../components/styles'
@@ -64,10 +64,9 @@ export function Settings({
   onBack: () => void
   children?: ReactNode
 }) {
-  // Cover / mute live outside the vault (the page script needs them while
-  // locked), so they are read and written here directly. Changes build on
-  // `latest`, not on the render's `prefs`: a permission answer comes back
-  // after other changes may have landed.
+  // Outside the vault (the page script reads them while locked). Changes build
+  // on `latest`, not the render's `prefs` (a permission answer comes back late),
+  // and write only their own fields: the background changes `cover` too.
   const [prefs, setPrefs] = useState<Prefs | null>(null)
   const latest = useRef<Prefs | null>(null)
   const show = useCallback((next: Prefs) => {
@@ -89,9 +88,8 @@ export function Settings({
   }, [show])
   const changePrefs = (patch: Partial<Prefs>) => {
     if (!latest.current) return
-    const next = {...latest.current, ...patch}
-    show(next)
-    savePrefs(next).catch((error: unknown) => {
+    show({...latest.current, ...patch})
+    updatePrefs(patch).catch((error: unknown) => {
       console.error(error)
       // Show what is actually stored, not a change that never landed.
       loadPrefs().then(show, console.error)
