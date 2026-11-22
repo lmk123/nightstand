@@ -1,6 +1,7 @@
 ---
 paths:
   - "src/content/**"
+  - "scripts/**"
   - "src/background/cover.ts"
   - "src/background/index.ts"
   - "src/platform/messages.ts"

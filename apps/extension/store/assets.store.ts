@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url'
 import {Resvg} from '@resvg/resvg-js'
 import type {Page} from 'puppeteer-core'
 import {afterAll, beforeAll, describe, it} from 'vitest'
-import {launchChrome, type ChromeSession} from '../e2e/support/chrome'
+import {launchChrome, turnCoverOn, type ChromeSession} from '../e2e/support/chrome'
 import {DIST_CHROMIUM, hasChrome} from '../e2e/support/env'
 import {clickText, hasText, sleep, waitIcons, waitText} from '../e2e/support/popup'
 import {cleanupTemp, patchedCopy} from '../e2e/support/temp'
@@ -247,8 +247,15 @@ async function shoot(locale: Locale) {
   const dir = join(OUT, locale)
   mkdirSync(dir, {recursive: true})
   const server = await startSiteServer([...links, ...saved])
-  const s = await launchChrome({extension: patchedCopy(DIST_CHROMIUM, {onlyLocale: locale}), serverPort: server.port})
+  // Covering is off by default and needs the all-sites permission, whose
+  // prompt headless Chrome can't answer: the copy holds it from install, and
+  // covering is turned on before any page loads, so the cover shot has one.
+  const s = await launchChrome({
+    extension: patchedCopy(DIST_CHROMIUM, {onlyLocale: locale, grantPageAccess: true}),
+    serverPort: server.port
+  })
   try {
+    await turnCoverOn(s)
     const url = (site: Site) => `http://${site.host}/`
     await s.sw.evaluate(
       (config) => chrome.storage.local.set({links: config}),

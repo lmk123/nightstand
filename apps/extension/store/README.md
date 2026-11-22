@@ -33,7 +33,7 @@ pnpm run store
 
 **Single purpose**
 
-> Nightstand keeps the sites a user chooses out of the browser's address bar suggestions, history page and bookmarks. The user saves those sites in an encrypted list; Nightstand deletes their browsing history after every visit and deletes bookmarks that point to them; when one of them is opened, its page is covered and its tab muted until the user clicks to show it, so it can't be seen or heard by accident. While locked, its popup shows a plain "Quick Links" launcher; the passphrase typed into its filter box unlocks the list.
+> Nightstand keeps the sites a user chooses out of the browser's address bar suggestions, history page and bookmarks. The user saves those sites in an encrypted list; Nightstand deletes their browsing history after every visit and deletes bookmarks that point to them; optionally (off by default), when one of them is opened, its page is covered and its tab muted until the user clicks to show it, so it can't be seen or heard by accident. While locked, its popup shows a plain "Quick Links" launcher; the passphrase typed into its filter box unlocks the list.
 
 **Permission justifications**
 
@@ -45,10 +45,11 @@ pnpm run store
 | `alarms` | Schedules the periodic scan (every 15 minutes) that deletes history of saved sites a visit-time clean-up may have missed. |
 | `bookmarks` | When a site is saved, counts and deletes the bookmarks that point to it, since they would keep it in address bar suggestions; also lets the user import sites from their bookmarks. |
 | `favicon` | Shows each site's icon in the popup, read from the browser's local icon cache. No icon is ever fetched from the network. |
+| `scripting` | Registers the page-covering content script only while the user has covering turned on (and unregisters it when they turn it off), so that its host permission can be optional instead of granted at install. |
 
-- **Host permissions**（来自内容脚本的匹配范围 `http://*/*`、`https://*/*`）：
+- **Host permissions**（可选的 `optional_host_permissions`：`http://*/*`、`https://*/*`，只在用户开启遮罩时申请）：
 
-  > A content script runs at document_start in the top frame of every http(s) page to check the page's address against the user's salted-hash match table. On a saved site it covers the page with an opaque overlay and a neutral tab title until the user clicks "Show page". The user saves arbitrary sites, so the script can't be limited to fixed hosts in advance, and requesting each saved site's host separately would list those sites on the extension's details page, which is exactly what the extension avoids. The script does not read page content (apart from the tab title it swaps and restores) and sends nothing anywhere; it only tells the extension's own background whether the page was shown or covered.
+  > Optional, requested only when the user turns on covering in the settings (off by default) and removed when they turn it off. While granted, a content script registered at run time runs at document_start in the top frame of every http(s) page to check the page's address against the user's salted-hash match table. On a saved site it covers the page with an opaque overlay and a neutral tab title until the user clicks "Show page". The user saves arbitrary sites, so the script can't be limited to fixed hosts in advance, and requesting each saved site's host separately would list those sites on the extension's details page, which is exactly what the extension avoids. The script does not read page content (apart from the tab title it swaps and restores) and sends nothing anywhere; it only tells the extension's own background whether the page was shown or covered.
 - **Are you using remote code?** No, I am not using remote code.
 
 **Data usage**

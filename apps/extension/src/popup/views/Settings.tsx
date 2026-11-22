@@ -1,10 +1,11 @@
-import {useEffect, useState, type ReactNode} from 'react'
+import {useCallback, useEffect, useRef, useState, type ReactNode} from 'react'
 import {IDLE_MINUTES, isIdleMinutes, type Prefs, type VaultSettings} from '@nightstand/core'
 import {Label} from '@/components/ui/label'
 import {NativeSelect, NativeSelectOption} from '@/components/ui/native-select'
 import {Switch} from '@/components/ui/switch'
 import {t} from '@/platform/i18n'
-import {loadPrefs, savePrefs} from '@/platform/storage'
+import {removePageAccess, requestPageAccess} from '@/platform/page-access'
+import {loadPrefs, updatePrefs, watchPrefs} from '@/platform/storage'
 import {Header} from '../components/Header'
 import {ShortcutInfo} from '../components/ShortcutInfo'
 import {viewClass} from '../components/styles'
@@ -63,21 +64,53 @@ export function Settings({
   onBack: () => void
   children?: ReactNode
 }) {
-  // Cover / mute live outside the vault (the page script needs them while
-  // locked), so they are read and written here directly.
+  // Outside the vault (the page script reads them while locked). Changes build
+  // on `latest`, not the render's `prefs` (a permission answer comes back late),
+  // and write only their own fields: the background changes `cover` too.
   const [prefs, setPrefs] = useState<Prefs | null>(null)
-  useEffect(() => {
-    loadPrefs().then(setPrefs, console.error)
-  }, [])
-  const changePrefs = (patch: Partial<Prefs>) => {
-    if (!prefs) return
-    const next = {...prefs, ...patch}
+  const latest = useRef<Prefs | null>(null)
+  const show = useCallback((next: Prefs) => {
+    latest.current = next
     setPrefs(next)
-    savePrefs(next).catch((error: unknown) => {
+  }, [])
+  useEffect(() => {
+    // The background changes them too (covering follows the permission). A
+    // change seen before the first read returns is newer than that read.
+    let changed = false
+    const stop = watchPrefs((next) => {
+      changed = true
+      show(next)
+    })
+    loadPrefs().then((next) => {
+      if (!changed) show(next)
+    }, console.error)
+    return stop
+  }, [show])
+  const changePrefs = (patch: Partial<Prefs>) => {
+    if (!latest.current) return
+    show({...latest.current, ...patch})
+    updatePrefs(patch).catch((error: unknown) => {
       console.error(error)
       // Show what is actually stored, not a change that never landed.
-      loadPrefs().then(setPrefs, console.error)
+      loadPrefs().then(show, console.error)
     })
+  }
+  // Covering needs the optional all-sites permission, asked for right in the
+  // click. Chrome closes the popup when its prompt opens, so the background
+  // turns covering on once it is granted (background/page-script.ts); an
+  // answer that does come back is saved here too. Turning it off gives the
+  // permission back in the click as well, so turning it straight back on
+  // asks again instead of racing a removal still under way.
+  const changeCover = (cover: boolean) => {
+    if (cover) {
+      requestPageAccess().then((granted) => {
+        if (granted) changePrefs({cover})
+      }, console.error)
+      return
+    }
+    // Fails only where the permission is a required one (the e2e build).
+    removePageAccess().catch(() => undefined)
+    changePrefs({cover})
   }
 
   return (
@@ -88,9 +121,10 @@ export function Settings({
           <section className="grid grid-cols-1 gap-2">
             <h2 className="section-label">{t('coverSection')}</h2>
             <div className="panel divide-line grid grid-cols-1 divide-y">
-              <SwitchRow checked={prefs.cover} onChange={(cover) => changePrefs({cover})}>
+              <SwitchRow checked={prefs.cover} onChange={changeCover}>
                 {t('coverSetting')}
                 <span className="text-muted-foreground mt-1 block text-xs">{t('coverHint')}</span>
+                <span className="text-muted-foreground mt-1 block text-xs">{t('coverAccessHint')}</span>
               </SwitchRow>
               {/* Muting goes with the cover: with covering off no page is ever shown, so it would never end. */}
               <SwitchRow checked={prefs.cover && prefs.mute} disabled={!prefs.cover} onChange={(mute) => changePrefs({mute})}>

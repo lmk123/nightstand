@@ -1,4 +1,4 @@
-import type {Page} from 'puppeteer-core'
+import type {ElementHandle, Page} from 'puppeteer-core'
 
 // Helpers that act on the popup by its visible (zh_CN) text, like a user would.
 
@@ -127,4 +127,56 @@ export async function submitUnlock(page: Page, secret: string, settleMs = 1200):
 export async function openSettings(page: Page, link?: string): Promise<void> {
   await page.click('button[aria-label="设置"]')
   if (link) await clickText(page, link)
+}
+
+/**
+ * Whether the settings switch in the row that mentions `text` is on (each
+ * row is a <label> holding its switch). Found by text, not by position: the
+ * cover section above renders only once the preferences are read, which
+ * shifts every index.
+ */
+export async function switchOn(page: Page, text: string): Promise<boolean> {
+  await page.waitForFunction(
+    (text) => [...document.querySelectorAll('label')].some((row) => row.textContent?.includes(text) && row.querySelector('[data-slot=switch]')),
+    {},
+    text
+  )
+  return page.evaluate(
+    (text) =>
+      [...document.querySelectorAll('label')]
+        .find((row) => row.textContent?.includes(text))
+        ?.querySelector('[data-slot=switch]')
+        ?.getAttribute('aria-checked') === 'true',
+    text
+  )
+}
+
+/**
+ * Clicks the switch in the row that mentions `text` and waits until it reads
+ * `on`. A real mouse click: the cover switch asks for a permission, which
+ * needs a user gesture.
+ */
+export async function setSwitch(page: Page, text: string, on: boolean): Promise<void> {
+  await switchOn(page, text)
+  const toggle = await page.evaluateHandle(
+    (text) =>
+      [...document.querySelectorAll('label')]
+        .find((row) => row.textContent?.includes(text))
+        ?.querySelector<HTMLElement>('[data-slot=switch]') ?? null,
+    text
+  )
+  const element = toggle.asElement() as ElementHandle<HTMLElement> | null
+  if (!element) throw new Error(`no switch next to "${text}"`)
+  await element.click()
+  await toggle.dispose()
+  await page.waitForFunction(
+    (text, on) =>
+      [...document.querySelectorAll('label')]
+        .find((row) => row.textContent?.includes(text))
+        ?.querySelector('[data-slot=switch]')
+        ?.getAttribute('aria-checked') === String(on),
+    {},
+    text,
+    on
+  )
 }

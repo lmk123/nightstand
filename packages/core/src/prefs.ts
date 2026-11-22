@@ -19,8 +19,12 @@ export type IdleMinutes = (typeof IDLE_MINUTES)[number]
  * - `idleMinutes`: a shown page is covered again after this many minutes
  *   without input on it (while its tab plays sound, the wait doesn't end).
  *
- * `cover` and `mute` default to on, `idleMinutes` to 1; an absent key
- * (fresh install, older build) means the default.
+ * `cover` defaults to off: it needs the optional all-sites host permission,
+ * which the extension asks for only when the user turns covering on (the
+ * background keeps the two in step). `mute` defaults to on, so it applies
+ * once covering is turned on; `idleMinutes` to 1. An absent key (fresh
+ * install, older build) means the default, so an install that never changed
+ * its settings stops covering after the update that made covering optional.
  */
 export interface Prefs {
   cover: boolean
@@ -29,7 +33,7 @@ export interface Prefs {
 }
 
 export function defaultPrefs(): Prefs {
-  return {cover: true, mute: true, idleMinutes: 1}
+  return {cover: false, mute: true, idleMinutes: 1}
 }
 
 export function isIdleMinutes(value: unknown): value is IdleMinutes {
