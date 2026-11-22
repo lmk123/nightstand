@@ -501,6 +501,65 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     await page.close()
   })
 
+  it('covers a plain-http page that enters or leaves a protected address by the history API', async () => {
+    const p = await openPopup(s)
+    await submitUnlock(p, 'notes')
+    await addEntry(p, 'http://example.edu/secret', 'exact')
+    await p.close()
+
+    const page = await s.browser.newPage()
+    const push = (path: string) => page.evaluate((path) => history.pushState(null, '', path), path)
+    await page.goto('http://example.edu/start')
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+    expect(await muted(s, 'http://example.edu/start')).toBe(false)
+
+    // The frame's URL that the background sees stays at /start: the page's
+    // own address decides, or the tab ends up muted with nothing to show it.
+    await push('/secret')
+    await waitCovered(page, true)
+    expect(await page.title()).toBe('新标签页')
+    expect(await muted(s, 'http://example.edu/secret')).toBe(true)
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await muted(s, 'http://example.edu/secret')).toBe(false)
+
+    // Leaving while covered uncovers too.
+    await push('/out')
+    await push('/secret')
+    await waitCovered(page, true)
+    expect(await muted(s, 'http://example.edu/secret')).toBe(true)
+    await push('/out-again')
+    await waitCovered(page, false)
+    expect(await painted(page)).toBe(true)
+    expect(await muted(s, 'http://example.edu/out-again')).toBe(false)
+    await page.close()
+  })
+
+  it('unmutes a secure page shown after it entered a protected address by the history API', async () => {
+    // 127.0.0.1 is a secure context: the page script matches by itself, and
+    // only "shown" / "covered" go by the address it reports.
+    const base = `http://127.0.0.1:${server.port}`
+    const p = await openPopup(s)
+    await submitUnlock(p, 'notes')
+    await addEntry(p, `${base}/hidden`, 'exact')
+    await p.close()
+
+    const page = await s.browser.newPage()
+    await page.goto(`${base}/start`)
+    expect(await page.evaluate(() => isSecureContext)).toBe(true)
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+
+    await page.evaluate(() => history.pushState(null, '', '/hidden'))
+    await waitCovered(page, true)
+    expect(await muted(s, `${base}/hidden`)).toBe(true)
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await muted(s, `${base}/hidden`)).toBe(false)
+    await page.close()
+  })
+
   it('shows the toolbar icon on the button, follows a change of icon, and says who covered the page on hover', async () => {
     const page = await s.browser.newPage()
     await page.goto('http://example.com/icon')
@@ -612,8 +671,14 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
     })
 
     it('leaves the cover out when an edit protects nothing new', async () => {
-      // A bookmark under every protected site, so a title-only edit still gets the notice.
-      const urls = ['http://example.com/bm', 'http://example.net/bm', 'http://localhost/bm']
+      // A bookmark under every protected site and address, so a title-only edit still gets the notice.
+      const urls = [
+        'http://example.com/bm',
+        'http://example.net/bm',
+        'http://localhost/bm',
+        'http://example.edu/secret',
+        `http://127.0.0.1:${server.port}/hidden`
+      ]
       const ids = await s.sw.evaluate(
         async (urls) => Promise.all(urls.map(async (url) => (await chrome.bookmarks.create({title: 'bm', url})).id)),
         urls

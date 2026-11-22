@@ -39,7 +39,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!fromOwnPage(sender)) {
     const tabId = sender.tab?.id
     if (tabId === undefined || !fromTopFrame(sender) || !isPageRequest(message)) return
-    handlePageRequest(message, tabId, sender.url).then(sendResponse, (error: unknown) => {
+    handlePageRequest(message, tabId).then(sendResponse, (error: unknown) => {
       console.error(error)
       // Can't tell: the page script keeps the page covered.
       sendResponse({} satisfies PageReply)

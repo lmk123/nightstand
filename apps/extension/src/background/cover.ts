@@ -116,19 +116,11 @@ async function openTabs(): Promise<Map<number, chrome.tabs.Tab>> {
   return open
 }
 
-/**
- * Tells the tab's page script, if it has one. Resolves whether one got it
- * (it answers every notice): not in a PDF, a browser page, a page still
- * loading, or a page loaded while covering was off.
- *
- * Never awaited inside `updateTabs`: a page that can't answer yet (held by
- * an `alert()`) would hold up every other tab's change.
- */
-function notify(tabId: number, notice: PageNotice): Promise<boolean> {
-  return chrome.tabs.sendMessage(tabId, notice).then(
-    (answer: unknown) => answer === true,
-    () => false
-  )
+function notify(tabId: number, notice: PageNotice): void {
+  chrome.tabs.sendMessage(tabId, notice).catch(() => {
+    // No page script there (PDF, browser page, still loading, or loaded while
+    // covering was off): nothing to tell.
+  })
 }
 
 /**
@@ -139,10 +131,9 @@ function notify(tabId: number, notice: PageNotice): Promise<boolean> {
  * state) already has right.
  *
  * A tab is muted only where a page script covers it ("Show page" can undo
- * the mute): not in a PDF, nor in a page loaded while covering was off. A
- * new page is recorded on its `pageQuery`; a history API move is recorded
- * here once the page script has answered the notice, since its messages
- * still carry the address from before the move.
+ * the mute): not in a PDF, nor in a page loaded while covering was off. So
+ * entering is not recorded here but on the `pageQuery` the page script
+ * sends on this notice (or at load), which carries its current address.
  *
  * A tab outside protected pages with no record can still carry a mute of
  * Nightstand's: an extension update clears `storage.session` but not the
@@ -152,29 +143,19 @@ function notify(tabId: number, notice: PageNotice): Promise<boolean> {
  * isn't undone by a decision made before it.
  */
 async function onTabUrl(tabId: number, url: string, tab: chrome.tabs.Tab): Promise<void> {
-  const move = await updateTabs(async (tabs): Promise<'entered' | 'left' | undefined> => {
+  const moved = await updateTabs(async (tabs): Promise<boolean> => {
     const inside = await covers(url)
     const before = tabs[tabId]
     if (inside === Boolean(before)) {
       if (!inside && isOurMute(tab)) await unmuteOurs(tabId)
-      return undefined
+      return false
     }
-    if (inside) return 'entered'
+    if (inside) return true
     delete tabs[tabId]
     await unmuteOurs(tabId)
-    return 'left'
+    return true
   })
-  if (!move) return
-  const heard = await notify(tabId, {type: 'recheck'})
-  if (move !== 'entered' || !heard) return
-  await updateTabs(async (tabs) => {
-    if (tabs[tabId]) return
-    // Still on a covered page: the tab may have moved on while it was told.
-    const now = await chrome.tabs.get(tabId).catch(() => undefined)
-    if (!now || !(await covers(now.url))) return
-    tabs[tabId] = 'covered'
-    await mute(now)
-  })
+  if (moved) notify(tabId, {type: 'recheck'})
 }
 
 /** Covers every shown tab outside the focused window (WINDOW_ID_NONE: none is focused). */
@@ -193,31 +174,41 @@ async function onWindowFocus(windowId: number): Promise<void> {
     }
     return ids
   })
-  for (const id of covered) void notify(id, {type: 'cover'})
+  for (const id of covered) notify(id, {type: 'cover'})
 }
 
 /**
- * Answers the page script about its own tab. `url` is the address of the
- * frame that sent it (the top frame), which the page script can't always
- * check itself: plain-http pages have no `crypto.subtle`. Anything about a
+ * Answers the page script about its own tab, which can't always check its
+ * address itself: plain-http pages have no `crypto.subtle`. Anything about a
  * page that is not covered is ignored.
+ *
+ * The page's address is the one it reports (`request.url`), not the sending
+ * frame's from the message sender: that one stays at the address the
+ * document loaded at through history API changes, so going by it would
+ * answer "not protected" to a page that moved onto a protected address that
+ * way, leaving the tab muted with nothing to show it. Only our own page
+ * script can send this (a page's own scripts can't reach the extension), and
+ * the reply is booleans about its own tab either way.
  *
  * Handled through the queue: a change already under way (the window lost
  * focus, a navigation) is answered as it ends, not as it began. The tab's
  * current address must be covered too: a message from the page the tab is
  * leaving (sent just before the next page committed) must not mark or mute
  * a tab that has already moved off protected pages. That case gets "can't
- * tell", which no page script reads as "not protected".
+ * tell", which no page script reads as "not protected"; so does a page on a
+ * protected address whose tab hasn't caught up with it yet. A page whose own
+ * address is not protected is answered without looking up the tab: that is
+ * almost every plain-http page, held invisible until the answer comes.
  *
  * Queued as soon as it arrives, before any matching: matching awaits hashes,
  * which don't finish in order, so a "shown" followed at once by "covered"
  * (Show page, then a tab switch) could otherwise reach the map reversed.
  */
-export function handlePageRequest(request: PageRequest, tabId: number, url: string | undefined): Promise<PageReply> {
+export function handlePageRequest(request: PageRequest, tabId: number): Promise<PageReply> {
   return updateTabs(async (tabs): Promise<PageReply> => {
-    if (!(await covers(url))) return {inside: false, shown: false}
+    if (!(await covers(request.url))) return {inside: false, shown: false}
     const tab = await chrome.tabs.get(tabId).catch(() => undefined)
-    if (!tab || !(await covers(tab.url))) return {}
+    if (!tab || (tab.url !== request.url && !(await covers(tab.url)))) return {}
     switch (request.type) {
       case 'pageQuery':
         // No record: a new page entering protected pages, which covers itself
@@ -301,7 +292,7 @@ async function onPrefsChange(before: Prefs, after: Prefs): Promise<void> {
  * worker awake.
  */
 async function onTabQuiet(tabId: number): Promise<void> {
-  if (await updateTabs((tabs) => tabs[tabId] === 'shown')) void notify(tabId, {type: 'quiet'})
+  if (await updateTabs((tabs) => tabs[tabId] === 'shown')) notify(tabId, {type: 'quiet'})
 }
 
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {

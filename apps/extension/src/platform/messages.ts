@@ -11,11 +11,10 @@ export type BackgroundRequest =
 export type PopupNotice = {type: 'panic'}
 
 /**
- * Page script (content script on every http(s) page) → background. Only the
- * tab that sent it is ever affected, and only while it is on a protected
- * page (the background checks the tab's URL itself).
+ * Page script (content script on every http(s) page) → background, before
+ * `send` adds the page's address (see `PageRequest`).
  */
-export type PageRequest =
+export type PageRequestBody =
   /**
    * Is this page protected, and was this tab showing a protected page
    * already? Reply: `{inside: boolean, shown: boolean}`.
@@ -33,15 +32,21 @@ export type PageRequest =
   | {type: 'pagePlaying'}
 
 /**
+ * Page script → background. Only the tab that sent it is ever affected, and
+ * only while it is on a protected page (the background checks the tab's URL
+ * itself). `url` is the page's address now (`location.href`): the sender's
+ * frame URL stays at the document's first address through history API
+ * changes. It only goes page → background; no reply carries an address.
+ */
+export type PageRequest = PageRequestBody & {url: string}
+
+/**
  * Background → page script, the answer to every `PageRequest`. `{}` means
  * the background couldn't tell: the page script keeps the page covered.
  */
 export type PageReply = {inside: boolean; shown: boolean; playing?: boolean} | Record<string, never>
 
-/**
- * Background → page script. The page script answers every notice with
- * `true`, so the background knows one got it (no answer: there is none).
- */
+/** Background → page script. */
 export type PageNotice =
   /** Cover now (the browser window lost focus). */
   | {type: 'cover'}
@@ -51,8 +56,11 @@ export type PageNotice =
   | {type: 'quiet'}
 
 export function isPageRequest(message: unknown): message is PageRequest {
-  const type = (message as {type?: unknown} | null)?.type
-  return type === 'pageQuery' || type === 'pageShown' || type === 'pageCovered' || type === 'pagePlaying'
+  const {type, url} = (message ?? {}) as {type?: unknown; url?: unknown}
+  return (
+    typeof url === 'string' &&
+    (type === 'pageQuery' || type === 'pageShown' || type === 'pageCovered' || type === 'pagePlaying')
+  )
 }
 
 export function isPageNotice(message: unknown): message is PageNotice {
