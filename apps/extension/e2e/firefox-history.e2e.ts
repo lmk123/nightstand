@@ -41,31 +41,34 @@ describe.skipIf(!hasFirefox || !hasSqlite())('history cleanup (Firefox backgroun
     })
     const server = await startTestServer()
     const profile = tempDir('firefox')
-    const firefox = await launchFirefox(profile, {
-      'network.proxy.type': 1,
-      'network.proxy.http': '127.0.0.1',
-      'network.proxy.http_port': server.port,
-      'network.proxy.allow_hijacking_localhost': true
-    })
-    const {browser} = firefox
     try {
-      await browser.installExtension(extension)
-      await sleep(1500)
-      const [page] = await browser.pages()
-      for (const url of [
-        'http://example.com/a',
-        'http://www.example.com/b',
-        'http://sub.example.com/c',
-        'http://evil-example.com/',
-        'http://example.org/p?q=1',
-        'http://example.org/other'
-      ]) {
-        await page!.goto(url)
-        await sleep(400)
+      const firefox = await launchFirefox(profile, {
+        'network.proxy.type': 1,
+        'network.proxy.http': '127.0.0.1',
+        'network.proxy.http_port': server.port,
+        'network.proxy.allow_hijacking_localhost': true
+      })
+      const {browser} = firefox
+      try {
+        await browser.installExtension(extension)
+        await sleep(1500)
+        const [page] = await browser.pages()
+        for (const url of [
+          'http://example.com/a',
+          'http://www.example.com/b',
+          'http://sub.example.com/c',
+          'http://evil-example.com/',
+          'http://example.org/p?q=1',
+          'http://example.org/other'
+        ]) {
+          await page!.goto(url)
+          await sleep(400)
+        }
+        await sleep(2500)
+      } finally {
+        await firefox.close()
       }
-      await sleep(2500)
     } finally {
-      await firefox.close()
       await server.close()
     }
     const rows = execFileSync(
