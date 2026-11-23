@@ -147,6 +147,10 @@ export default function main(): (() => void) | undefined {
   style.textContent = SHADOW_CSS
   const cover = document.createElement('div')
   cover.className = 'cover'
+  // The font stack lists no CJK font, so Han characters fall back by lang:
+  // without the catalog's own, they'd follow the page's (Japanese kanji in
+  // Chinese shapes on a zh page, and the other way round).
+  cover.lang = t('htmlLang')
   // The toolbar's icon and, on hover only (a bystander sees just the
   // button), who covered the page: otherwise the owner may not connect a
   // plain grey page with Nightstand.

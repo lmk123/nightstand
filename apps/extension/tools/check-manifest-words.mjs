@@ -11,7 +11,9 @@ const manifest = JSON.parse(readFileSync(join(root, 'src/manifest.json'), 'utf8'
 const forbidden = [
   'private', 'privacy', 'hide', 'hidden', 'secret', 'incognito', 'stealth',
   'porn', 'adult', 'nsfw', 'vault',
-  '隐私', '隐藏', '私密', '秘密', '无痕', '保密'
+  '隐私', '隐藏', '私密', '秘密', '无痕', '保密',
+  'プライベート', 'プライバシー', 'シークレット', '隠す', '隠し', '非表示', '内緒', '金庫',
+  '保管庫', '非公開', '秘匿', 'ステルス', 'アダルト', 'ポルノ'
 ]
 
 // Collect every user-visible manifest string, resolving __MSG_x__ per locale.
