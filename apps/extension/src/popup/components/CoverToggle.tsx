@@ -5,9 +5,10 @@ import {t} from '@/platform/i18n'
 import {usePrefs} from '../prefs'
 
 /**
- * Enhanced mode (covering, and muting with it) as a header button, on the
- * vault list and on the Quick Links screen alike, so it can be flipped
- * without unlocking. Only its name here: the settings view explains it.
+ * Enhanced mode (covering, and muting with it) as a header button on the
+ * vault list. Not on the Quick Links screen: anyone at the locked popup could
+ * turn it off there, which uncovers every protected tab already open. Only
+ * its name here: the settings view explains it.
  */
 export function CoverToggle() {
   const {prefs, failed, toggleCover} = usePrefs()

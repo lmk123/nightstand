@@ -262,15 +262,20 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await p.close()
   })
 
-  it('turns on and off from the header toggle, locked and unlocked alike', async () => {
+  it('turns on and off from the vault list header toggle, never shown while locked', async () => {
     // Not disabled: it is until the preferences are read, and a click then would be lost.
     const toggle = 'button[aria-label="增强模式"]:not([disabled])'
     const pressed = (p: Page, on: boolean) =>
       p.waitForFunction((toggle, on) => document.querySelector(toggle)?.getAttribute('aria-pressed') === String(on), {}, toggle, on)
     const stored = (on: boolean) => waitStorage(s, (snapshot) => (snapshot.prefs as {cover?: unknown} | undefined)?.cover === on)
 
-    // On the Quick Links screen, without unlocking. A real click: the request needs a user gesture.
+    // Not on the Quick Links screen: anyone there could turn it off and uncover open tabs.
     const p = await openPopup(s)
+    await waitText(p, '快捷链接')
+    expect(await p.$('button[aria-label="增强模式"]')).toBe(null)
+
+    // On the vault list. A real click: the request needs a user gesture.
+    expect(await submitUnlock(p, 'notes')).toBe(true)
     await pressed(p, false)
     await p.click(toggle)
     await pressed(p, true)
@@ -281,9 +286,7 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await stored(false)
     await waitPageScript(s, false)
 
-    // On the vault list; the settings switch shows the same setting.
-    expect(await submitUnlock(p, 'notes')).toBe(true)
-    await pressed(p, false)
+    // The settings switch shows the same setting.
     await p.click(toggle)
     await pressed(p, true)
     await waitPageScript(s, true)

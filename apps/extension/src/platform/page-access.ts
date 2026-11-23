@@ -8,14 +8,17 @@
 export const PAGE_ORIGINS = ['http://*/*', 'https://*/*']
 
 /**
- * Set in `storage.session` while a request of the popup's is open, so the
+ * When the popup's open request was made, in `storage.session`, so the
  * background turns covering on only for a grant given in answer to it: the
  * block stays granted while covering is off, and granting it again some other
  * way (the extension menu's site access, the details page) must not turn
- * covering back on. Left set if Chrome closes the popup and the user refuses;
- * gone with the browser session.
+ * covering back on. Left behind if Chrome closes the popup and the user
+ * refuses, hence the time limit: a grant made elsewhere later doesn't count.
  */
 const ASKED_KEY = 'asked'
+
+/** How long a request counts as open: Chrome's prompt waits for the user, but not usually this long. */
+const ASKED_FOR_MS = 5 * 60_000
 
 /** The popup's open request, if any. */
 let pending: Promise<boolean> | null = null
@@ -35,7 +38,7 @@ export function requestPageAccess(): Promise<boolean> {
   // request ending first would clear it while the first prompt is still open.
   if (pending) return pending
   // Not awaited: the request must stay in the click. The write is issued first, so it lands before any answer.
-  const marked = chrome.storage.session.set({[ASKED_KEY]: true}).then(
+  const marked = chrome.storage.session.set({[ASKED_KEY]: Date.now()}).then(
     () => true,
     (error: unknown) => {
       console.error(error)
@@ -53,9 +56,10 @@ export function requestPageAccess(): Promise<boolean> {
   return answer
 }
 
-/** For the background: whether a request of the popup's was open, closing it. */
+/** For the background: whether a request of the popup's is open (made within the time limit), closing it. */
 export async function takePageAccessRequest(): Promise<boolean> {
-  const asked = (await chrome.storage.session.get(ASKED_KEY))[ASKED_KEY] === true
-  if (asked) await chrome.storage.session.remove(ASKED_KEY)
-  return asked
+  const at: unknown = (await chrome.storage.session.get(ASKED_KEY))[ASKED_KEY]
+  if (at === undefined) return false
+  await chrome.storage.session.remove(ASKED_KEY)
+  return typeof at === 'number' && Date.now() - at < ASKED_FOR_MS
 }
