@@ -29,9 +29,9 @@ export async function launchFirefox(profile: string, prefs: Record<string, unkno
     return {browser, close: () => browser.close()}
   }
 
-  // `open -a` needs the bundle; a symlink such as Homebrew's bin/firefox
-  // resolves into one.
-  const app = /^.+?\.app(?=\/)/.exec(realpathSync(FIREFOX_PATH))?.[0]
+  // `open -a` needs the bundle: the path may be the bundle itself, a file in
+  // it, or a symlink (such as Homebrew's bin/firefox) resolving into one.
+  const app = /^.+?\.app(?=\/|$)/.exec(realpathSync(FIREFOX_PATH))?.[0]
   if (!app) throw new Error(`FIREFOX_PATH must point into a .app bundle on macOS: ${FIREFOX_PATH}`)
 
   // The profile puppeteer.launch would write: its automation defaults (no
@@ -58,56 +58,61 @@ export async function launchFirefox(profile: string, prefs: Record<string, unkno
     })
   })
   const exitsWithin = (ms: number) => Promise.race([exited.then(() => true), sleep(ms).then(() => false)])
-  const kill = () => {
+  /** Kills Firefox and waits for it to exit; if it won't, stops `open` from holding the test process open. */
+  const stop = async () => {
     // Firefox runs under launchd, so there's no child pid; `--` because macOS
     // pkill reads a pattern starting with `--profile` as options. Also matches
     // the `open` waiting on it.
     const pattern = `--profile ${profile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`
+    let failed: unknown
     try {
       execFileSync('pkill', ['-f', '--', pattern], {stdio: 'ignore'})
     } catch (error) {
       // 1: nothing matched, it's already gone.
-      if ((error as {status?: number}).status !== 1) throw error
+      if ((error as {status?: number}).status !== 1) failed = error
     }
+    if (await exitsWithin(5_000)) return
+    opener.unref()
+    throw new Error('Firefox did not exit', {cause: failed})
   }
   try {
-    const port = await bidiPort(profile, () => gone)
-    const browser = await puppeteer.connect({browserWSEndpoint: `ws://127.0.0.1:${port}/session`, protocol: 'webDriverBiDi'})
+    const browserWSEndpoint = await bidiEndpoint(profile, () => gone)
+    const browser = await puppeteer.connect({browserWSEndpoint, protocol: 'webDriverBiDi'})
     return {
       browser,
       async close() {
         try {
           await browser.close()
         } catch {
-          kill()
+          return stop()
         }
         if (await exitsWithin(10_000)) return
-        kill()
-        if (!(await exitsWithin(5_000))) throw new Error('Firefox did not exit')
+        return stop()
       }
     }
   } catch (error) {
-    try {
-      kill()
-    } catch {
-      // Keep the launch error: it says why.
-    }
+    // Keep the launch error: it says why.
+    await stop().catch(() => {})
     throw error
   }
 }
 
-/** Firefox writes the port it picked for `--remote-debugging-port=0` into the profile. */
-async function bidiPort(profile: string, gone: () => string | undefined, timeout = 30_000): Promise<number> {
+/** Firefox writes the address it picked for `--remote-debugging-port=0` into the profile. */
+async function bidiEndpoint(profile: string, gone: () => string | undefined, timeout = 30_000): Promise<string> {
   const file = join(profile, 'WebDriverBiDiServer.json')
   for (const start = Date.now(); Date.now() - start < timeout; await sleep(200)) {
     const why = gone()
     if (why) throw new Error(`Firefox quit before opening its WebDriver BiDi port (${why})`)
     if (!existsSync(file)) continue
+    let server: {ws_host?: unknown; ws_port?: unknown}
     try {
-      return (JSON.parse(readFileSync(file, 'utf8')) as {ws_port: number}).ws_port
+      server = JSON.parse(readFileSync(file, 'utf8')) as typeof server
     } catch {
-      // Caught mid-write: try again.
+      continue // Caught mid-write: try again.
     }
+    const {ws_host: host = '127.0.0.1', ws_port: port} = server
+    if (typeof host !== 'string' || typeof port !== 'number') continue
+    return `ws://${host.includes(':') ? `[${host}]` : host}:${port}/session`
   }
   throw new Error(`Firefox did not open its WebDriver BiDi port within ${timeout / 1000} s`)
 }
