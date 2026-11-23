@@ -306,6 +306,12 @@ describe('migrateVaultData', () => {
     expect(migrateVaultData({version: 4, entries: [], settings: {skipSaveCheck: 1}}).settings).toEqual({})
     expect(emptyVaultData().settings).not.toHaveProperty('skipSaveCheck')
   })
+  it('keeps the optional cover-notice flag only when it is a boolean', () => {
+    const data = updateSettings(emptyVaultData(), {skipCoverNotice: true})
+    expect(migrateVaultData(JSON.parse(JSON.stringify(data))).settings).toEqual({skipCoverNotice: true})
+    expect(migrateVaultData({version: 4, entries: [], settings: {skipCoverNotice: 'no'}}).settings).toEqual({})
+    expect(emptyVaultData().settings).not.toHaveProperty('skipCoverNotice')
+  })
   it('rejects malformed payloads and unknown versions', () => {
     const cases: [unknown, string][] = [
       [null, 'invalid-data'],

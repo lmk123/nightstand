@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
 import type {Prefs} from '@nightstand/core'
-import {requestPageAccess} from '@/platform/page-access'
+import {requestPageAccess, watchPageAccess} from '@/platform/page-access'
 import {loadPrefs, updatePrefs, watchPrefs} from '@/platform/storage'
 
 /**
@@ -16,8 +16,12 @@ export function usePrefs(): {
   failed: boolean
   changePrefs: (patch: Partial<Prefs>) => void
   changeCover: (cover: boolean) => void
-  /** Call straight from a click, like `changeCover`. */
-  toggleCover: () => void
+  /**
+   * Call straight from a click, like `changeCover`. With `confirmOn`, turning
+   * on calls it instead, with the current prefs and a `turnOn` to call
+   * straight from the confirming click.
+   */
+  toggleCover: (confirmOn?: (turnOn: () => void, current: Prefs) => void) => void
 } {
   const [prefs, setPrefs] = useState<Prefs | null>(null)
   const [failed, setFailed] = useState(false)
@@ -75,8 +79,18 @@ export function usePrefs(): {
       })
   }
   // From `latest`, not a render's `prefs`: a click may come before the last change has rendered.
-  const toggleCover = () => {
-    if (latest.current) changeCover(!latest.current.cover)
+  const toggleCover = (confirmOn?: (turnOn: () => void, current: Prefs) => void) => {
+    const current = latest.current
+    if (!current) return
+    if (!current.cover && confirmOn) confirmOn(() => changeCover(true), current)
+    else changeCover(!current.cover)
   }
   return {prefs, failed, changePrefs, changeCover, toggleCover}
+}
+
+/** Whether the page script's access (asked for on first turning covering on) is granted; null until known. */
+export function usePageAccess(): boolean | null {
+  const [access, setAccess] = useState<boolean | null>(null)
+  useEffect(() => watchPageAccess(setAccess), [])
+  return access
 }

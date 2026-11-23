@@ -159,6 +159,40 @@ describe.skipIf(!hasChrome)('site access is optional in the shipped build (Chrom
     await waitStorage(s, (snapshot) => (snapshot.prefs as {cover?: unknown} | undefined)?.cover === false)
     expect(await pageScriptRegistered(s)).toBe(false)
   })
+
+  it('explains the first request, and a tick without access never keeps the explanation away', async () => {
+    const toggle = 'button[aria-label="增强模式"]:not([disabled])'
+    const sheet = '[role="alertdialog"]'
+    let p = await openPopup(s)
+    await onboard(p, 'notes')
+    await p.close()
+
+    // Ticked, then the popup closed without turning on (as a click outside does):
+    // the tick is stored, as it must be before Chrome's prompt closes the popup.
+    p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    const shelfBefore = JSON.stringify((await waitStorage(s, () => true)).shelf)
+    await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await p.click(`${sheet} [data-slot=checkbox]`)
+    await waitStorage(s, (snapshot) => JSON.stringify(snapshot.shelf) !== shelfBefore)
+    await p.close()
+
+    // Still no access: the explanation comes back, and the stale tick is cleared.
+    p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await clickText(p, '取消')
+    await p.waitForSelector(sheet, {hidden: true})
+    await openSettings(p)
+    // Locked on while there is no access: the sheet would come back anyway.
+    expect(await switchOn(p, '开启前提醒')).toBe(true)
+    expect(await hasText(p, '浏览器授权之前')).toBe(true)
+    // The settings switch says the browser will ask, while it hasn't been granted.
+    expect(await hasText(p, '询问时这个窗口可能会关闭')).toBe(true)
+    await p.close()
+  })
 })
 
 /**
@@ -270,30 +304,87 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     const stored = (on: boolean) => waitStorage(s, (snapshot) => (snapshot.prefs as {cover?: unknown} | undefined)?.cover === on)
 
     // Not on the Quick Links screen: anyone there could turn it off and uncover open tabs.
-    const p = await openPopup(s)
+    let p = await openPopup(s)
     await waitText(p, '快捷链接')
     expect(await p.$('button[aria-label="增强模式"]')).toBe(null)
 
-    // On the vault list. A real click: the request needs a user gesture.
+    // On the vault list, turning on explains it first: cancelling leaves it off.
+    const sheet = '[role="alertdialog"]'
     expect(await submitUnlock(p, 'notes')).toBe(true)
     await pressed(p, false)
     await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await clickText(p, '取消')
+    await p.waitForSelector(sheet, {hidden: true})
+    await pressed(p, false)
+    // While it is open the list behind is inert (Tab can't reach it), and Escape cancels.
+    await p.click(toggle)
+    await p.waitForSelector(sheet)
+    expect(await p.$('[inert] input')).not.toBe(null)
+    await p.keyboard.press('Escape')
+    await p.waitForSelector(sheet, {hidden: true})
+    expect(await p.$('[inert]')).toBe(null)
+    await pressed(p, false)
+    // Focus goes back to the toggle that opened it, not the body.
+    await p.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '增强模式')
+
+    // A real click on "Turn on": the request needs a user gesture.
+    await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await clickText(p, '开启')
     await pressed(p, true)
     await stored(true)
     await waitPageScript(s, true)
+    // Turning off never asks.
     await p.click(toggle)
     await pressed(p, false)
     await stored(false)
     await waitPageScript(s, false)
+    expect(await p.$(sheet)).toBe(null)
 
-    // The settings switch shows the same setting.
+    // "Don't show again" sticks across popups (it lives in the vault). With
+    // access already granted it is written on "Turn on", not on the tick:
+    // ticking and then cancelling or leaving writes nothing.
+    const shelf = async () => JSON.stringify((await waitStorage(s, () => true)).shelf)
+    const shelfBefore = await shelf()
     await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await p.click(`${sheet} [data-slot=checkbox]`)
+    await clickText(p, '取消')
+    await p.waitForSelector(sheet, {hidden: true})
+    await sleep(300)
+    expect(await shelf()).toBe(shelfBefore)
+    await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await p.click(`${sheet} [data-slot=checkbox]`)
+    await clickText(p, '开启')
+    await waitStorage(s, (snapshot) => JSON.stringify(snapshot.shelf) !== shelfBefore)
     await pressed(p, true)
     await waitPageScript(s, true)
+    await p.click(toggle)
+    await pressed(p, false)
+    await p.close()
+    p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    await pressed(p, false)
+    await p.click(toggle)
+    await pressed(p, true)
+    expect(await p.$(sheet)).toBe(null)
+    await waitPageScript(s, true)
+
+    // The settings switch shows the same setting, and the reminder can be turned back on there.
     await openSettings(p)
     expect(await switchOn(p, '先遮住页面')).toBe(true)
+    expect(await switchOn(p, '开启前提醒')).toBe(false)
+    await setSwitch(p, '开启前提醒', true)
     await setSwitch(p, '先遮住页面', false)
     await waitPageScript(s, false)
+    await p.click('button[aria-label="返回"]')
+    await pressed(p, false)
+    await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await clickText(p, '取消')
+    await pressed(p, false)
     await p.close()
   })
 })

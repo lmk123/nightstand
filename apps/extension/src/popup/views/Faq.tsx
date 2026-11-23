@@ -5,11 +5,12 @@ import {t, type MessageKey} from '@/platform/i18n'
 import {Header} from '../components/Header'
 import {viewClass} from '../components/styles'
 
-export type FaqTopic = 'matchMode' | 'extraHosts' | 'storage' | 'secrets'
+export type FaqTopic = 'matchMode' | 'extraHosts' | 'enhancedMode' | 'storage' | 'secrets'
 
 const TOPICS: {id: FaqTopic; question: MessageKey}[] = [
   {id: 'matchMode', question: 'faqMatchQ'},
   {id: 'extraHosts', question: 'faqExtraQ'},
+  {id: 'enhancedMode', question: 'faqCoverQ'},
   {id: 'storage', question: 'faqStoreQ'},
   {id: 'secrets', question: 'faqSecretQ'}
 ]
@@ -45,6 +46,7 @@ export function Faq({initial, onBack}: {initial?: FaqTopic; onBack: () => void})
   const body: Record<FaqTopic, ReactNode> = {
     matchMode: <MatchModeAnswer />,
     extraHosts: <ExtraHostsAnswer />,
+    enhancedMode: <EnhancedModeAnswer />,
     storage: <StorageAnswer />,
     secrets: <SecretsAnswer />
   }
@@ -158,6 +160,19 @@ function ExtraHostsAnswer() {
       </ul>
       <p>{t('faqExtraFind4')}</p>
       <Tip>{t('faqExtraTip')}</Tip>
+    </>
+  )
+}
+
+function EnhancedModeAnswer() {
+  return (
+    <>
+      <p>{t('faqCover1')}</p>
+      <p>{t('faqCover2')}</p>
+      <p>{t('faqCover3')}</p>
+      <p>{t('faqCover4')}</p>
+      <p>{t('faqCover5')}</p>
+      <Tip>{t('faqCoverTip')}</Tip>
     </>
   )
 }

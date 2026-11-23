@@ -357,11 +357,8 @@
   "coverSetting": {
     "message": "Cover the page until I click \"Show page\""
   },
-  "coverHint": {
-    "message": "It is covered again when you move the mouse off the page, switch tabs, leave the browser window, or stop using the page for a while (not while it plays sound)."
-  },
-  "coverAccessHint": {
-    "message": "The first time you turn it on, the browser asks for access to all websites, used only to cover pages. This window may close while the browser asks; covering starts once you allow it. After that the switch no longer asks, and turning enhanced mode off keeps that access; to take it back, remove it on the extension’s details page in the browser, which also turns enhanced mode off."
+  "coverShortHint": {
+    "message": "Covered again when you leave the page or stop using it for a while."
   },
   "muteSetting": {
     "message": "Mute the tab (sound comes back when the page is shown)"
@@ -377,6 +374,33 @@
         "example": "2"
       }
     }
+  },
+  "coverNoticeSetting": {
+    "message": "Before turning it on from the top bar, explain what it does"
+  },
+  "coverNoticeSettingLocked": {
+    "message": "Always shown until the browser has granted access"
+  },
+  "coverNoticeTitle": {
+    "message": "Turn on enhanced mode"
+  },
+  "coverNoticeIntro": {
+    "message": "When you open a page from your list:"
+  },
+  "coverNoticeCover": {
+    "message": "It stays covered until you click \"Show page\""
+  },
+  "coverNoticeCoverMute": {
+    "message": "It stays covered and muted until you click \"Show page\""
+  },
+  "coverNoticeRecover": {
+    "message": "It is covered again when you move the mouse off it, switch tabs, or stop using it for a while"
+  },
+  "coverNoticeAccess": {
+    "message": "If it isn't allowed yet, the browser asks for access to all websites, used only to cover pages. This window may close while it asks; covering starts once you allow it."
+  },
+  "coverNoticeConfirm": {
+    "message": "Turn on"
   },
   "coverShow": {
     "message": "Show page"
@@ -614,6 +638,30 @@
   },
   "faqExtraTip": {
     "message": "It's best to look before you add the entry: once it's saved, the site's own history is gone and only words in titles are left to search for. And don't add big everyday sites (such as google.com): all history for them and every subdomain would be deleted."
+  },
+  "faqCoverLink": {
+    "message": "What is enhanced mode?"
+  },
+  "faqCoverQ": {
+    "message": "What does enhanced mode do?"
+  },
+  "faqCover1": {
+    "message": "With enhanced mode on, a page from your list opens behind a cover, and its tab title reads \"New Tab\". The content only shows once you click \"Show page\" in the middle of the cover. Handy when presenting, sharing your screen, or with people around."
+  },
+  "faqCover2": {
+    "message": "Once shown, the page is covered again when you move the mouse off it, switch tabs, leave the browser window, or stop using it for a while (not while it plays sound). How long counts as a while is set in Settings."
+  },
+  "faqCover3": {
+    "message": "Muting is on by default: a covered page is muted too, and its sound comes back when you click \"Show page\". You can turn it off in Settings."
+  },
+  "faqCover4": {
+    "message": "The first time you turn it on, the browser asks for access to all websites, used only to cover pages. This window may close while the browser asks; covering starts once you allow it. After that it no longer asks, and turning enhanced mode off keeps that access; to take it back, remove it on the extension’s details page in the browser, which also turns enhanced mode off."
+  },
+  "faqCover5": {
+    "message": "Turn it on or off at any time with the lightning button at the top of the list, or in Settings. Turning it off uncovers and unmutes open pages at once; after turning it back on, tabs already open are covered the next time they load."
+  },
+  "faqCoverTip": {
+    "message": "The cover can’t hide the address in the address bar or the site icon on the tab, and PDFs and the browser’s own pages are not covered."
   },
   "faqStoreQ": {
     "message": "How is my data stored? Can it be cracked?"
