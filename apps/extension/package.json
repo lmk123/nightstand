@@ -21,6 +21,7 @@
     "@eslint/js": "catalog:",
     "@eslint/json": "^2.1.1",
     "@eslint/markdown": "^8.0.3",
+    "@puppeteer/browsers": "^2.13.2",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/postcss": "^4.3.4",
     "@types/chrome": "^0.3.7",
