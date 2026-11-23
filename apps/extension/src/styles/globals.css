@@ -172,10 +172,10 @@
         font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
         -webkit-font-smoothing: antialiased;
     }
-    /* Traditional Chinese glyph shapes: the SC fonts above cover these characters too, in mainland forms.
-       The page cover (src/content/cover.ts) repeats both font lists. */
+    /* Traditional glyph shapes: the SC fonts and system-ui (YaHei UI on Simplified Chinese Windows) draw mainland forms,
+       so no system-ui here. The page cover (src/content/cover.ts) repeats both font lists. */
     html:lang(zh-TW) body {
-        font-family: system-ui, -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+        font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
     }
 }
 

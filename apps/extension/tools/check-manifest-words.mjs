@@ -12,7 +12,7 @@ const forbidden = [
   'private', 'privacy', 'hide', 'hidden', 'secret', 'incognito', 'stealth',
   'porn', 'adult', 'nsfw', 'vault',
   '隐私', '隐藏', '私密', '秘密', '无痕', '保密',
-  '隱私', '隱藏', '無痕'
+  '隱私', '隱藏', '無痕', '祕密'
 ]
 
 // Collect every user-visible manifest string, resolving __MSG_x__ per locale.
