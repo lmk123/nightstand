@@ -40,7 +40,7 @@ export function hasText(page: Page, text: string): Promise<boolean> {
 }
 
 export async function clearAndType(page: Page, selector: string, text: string): Promise<void> {
-  await page.click(selector, {clickCount: 3})
+  await page.click(selector, {count: 3})
   await page.keyboard.press('Backspace')
   await page.type(selector, text)
 }

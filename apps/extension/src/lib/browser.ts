@@ -42,11 +42,9 @@ export const isChromiumLike =
 /**
  * The global `browser`, typed as the WebExtension (Firefox) API.
  *
- * @types/chrome (>= 0.3) declares `var browser: typeof chrome`, which collides
- * with Extension.js's `const browser: typeof import('webextension-polyfill')`
- * (the conflict is only hidden by `skipLibCheck`) and wins, so the global has
- * no Firefox-only API typings. This is the single place that
- * re-types it; call it only inside an `isFirefoxLike` branch.
+ * Extension.js types the global with chrome-types (Chrome's API plus a couple
+ * of Firefox additions), so Firefox-only APIs are missing. This is the single
+ * place that re-types it; call it only inside an `isFirefoxLike` branch.
  *
  * It is a function rather than a constant so that importing this module never
  * touches `browser` at load time.

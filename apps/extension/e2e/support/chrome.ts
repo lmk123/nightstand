@@ -117,7 +117,7 @@ export async function historyUrls(session: ChromeSession, settleMs = 800): Promi
 }
 
 export function storageSnapshot(session: ChromeSession): Promise<Record<string, unknown>> {
-  return session.sw.evaluate(() => chrome.storage.local.get(null))
+  return session.sw.evaluate(() => chrome.storage.local.get())
 }
 
 /** Waits (polling the background) until the stored data satisfies `done`. */

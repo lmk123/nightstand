@@ -108,7 +108,8 @@ type State = 'deciding' | 'off' | 'covered' | 'shown'
  */
 function send(request: PageRequestBody): Promise<Partial<PageReply> | undefined> {
   try {
-    return chrome.runtime.sendMessage<PageRequest, PageReply>({...request, url: location.href}).catch(() => undefined)
+    const message: PageRequest = {...request, url: location.href}
+    return chrome.runtime.sendMessage(message).catch(() => undefined)
   } catch {
     // Extension updated or removed since this page loaded.
     return Promise.resolve(undefined)
