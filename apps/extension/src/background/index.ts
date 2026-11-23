@@ -85,9 +85,9 @@ chrome.runtime.onStartup.addListener(() => {
   fullScan().catch(console.error)
 })
 
-chrome.runtime.onInstalled.addListener(({reason}) => {
+chrome.runtime.onInstalled.addListener(() => {
   removeRetiredKeys().catch(console.error)
-  reconcilePageScript({giveBack: reason === 'update'}).catch(console.error)
+  reconcilePageScript().catch(console.error)
   restoreIcon().catch(console.error)
   ensureAlarm().catch(console.error)
   fullScan().catch(console.error)

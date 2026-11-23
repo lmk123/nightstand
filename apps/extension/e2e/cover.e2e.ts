@@ -19,6 +19,7 @@ import {
   onboard,
   openSettings,
   setSwitch,
+  switchOn,
   sleep,
   submitUnlock,
   waitText
@@ -66,9 +67,10 @@ async function fire(page: Page, type: 'mouseout' | 'dragleave', init: MouseEvent
   )
 }
 
-/** The test server's title for a page: its Host header and request line (Chrome sends absolute URLs here). */
+/** The test server's title for a page: its Host header, path and query. */
 function serverTitle(url: string): string {
-  return new URL(url).host + url
+  const {host, pathname, search} = new URL(url)
+  return host + pathname + search
 }
 
 /** The Show button sits in the middle of the cover (inside a closed shadow root). */
@@ -257,6 +259,37 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     expect(await covered(page)).toBe(false)
     expect(await muted(s, 'http://example.com/turned-off')).toBe(false)
     await page.close()
+    await p.close()
+  })
+
+  it('turns on and off from the header toggle, locked and unlocked alike', async () => {
+    const toggle = 'button[aria-label="增强模式"]'
+    const pressed = (p: Page, on: boolean) =>
+      p.waitForFunction((toggle, on) => document.querySelector(toggle)?.getAttribute('aria-pressed') === String(on), {}, toggle, on)
+    const stored = (on: boolean) => waitStorage(s, (snapshot) => (snapshot.prefs as {cover?: unknown} | undefined)?.cover === on)
+
+    // On the Quick Links screen, without unlocking. A real click: the request needs a user gesture.
+    const p = await openPopup(s)
+    await pressed(p, false)
+    await p.click(toggle)
+    await pressed(p, true)
+    await stored(true)
+    await waitPageScript(s, true)
+    await p.click(toggle)
+    await pressed(p, false)
+    await stored(false)
+    await waitPageScript(s, false)
+
+    // On the vault list; the settings switch shows the same setting.
+    await submitUnlock(p, 'notes')
+    await pressed(p, false)
+    await p.click(toggle)
+    await pressed(p, true)
+    await waitPageScript(s, true)
+    await openSettings(p)
+    expect(await switchOn(p, '先遮住页面')).toBe(true)
+    await setSwitch(p, '先遮住页面', false)
+    await waitPageScript(s, false)
     await p.close()
   })
 })
@@ -669,8 +702,8 @@ describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () =
   })
 
   describe('the save notice', () => {
-    const cover = '打开它的网页时会先遮住页面，点“显示页面”后才显示（可在设置里关闭）'
-    const coverMute = '打开它的网页时会先遮住页面并静音，点“显示页面”后才显示（可在设置里关闭）'
+    const cover = '打开它的网页时会先遮住页面，点“显示页面”后才显示（可随时关闭增强模式）'
+    const coverMute = '打开它的网页时会先遮住页面并静音，点“显示页面”后才显示（可随时关闭增强模式）'
     let savedPrefs: unknown
 
     beforeAll(async () => {

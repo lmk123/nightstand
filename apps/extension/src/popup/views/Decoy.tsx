@@ -4,6 +4,7 @@ import {filterDecoyLinks, hostOf, type DecoyLink, type StoredVault} from '@night
 import {Button} from '@/components/ui/button'
 import {t} from '@/platform/i18n'
 import {SiteAvatar} from '../components/Avatar'
+import {CoverToggle} from '../components/CoverToggle'
 import {attemptUnlock, type UnlockResult} from '../session'
 
 /**
@@ -73,6 +74,7 @@ export function Decoy({
             }}
           />
         </label>
+        <CoverToggle />
         <Button
           variant="ghost"
           size="icon-lg"

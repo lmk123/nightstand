@@ -96,10 +96,10 @@
     "message": "After saving, the browsing history of every visit will be deleted automatically"
   },
   "saveNoticeCover": {
-    "message": "Its pages will open covered until you click “Show page” (you can turn this off in Settings)"
+    "message": "Its pages will open covered until you click “Show page” (you can turn enhanced mode off at any time)"
   },
   "saveNoticeCoverMute": {
-    "message": "Its pages will open covered and muted until you click “Show page” (you can turn this off in Settings)"
+    "message": "Its pages will open covered and muted until you click “Show page” (you can turn enhanced mode off at any time)"
   },
   "saveNoticeEffects": {
     "message": "This can't be undone, and address bar suggestions that came from them disappear too. Cookies, cache and download history are not affected."
@@ -345,8 +345,14 @@
   "saveCheckSetting": {
     "message": "After saving, remind me to check the address bar"
   },
-  "coverSection": {
-    "message": "Opening protected pages"
+  "enhancedMode": {
+    "message": "Enhanced mode"
+  },
+  "enhancedModeOn": {
+    "message": "Enhanced mode: on"
+  },
+  "enhancedModeOff": {
+    "message": "Enhanced mode: off"
   },
   "coverSetting": {
     "message": "Cover the page until I click \"Show page\""
@@ -355,7 +361,7 @@
     "message": "It is covered again when you move the mouse off the page, switch tabs, leave the browser window, or stop using the page for a while (not while it plays sound)."
   },
   "coverAccessHint": {
-    "message": "Turning this on asks the browser for access to all websites, used only to cover pages. This window may close while the browser asks; covering starts once you allow it. Turning it off gives that access back."
+    "message": "The first time you turn it on, the browser asks for access to all websites, used only to cover pages. This window may close while the browser asks; covering starts once you allow it. After that the switch no longer asks, and turning enhanced mode off keeps that access; to take it back, remove it on the extension’s details page in the browser, which also turns enhanced mode off."
   },
   "muteSetting": {
     "message": "Mute the tab (sound comes back when the page is shown)"

@@ -63,7 +63,8 @@ export async function startTestServer(): Promise<{port: number; close: () => Pro
       res.end(`<!doctype html><script>location.replace(${to})</script>`)
       return
     }
-    res.end(`<!doctype html><title>${req.headers.host ?? ''}${req.url ?? ''}</title><p>ok`)
+    // Host and path, whether Chrome sends the request line's target as a path or a whole URL.
+    res.end(`<!doctype html><title>${req.headers.host ?? ''}${url.pathname}${url.search}</title><p>ok`)
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   return {
