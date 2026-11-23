@@ -1,9 +1,9 @@
 import {execFileSync} from 'node:child_process'
 import {join} from 'node:path'
 import {buildMatchTable} from '@nightstand/core'
-import puppeteer from 'puppeteer-core'
 import {afterAll, describe, expect, it} from 'vitest'
-import {DIST_FIREFOX, FIREFOX_PATH, hasFirefox} from './support/env'
+import {DIST_FIREFOX, hasFirefox} from './support/env'
+import {launchFirefox} from './support/firefox'
 import {sleep} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp, patchedCopy, tempDir} from './support/temp'
@@ -41,18 +41,13 @@ describe.skipIf(!hasFirefox || !hasSqlite())('history cleanup (Firefox backgroun
     })
     const server = await startTestServer()
     const profile = tempDir('firefox')
-    const browser = await puppeteer.launch({
-      browser: 'firefox',
-      executablePath: FIREFOX_PATH,
-      headless: true,
-      userDataDir: profile,
-      extraPrefsFirefox: {
-        'network.proxy.type': 1,
-        'network.proxy.http': '127.0.0.1',
-        'network.proxy.http_port': server.port,
-        'network.proxy.allow_hijacking_localhost': true
-      }
+    const firefox = await launchFirefox(profile, {
+      'network.proxy.type': 1,
+      'network.proxy.http': '127.0.0.1',
+      'network.proxy.http_port': server.port,
+      'network.proxy.allow_hijacking_localhost': true
     })
+    const {browser} = firefox
     try {
       await browser.installExtension(extension)
       await sleep(1500)
@@ -70,7 +65,7 @@ describe.skipIf(!hasFirefox || !hasSqlite())('history cleanup (Firefox backgroun
       }
       await sleep(2500)
     } finally {
-      await browser.close()
+      await firefox.close()
       await server.close()
     }
     const rows = execFileSync(
