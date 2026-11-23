@@ -39,11 +39,9 @@ export function VaultList({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // The header toggle's prefs and `turnOn`, while the sheet before turning on is open.
   const [coverNotice, setCoverNotice] = useState<{mute: boolean; granted: boolean; turnOn: () => void} | null>(null)
-  // "Don't show again" counts only once the access was granted: the first time
-  // it is stored on the tick (see CoverNotice), before the user has answered
-  // the prompt, or may have left the popup without turning anything on.
-  // Until the access is known, a stored tick can't be judged: the toggle waits
-  // (disabled) rather than show the sheet and clear a tick that counts.
+  // "Don't show again" counts only once access is granted (without it, the tick
+  // is stored before the prompt is answered; see CoverNotice). Until access is
+  // known, turning on waits: the toggle is disabled while off.
   const access = usePageAccess()
   const showCoverNotice = !skipCoverNotice || access !== true
   const visible = useMemo(() => searchEntries(entries, query), [entries, query])
@@ -54,6 +52,15 @@ export function VaultList({
   const selected = visible.find((e) => e.id === selectedId) ?? (query.trim() ? visible[0] : undefined)
   const listRef = useRef<HTMLUListElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  // Focus goes back where it was when the sheet opened (else the search box, where ↑↓ and ↵ work).
+  const returnFocus = useRef<Element | null>(null)
+  useEffect(() => {
+    if (coverNotice || !returnFocus.current) return
+    const back = returnFocus.current
+    returnFocus.current = null
+    if (back instanceof HTMLElement && back !== document.body && back.isConnected) back.focus()
+    else searchRef.current?.focus()
+  }, [coverNotice])
 
   useEffect(() => {
     listRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView({block: 'nearest'})
@@ -82,8 +89,15 @@ export function VaultList({
           actions={
             <>
               <CoverToggle
-                disabled={skipCoverNotice && access === null}
-                confirmOn={showCoverNotice ? (turnOn, current) => setCoverNotice({mute: current.mute, granted: access === true, turnOn}) : undefined}
+                disabled={access === null}
+                confirmOn={
+                  showCoverNotice
+                    ? (turnOn, current) => {
+                        returnFocus.current = document.activeElement
+                        setCoverNotice({mute: current.mute, granted: access === true, turnOn})
+                      }
+                    : undefined
+                }
               />
               <Button
                 variant="ghost"

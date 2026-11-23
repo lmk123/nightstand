@@ -27,13 +27,23 @@ export function hasPageAccess(): Promise<boolean> {
   return chrome.permissions.contains({origins: PAGE_ORIGINS})
 }
 
-/** Calls `onChange` with whether access is granted, now and after every grant or removal, until the returned stop. */
+/**
+ * Calls `onChange` with whether access is granted, now and after every grant
+ * or removal, until the returned stop. Only the latest check's answer counts
+ * (answers may come back out of order); a failed check counts as not granted.
+ */
 export function watchPageAccess(onChange: (granted: boolean) => void): () => void {
   let stopped = false
+  let latest = 0
   const check = () => {
-    hasPageAccess().then((granted) => {
-      if (!stopped) onChange(granted)
-    }, console.error)
+    const id = ++latest
+    const report = (granted: boolean) => {
+      if (!stopped && id === latest) onChange(granted)
+    }
+    hasPageAccess().then(report, (error: unknown) => {
+      console.error(error)
+      report(false)
+    })
   }
   check()
   chrome.permissions.onAdded.addListener(check)

@@ -325,6 +325,8 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await p.waitForSelector(sheet, {hidden: true})
     expect(await p.$('[inert]')).toBe(null)
     await pressed(p, false)
+    // Focus goes back to the toggle that opened it, not the body.
+    await p.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '增强模式')
 
     // A real click on "Turn on": the request needs a user gesture.
     await p.click(toggle)

@@ -109,10 +109,11 @@ export function Settings({
               >
                 {t('idleSetting')}
               </SettingRow>
-              {/* Without access the list shows the sheet anyway (and clears the flag), so it is locked on here. */}
+              {/* Without access the list shows the sheet anyway (and clears the flag), so it is locked on here;
+                  until access is known it can't be changed either. */}
               <SwitchRow
                 checked={access === false || settings.skipCoverNotice !== true}
-                disabled={access === false}
+                disabled={access !== true}
                 onChange={(on) => onChange({skipCoverNotice: !on})}
               >
                 {t('coverNoticeSetting')}

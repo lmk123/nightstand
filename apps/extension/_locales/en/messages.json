@@ -397,7 +397,7 @@
     "message": "It is covered again when you move the mouse off it, switch tabs, or stop using it for a while"
   },
   "coverNoticeAccess": {
-    "message": "The first time, the browser asks for access to all websites, used only to cover pages. This window may close while it asks; covering starts once you allow it."
+    "message": "If it isn't allowed yet, the browser asks for access to all websites, used only to cover pages. This window may close while it asks; covering starts once you allow it."
   },
   "coverNoticeConfirm": {
     "message": "Turn on"

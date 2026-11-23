@@ -12,7 +12,7 @@ import {usePrefs} from '../prefs'
  * its name here: the help explains it. With `confirmOn`, turning on calls it
  * instead (the list shows `CoverNotice` first), with the prefs it read and a
  * `turnOn` for the confirming click; turning off never asks. `disabled`: the
- * caller can't tell yet whether turning on should ask first.
+ * caller can't tell yet whether turning on should ask first; turning off still works.
  */
 export function CoverToggle({confirmOn, disabled}: {confirmOn?: (turnOn: () => void, current: Prefs) => void; disabled?: boolean}) {
   const {prefs, failed, toggleCover} = usePrefs()
@@ -25,7 +25,7 @@ export function CoverToggle({confirmOn, disabled}: {confirmOn?: (turnOn: () => v
       variant="ghost"
       size="icon-lg"
       className={cn('rounded-[10px]', on ? 'text-primary bg-primary/10 hover:bg-primary/15 hover:text-primary' : 'text-subtle-foreground')}
-      disabled={!prefs || disabled}
+      disabled={!prefs || (disabled && !on)}
       onClick={() => toggleCover(confirmOn)}
       aria-label={t('enhancedMode')}
       aria-pressed={on}
