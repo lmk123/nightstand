@@ -1,8 +1,8 @@
-// Keeps popup grids from widening past the 360px popup: a
-// bare `grid` gets an implicit `auto` column that a long unbroken string
-// (file name, URL used as a title) stretches even inside `truncate`, and a
-// bare `fr` in a custom track list has the same `auto` minimum. Flags, in
-// every class string under src/popup:
+// Keeps popup grids from widening past the 360px popup: a bare `grid` gets an
+// implicit `auto` column that a long unbroken string (file name, URL used as
+// a title) stretches even inside `truncate`, and a bare `fr` in a custom
+// track list has the same `auto` minimum. Flags, in every class string under
+// src/popup:
 //   - `grid` without `grid-cols-*` (or an inline `gridTemplateColumns` on the
 //     same element, or `place-items-*`/`place-content-*` for a grid that only
 //     centers one child);

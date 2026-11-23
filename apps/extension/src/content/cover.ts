@@ -432,9 +432,9 @@ export default function main(): (() => void) | undefined {
   async function matchHere(): Promise<boolean | null> {
     const {cover, matcher} = await lookup()
     if (!cover || !matcher || matcher.isEmpty) return false
-    // Plain http asks the background on purpose: a bundled SHA-256 won only
-    // ~26 ms, on the first page after the worker stopped (2026-11, Chrome on
-    // macOS), and breaks the Web Crypto-only rule. Not again without new evidence.
+    // Plain http asks the background on purpose; no bundled SHA-256 without new
+    // evidence: it was faster only on the first page after the worker stopped
+    // (~25 ms, 2026-11, Chrome on macOS), and Web Crypto-only forbids it.
     if (!globalThis.crypto?.subtle) return null
     return matcher.matches(location.href)
   }
