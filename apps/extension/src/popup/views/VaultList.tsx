@@ -5,6 +5,7 @@ import {cn} from 'cn'
 import {Button} from '@/components/ui/button'
 import {t} from '@/platform/i18n'
 import {SiteAvatar} from '../components/Avatar'
+import {CoverToggle} from '../components/CoverToggle'
 import {Header} from '../components/Header'
 import {buttonClass, outlineButtonClass} from '../components/styles'
 import {entryTitle} from '../title'
@@ -62,6 +63,7 @@ export function VaultList({
         }
         actions={
           <>
+            <CoverToggle />
             <Button
               variant="ghost"
               size="icon-lg"
