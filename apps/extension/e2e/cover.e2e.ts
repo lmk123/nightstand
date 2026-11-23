@@ -298,17 +298,17 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await waitPageScript(s, false)
     expect(await p.$(sheet)).toBe(null)
 
-    // "Don't show again" sticks across popups (it lives in the vault).
+    // "Don't show again" sticks across popups (it lives in the vault, written on the tick).
+    const shelfBefore = JSON.stringify((await waitStorage(s, () => true)).shelf)
     await p.click(toggle)
     await p.waitForSelector(sheet)
     await p.click(`${sheet} [data-slot=checkbox]`)
+    await waitStorage(s, (snapshot) => JSON.stringify(snapshot.shelf) !== shelfBefore)
     await clickText(p, '开启')
     await pressed(p, true)
     await waitPageScript(s, true)
     await p.click(toggle)
     await pressed(p, false)
-    // Let the vault write land before closing.
-    await sleep(500)
     await p.close()
     p = await openPopup(s)
     expect(await submitUnlock(p, 'notes')).toBe(true)

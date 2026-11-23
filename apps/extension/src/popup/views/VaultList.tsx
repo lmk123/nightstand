@@ -26,7 +26,7 @@ export function VaultList({
   entries: VaultEntry[]
   notice?: React.ReactNode
   skipCoverNotice: boolean
-  onSkipCoverNotice: () => void
+  onSkipCoverNotice: (skip: boolean) => void
   onOpen: (entry: VaultEntry) => void
   onEdit: (entry: VaultEntry) => void
   onAddCurrent: () => void
@@ -36,7 +36,8 @@ export function VaultList({
 }) {
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [coverNotice, setCoverNotice] = useState(false)
+  // The header toggle's prefs and `turnOn`, while the sheet before turning on is open.
+  const [coverNotice, setCoverNotice] = useState<{mute: boolean; turnOn: () => void} | null>(null)
   const visible = useMemo(() => searchEntries(entries, query), [entries, query])
   // Opening a site is never a single click: a stray click on a shared screen
   // must not load it. A click (or the arrow keys) only selects a row; its
@@ -70,7 +71,7 @@ export function VaultList({
         }
         actions={
           <>
-            <CoverToggle onTurnOn={skipCoverNotice ? undefined : () => setCoverNotice(true)} />
+            <CoverToggle confirmOn={skipCoverNotice ? undefined : (turnOn, current) => setCoverNotice({mute: current.mute, turnOn})} />
             <Button
               variant="ghost"
               size="icon-lg"
@@ -197,7 +198,14 @@ export function VaultList({
           {t('addManually')}
         </Button>
       </footer>
-      {coverNotice && <CoverNotice onSkipFromNow={onSkipCoverNotice} onClose={() => setCoverNotice(false)} />}
+      {coverNotice && (
+        <CoverNotice
+          mute={coverNotice.mute}
+          turnOn={coverNotice.turnOn}
+          onSkipChange={onSkipCoverNotice}
+          onClose={() => setCoverNotice(null)}
+        />
+      )}
     </div>
   )
 }

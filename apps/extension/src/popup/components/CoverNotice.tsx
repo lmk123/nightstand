@@ -6,7 +6,6 @@ import {Checkbox} from '@/components/ui/checkbox'
 import {Label} from '@/components/ui/label'
 import {t, type MessageKey} from '@/platform/i18n'
 import {HelpLink} from '../help'
-import {usePrefs} from '../prefs'
 import {mainButtonClass, outlineButtonClass} from './styles'
 
 /**
@@ -15,31 +14,51 @@ import {mainButtonClass, outlineButtonClass} from './styles'
  * Not shown from the settings switch, which has its own hint and link.
  * Covers the whole view it is placed in (the parent is `relative`).
  *
- * `onSkipFromNow`: the user ticked "don't show again" (settings can turn it back on).
+ * `mute` and `turnOn` come from the toggle that was clicked (`CoverToggle`).
+ * `onSkipChange`: "don't show again" was ticked or unticked; settings can turn
+ * the sheet back on.
  */
-export function CoverNotice({onSkipFromNow, onClose}: {onSkipFromNow: () => void; onClose: () => void}) {
-  const {prefs, changeCover} = usePrefs()
+export function CoverNotice({
+  mute,
+  turnOn,
+  onSkipChange,
+  onClose
+}: {
+  mute: boolean
+  turnOn: () => void
+  onSkipChange: (skip: boolean) => void
+  onClose: () => void
+}) {
   const [dontShowAgain, setDontShowAgain] = useState(false)
-  // Read in a few milliseconds: wait for it rather than show the muting line wrong.
-  if (!prefs) return null
 
   const points: [typeof EyeOff, MessageKey][] = [
-    [EyeOff, prefs.mute ? 'coverNoticeCoverMute' : 'coverNoticeCover'],
+    [EyeOff, mute ? 'coverNoticeCoverMute' : 'coverNoticeCover'],
     [RotateCcw, 'coverNoticeRecover'],
     [ShieldCheck, 'coverNoticeAccess']
   ]
 
-  function turnOn() {
-    // No await before `changeCover`: the permission request must stay in the click.
-    // Chrome's first prompt closes the popup and may cut the write off; the sheet then shows once more.
-    if (dontShowAgain) onSkipFromNow()
-    changeCover(true)
+  // Written on the tick, not on "Turn on": Chrome's first permission prompt
+  // closes the popup at once and would cut a write started then.
+  function changeSkip(skip: boolean) {
+    setDontShowAgain(skip)
+    onSkipChange(skip)
+  }
+
+  function cancel() {
+    // Ticked, then cancelled: nothing was turned on, so keep showing it.
+    if (dontShowAgain) onSkipChange(false)
+    onClose()
+  }
+
+  function confirm() {
+    // No await before `turnOn`: the permission request must stay in the click.
+    turnOn()
     onClose()
   }
 
   return (
     <>
-      <div aria-hidden className="bg-scrim absolute inset-0" onClick={onClose} />
+      <div aria-hidden className="bg-scrim absolute inset-0" onClick={cancel} />
       <section
         role="alertdialog"
         aria-labelledby="cover-notice-title"
@@ -67,14 +86,14 @@ export function CoverNotice({onSkipFromNow, onClose}: {onSkipFromNow: () => void
         </ul>
         <HelpLink topic="enhancedMode" label="faqCoverLink" />
         <Label className="text-subtle-foreground flex min-h-8 items-center gap-2 text-[13px] font-normal">
-          <Checkbox checked={dontShowAgain} onCheckedChange={(v) => setDontShowAgain(v === true)} />
+          <Checkbox checked={dontShowAgain} onCheckedChange={(v) => changeSkip(v === true)} />
           {t('saveNoticeSkip')}
         </Label>
         <div className="grid grid-cols-2 gap-2">
-          <Button type="button" variant="outline" className={cn(mainButtonClass, outlineButtonClass)} onClick={onClose}>
+          <Button type="button" variant="outline" className={cn(mainButtonClass, outlineButtonClass)} onClick={cancel}>
             {t('cancel')}
           </Button>
-          <Button type="button" className={mainButtonClass} autoFocus onClick={turnOn}>
+          <Button type="button" className={mainButtonClass} autoFocus onClick={confirm}>
             {t('coverNoticeConfirm')}
           </Button>
         </div>

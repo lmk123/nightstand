@@ -16,8 +16,12 @@ export function usePrefs(): {
   failed: boolean
   changePrefs: (patch: Partial<Prefs>) => void
   changeCover: (cover: boolean) => void
-  /** Call straight from a click, like `changeCover`. */
-  toggleCover: () => void
+  /**
+   * Call straight from a click, like `changeCover`. With `confirmOn`, turning
+   * on calls it instead, with the current prefs and a `turnOn` to call
+   * straight from the confirming click.
+   */
+  toggleCover: (confirmOn?: (turnOn: () => void, current: Prefs) => void) => void
 } {
   const [prefs, setPrefs] = useState<Prefs | null>(null)
   const [failed, setFailed] = useState(false)
@@ -75,8 +79,11 @@ export function usePrefs(): {
       })
   }
   // From `latest`, not a render's `prefs`: a click may come before the last change has rendered.
-  const toggleCover = () => {
-    if (latest.current) changeCover(!latest.current.cover)
+  const toggleCover = (confirmOn?: (turnOn: () => void, current: Prefs) => void) => {
+    const current = latest.current
+    if (!current) return
+    if (!current.cover && confirmOn) confirmOn(() => changeCover(true), current)
+    else changeCover(!current.cover)
   }
   return {prefs, failed, changePrefs, changeCover, toggleCover}
 }
