@@ -172,6 +172,12 @@
         font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
         -webkit-font-smoothing: antialiased;
     }
+    /* Han characters take their shape from the first listed font that has
+       them, and <html lang> doesn't override a listed family: without this,
+       Japanese kanji render in PingFang SC / Microsoft YaHei. */
+    html:lang(ja) body {
+        font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+    }
 }
 
 @layer components {
