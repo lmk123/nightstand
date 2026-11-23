@@ -27,6 +27,24 @@ export function hasPageAccess(): Promise<boolean> {
   return chrome.permissions.contains({origins: PAGE_ORIGINS})
 }
 
+/** Calls `onChange` with whether access is granted, now and after every grant or removal, until the returned stop. */
+export function watchPageAccess(onChange: (granted: boolean) => void): () => void {
+  let stopped = false
+  const check = () => {
+    hasPageAccess().then((granted) => {
+      if (!stopped) onChange(granted)
+    }, console.error)
+  }
+  check()
+  chrome.permissions.onAdded.addListener(check)
+  chrome.permissions.onRemoved.addListener(check)
+  return () => {
+    stopped = true
+    chrome.permissions.onAdded.removeListener(check)
+    chrome.permissions.onRemoved.removeListener(check)
+  }
+}
+
 /**
  * Must be called straight from a click (no await before it). Chrome closes
  * the popup when its prompt opens, so the caller may never see the answer:

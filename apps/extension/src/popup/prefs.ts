@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
 import type {Prefs} from '@nightstand/core'
-import {requestPageAccess} from '@/platform/page-access'
+import {requestPageAccess, watchPageAccess} from '@/platform/page-access'
 import {loadPrefs, updatePrefs, watchPrefs} from '@/platform/storage'
 
 /**
@@ -86,4 +86,11 @@ export function usePrefs(): {
     else changeCover(!current.cover)
   }
   return {prefs, failed, changePrefs, changeCover, toggleCover}
+}
+
+/** Whether the page script's access (asked for on first turning covering on) is granted; null until known. */
+export function usePageAccess(): boolean | null {
+  const [access, setAccess] = useState<boolean | null>(null)
+  useEffect(() => watchPageAccess(setAccess), [])
+  return access
 }

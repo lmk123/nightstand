@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useEffect, useEffectEvent, useRef, useState} from 'react'
 import {EyeOff, RotateCcw, ShieldCheck} from 'lucide-react'
 import {cn} from 'cn'
 import {Button} from '@/components/ui/button'
@@ -12,24 +12,50 @@ import {mainButtonClass, outlineButtonClass} from './styles'
  * Bottom sheet shown before the vault list's header toggle turns enhanced
  * mode on: what it does, in brief, and a link to the full answer in the help.
  * Not shown from the settings switch, which has its own hint and link.
- * Covers the whole view it is placed in (the parent is `relative`).
+ * Covers the whole view it is placed in (the parent is `relative` and makes
+ * everything else inert while it is open); Escape cancels.
  *
  * `mute` and `turnOn` come from the toggle that was clicked (`CoverToggle`).
- * `onSkipChange`: "don't show again" was ticked or unticked; settings can turn
- * the sheet back on.
+ * `granted`: the page access was already granted, so `turnOn` answers at once
+ * and the popup stays open. `skipped`: "don't show again" is stored although
+ * the sheet is shown (left from a first try that never got access).
+ * `onSkipChange` writes "don't show again"; settings can turn the sheet back on.
  */
 export function CoverNotice({
   mute,
+  granted,
+  skipped,
   turnOn,
   onSkipChange,
   onClose
 }: {
   mute: boolean
+  granted: boolean
+  skipped: boolean
   turnOn: () => void
-  onSkipChange: (skip: boolean) => void
+  onSkipChange: (skip: boolean) => Promise<void>
   onClose: () => void
 }) {
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  // A tick that never led to access doesn't count: it is cleared on opening
+  // (below), or turning on now without ticking would keep the sheet away.
+  const clear = !granted && skipped
+  // Writes of "don't show again" not finished yet: "Turn on" waits for them.
+  const [saving, setSaving] = useState(clear ? 1 : 0)
+  const done = () => setSaving((n) => n - 1)
+
+  function write(skip: boolean) {
+    setSaving((n) => n + 1)
+    void onSkipChange(skip).finally(done)
+  }
+
+  const cleared = useRef(false)
+  const clearOnce = useEffectEvent(() => {
+    if (!clear || cleared.current) return
+    cleared.current = true
+    void onSkipChange(false).finally(done)
+  })
+  useEffect(() => clearOnce(), [])
 
   const points: [typeof EyeOff, MessageKey][] = [
     [EyeOff, mute ? 'coverNoticeCoverMute' : 'coverNoticeCover'],
@@ -37,30 +63,45 @@ export function CoverNotice({
     [ShieldCheck, 'coverNoticeAccess']
   ]
 
-  // Written on the tick, not on "Turn on": Chrome's first permission prompt
-  // closes the popup at once and would cut a write started then.
   function changeSkip(skip: boolean) {
     setDontShowAgain(skip)
-    onSkipChange(skip)
+    // First time: written on the tick, not on "Turn on": Chrome's prompt closes
+    // the popup at once and would cut a write started then. "Turn on" waits
+    // until it lands. Already granted, it waits for "Turn on" instead.
+    if (!granted) write(skip)
   }
 
   function cancel() {
     // Ticked, then cancelled: nothing was turned on, so keep showing it.
-    if (dontShowAgain) onSkipChange(false)
+    if (!granted && dontShowAgain) write(false)
     onClose()
   }
 
   function confirm() {
+    if (saving > 0) return
     // No await before `turnOn`: the permission request must stay in the click.
     turnOn()
+    if (granted && dontShowAgain) void onSkipChange(true)
     onClose()
   }
+
+  // On the document: a click on the sheet's text leaves focus on the body.
+  const onKey = useEffectEvent((event: KeyboardEvent) => {
+    if (event.key !== 'Escape') return
+    event.preventDefault()
+    cancel()
+  })
+  useEffect(() => {
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <>
       <div aria-hidden className="bg-scrim absolute inset-0" onClick={cancel} />
       <section
         role="alertdialog"
+        aria-modal
         aria-labelledby="cover-notice-title"
         className="bg-card absolute inset-x-0 bottom-0 grid max-h-full grid-cols-1 gap-3.5 overflow-y-auto rounded-t-[18px] px-4 pt-2.5 pb-4 shadow-[0_-8px_24px_rgb(0_0_0/0.14)]"
       >
@@ -93,7 +134,8 @@ export function CoverNotice({
           <Button type="button" variant="outline" className={cn(mainButtonClass, outlineButtonClass)} onClick={cancel}>
             {t('cancel')}
           </Button>
-          <Button type="button" className={mainButtonClass} autoFocus onClick={confirm}>
+          {/* Ignores clicks for the few milliseconds a write takes; not `disabled`, which would drop the focus. */}
+          <Button type="button" className={mainButtonClass} autoFocus aria-disabled={saving > 0 || undefined} onClick={confirm}>
             {t('coverNoticeConfirm')}
           </Button>
         </div>

@@ -271,7 +271,7 @@ export default function App() {
             ) : undefined
           }
           skipCoverNotice={session.data.settings.skipCoverNotice === true}
-          onSkipCoverNotice={(skip) => void update((data) => updateSettings(data, {skipCoverNotice: skip})).catch(console.error)}
+          onSkipCoverNotice={(skip) => update((data) => updateSettings(data, {skipCoverNotice: skip})).then(() => undefined, console.error)}
           onOpen={openEntry}
           onEdit={(entry) => setView({name: 'entry', editing: entry})}
           onAddCurrent={addCurrentTab}

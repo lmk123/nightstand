@@ -8,7 +8,7 @@ import {Header} from '../components/Header'
 import {ShortcutInfo} from '../components/ShortcutInfo'
 import {viewClass} from '../components/styles'
 import {HelpLink} from '../help'
-import {usePrefs} from '../prefs'
+import {usePageAccess, usePrefs} from '../prefs'
 
 /** A setting's text with its control at the end; the whole row is the control's label. */
 function SettingRow({disabled, control, children}: {disabled?: boolean; control: ReactNode; children: ReactNode}) {
@@ -65,6 +65,7 @@ export function Settings({
   children?: ReactNode
 }) {
   const {prefs, changePrefs, changeCover} = usePrefs()
+  const access = usePageAccess()
 
   return (
     <div className={viewClass}>
@@ -74,10 +75,12 @@ export function Settings({
           <section className="grid grid-cols-1 gap-2">
             <h2 className="section-label">{t('enhancedMode')}</h2>
             <div className="panel divide-line grid grid-cols-1 divide-y">
-              {/* No explanation sheet here, unlike the header toggle: the hint and the help link below say it. */}
+              {/* No explanation sheet here, unlike the header toggle: the hints and the help link below say it.
+                  Until access is granted, also that the browser asks and may close this window. */}
               <SwitchRow checked={prefs.cover} onChange={changeCover}>
                 {t('coverSetting')}
                 <span className="text-muted-foreground mt-1 block text-xs">{t('coverShortHint')}</span>
+                {access === false && <span className="text-muted-foreground mt-1 block text-xs">{t('coverNoticeAccess')}</span>}
               </SwitchRow>
               {/* Muting goes with the cover: with covering off no page is ever shown, so it would never end. */}
               <SwitchRow checked={prefs.cover && prefs.mute} disabled={!prefs.cover} onChange={(mute) => changePrefs({mute})}>
