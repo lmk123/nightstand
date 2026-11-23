@@ -3,13 +3,13 @@
 // this one. Unlike the manifest, store pages say plainly what Nightstand does:
 // the store's policies require it.
 
-export const LOCALES = ['en', 'zh_CN'] as const
+export const LOCALES = ['en', 'zh_CN', 'zh_TW', 'ja'] as const
 export type Locale = (typeof LOCALES)[number]
 
 export type ShotName = 'decoy' | 'vault' | 'cover' | 'form' | 'notice'
 
 export interface Caption {
-  /** `\n` marks a line break (Chinese has no spaces to balance lines on). */
+  /** `\n` marks a line break (Chinese and Japanese have no spaces to balance lines on). */
   title: string
   body: string
 }
@@ -145,6 +145,122 @@ export const COPY: Record<Locale, Copy> = {
       {host: 'clinic.example', title: '体检报告', emoji: '🩺'},
       {host: 'rings.example', title: '求婚戒指', emoji: '💍'},
       {host: 'jobs.example', title: '招聘机会', emoji: '💼'}
+    ]
+  },
+  zh_TW: {
+    tagline: '讓網址列忘掉某些網站',
+    shots: [
+      [
+        'decoy',
+        {
+          title: '看起來只是一個\n普通的快速連結工具',
+          body: '別人點開圖示，看到的就只有這些。在篩選框裡輸入密語、按 Enter，才會解鎖。'
+        }
+      ],
+      [
+        'vault',
+        {
+          title: '你的網站，\n存在加密清單裡',
+          body: '每次造訪後自動刪除瀏覽記錄，網址列就不會再建議它們。'
+        }
+      ],
+      [
+        'cover',
+        {
+          title: '收藏的網站，\n先遮住再顯示',
+          body: '開啟增強模式後，打開收藏的網站時頁面會被蓋住、分頁靜音，按「顯示頁面」才會出現。滑鼠移開、切換分頁或一分鐘沒有操作，又會重新遮住。'
+        }
+      ],
+      [
+        'notice',
+        {
+          title: '儲存之前，\n先看清要刪除什麼',
+          body: '儲存網站時會刪除它既有的瀏覽記錄和書籤，Nightstand 會先告訴你有多少。'
+        }
+      ],
+      [
+        'form',
+        {
+          title: '整個網站，\n或者只是一個網址',
+          body: '可以清除一個網站和它的所有子網域，也可以只清除一個網址；網站會跳轉過去的其他網域也能一起清除。'
+        }
+      ]
+    ],
+    links: [
+      {host: 'news.example', title: '新聞', emoji: '📰'},
+      {host: 'weather.example', title: '天氣', emoji: '⛅'},
+      {host: 'calendar.example', title: '日曆', emoji: '📅'},
+      {host: 'mail.example', title: '郵件', emoji: '✉️'},
+      {host: 'docs.example', title: '文件', emoji: '📝'},
+      {host: 'maps.example', title: '地圖', emoji: '🗺️'},
+      {host: 'translate.example', title: '翻譯', emoji: '🌐'},
+      {host: 'music.example', title: '音樂', emoji: '🎧'}
+    ],
+    saved: [
+      {host: 'gifts.example', title: '給媽媽的生日禮物', emoji: '🎁'},
+      {host: 'homes.example', title: '租屋資訊', emoji: '🏠'},
+      {host: 'party.example', title: '驚喜派對籌備', emoji: '🎉'},
+      {host: 'clinic.example', title: '健康檢查報告', emoji: '🩺'},
+      {host: 'rings.example', title: '求婚戒指', emoji: '💍'},
+      {host: 'jobs.example', title: '職缺機會', emoji: '💼'}
+    ]
+  },
+  ja: {
+    tagline: 'アドレスバーに、特定のサイトを忘れさせる',
+    shots: [
+      [
+        'decoy',
+        {
+          title: '見た目は\nふつうのクイックリンク',
+          body: 'アイコンをクリックしても、見えるのはこれだけ。絞り込み欄にパスフレーズを入力して Enter キーを押すと、ロックが解除されます。'
+        }
+      ],
+      [
+        'vault',
+        {
+          title: 'あなたのサイトは\n暗号化されたリストに',
+          body: 'アクセスするたびに閲覧履歴が削除されるので、アドレスバーに候補として出てこなくなります。'
+        }
+      ],
+      [
+        'cover',
+        {
+          title: '表示すると決めるまで\n覆っておく',
+          body: '強化モードをオンにすると、保存したサイトは覆われてミュートされた状態で、目立たないタブタイトルのまま開きます。マウスをページの外に動かしたり、タブを切り替えたり、1 分間操作しなかったりすると、再び覆われます。'
+        }
+      ],
+      [
+        'notice',
+        {
+          title: '保存する前に、\n消えるものを確認',
+          body: 'サイトを保存すると、既存の閲覧履歴とブックマークが削除されます。Nightstand はその数を先に表示します。'
+        }
+      ],
+      [
+        'form',
+        {
+          title: 'サイト全体でも、\n1 ページだけでも',
+          body: 'すべてのサブドメインを含むサイト全体も、1 つの URL だけも対象にできます。サイトから移動する別のドメインもあわせて削除できます。'
+        }
+      ]
+    ],
+    links: [
+      {host: 'news.example', title: 'ニュース', emoji: '📰'},
+      {host: 'weather.example', title: '天気', emoji: '⛅'},
+      {host: 'calendar.example', title: 'カレンダー', emoji: '📅'},
+      {host: 'mail.example', title: 'メール', emoji: '✉️'},
+      {host: 'docs.example', title: 'ドキュメント', emoji: '📝'},
+      {host: 'maps.example', title: '地図', emoji: '🗺️'},
+      {host: 'translate.example', title: '翻訳', emoji: '🌐'},
+      {host: 'music.example', title: '音楽', emoji: '🎧'}
+    ],
+    saved: [
+      {host: 'gifts.example', title: '母の誕生日プレゼント候補', emoji: '🎁'},
+      {host: 'homes.example', title: '賃貸物件情報', emoji: '🏠'},
+      {host: 'party.example', title: 'サプライズパーティーの準備', emoji: '🎉'},
+      {host: 'clinic.example', title: '健康診断の結果', emoji: '🩺'},
+      {host: 'rings.example', title: '婚約指輪', emoji: '💍'},
+      {host: 'jobs.example', title: '求人情報', emoji: '💼'}
     ]
   }
 }

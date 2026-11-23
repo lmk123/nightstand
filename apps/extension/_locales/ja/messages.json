@@ -1,0 +1,711 @@
+{
+  "extName": {
+    "message": "Nightstand",
+    "description": "Extension name shown on the extensions page. Must stay neutral."
+  },
+  "extDescription": {
+    "message": "よく使うリンクをいつも手元に",
+    "description": "Extension description shown on the extensions page. Must stay neutral."
+  },
+  "actionTitle": {
+    "message": "クイックリンク",
+    "description": "Toolbar button tooltip. Must stay neutral."
+  },
+  "commandPanic": {
+    "message": "すばやく閉じる",
+    "description": "Keyboard shortcut description on the shortcuts page. Must stay neutral."
+  },
+  "popupTitle": {
+    "message": "クイックリンク",
+    "description": "Popup document title."
+  },
+  "htmlLang": {
+    "message": "ja",
+    "description": "BCP 47 language tag of this catalog, set as the popup's <html lang>."
+  },
+  "back": {
+    "message": "戻る"
+  },
+  "settings": {
+    "message": "設定"
+  },
+  "lock": {
+    "message": "ロック"
+  },
+  "edit": {
+    "message": "編集"
+  },
+  "delete": {
+    "message": "削除"
+  },
+  "confirmDelete": {
+    "message": "削除を確定"
+  },
+  "cancel": {
+    "message": "キャンセル"
+  },
+  "save": {
+    "message": "保存"
+  },
+  "saveNoticeTitle": {
+    "message": "保存する前に確認してください"
+  },
+  "saveNoticeSite": {
+    "message": "確定すると、このサイト（すべてのサブドメインを含む）の次のデータがすぐに削除されます："
+  },
+  "saveNoticeSiteExtra": {
+    "message": "確定すると、このサイトと追加ドメイン（$COUNT$ 件）の次のデータが、いずれもサブドメインを含めてすぐに削除されます：",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "saveNoticeExact": {
+    "message": "確定すると、この URL の次のデータがすぐに削除されます："
+  },
+  "saveNoticeExactExtra": {
+    "message": "確定すると、この URL と追加ドメイン（$COUNT$ 件、サブドメインを含む）の次のデータがすぐに削除されます：",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "saveNoticeHistory": {
+    "message": "履歴のページ：$COUNT$ 件",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "saveNoticeBookmarks": {
+    "message": "ブックマーク：$COUNT$ 件",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "saveNoticeAutoClean": {
+    "message": "保存後は、アクセスするたびに閲覧履歴が自動的に削除されます"
+  },
+  "saveNoticeCover": {
+    "message": "ページは覆われた状態で開き、「ページを表示」をクリックするまで表示されません（強化モードはいつでもオフにできます）"
+  },
+  "saveNoticeCoverMute": {
+    "message": "ページは覆われてミュートされた状態で開き、「ページを表示」をクリックするまでそのままです（強化モードはいつでもオフにできます）"
+  },
+  "saveNoticeEffects": {
+    "message": "この操作は元に戻せません。これらに由来するアドレスバーの候補も消えます。Cookie、キャッシュ、ダウンロード履歴には影響しません。"
+  },
+  "saveCheckTitle": {
+    "message": "保存しました。すぐにアドレスバーを確認してください"
+  },
+  "saveCheckHow": {
+    "message": "新しいタブを開き、アドレスバーにサイトのドメインの最初の数文字を入力してください（サイト名に含まれる言葉も試してください）。候補にまだこのサイトが出てくるか確認します。"
+  },
+  "saveCheckOpenTab": {
+    "message": "このサイトのタブがまだ開いている間は、「このタブに切り替え」という候補が出るのは正常です。タブを閉じてからもう一度試してください。"
+  },
+  "saveCheckIfStill": {
+    "message": "まだ出てくる場合：その候補の URL を見てください。ドメインが違うなら、この項目の「追加ドメイン」に追加します。矢印キーで候補を選んで Shift+Delete（Mac では Shift+Fn+Delete）を押して削除することもできます。"
+  },
+  "saveCheckDismiss": {
+    "message": "OK"
+  },
+  "saveNoticeSkip": {
+    "message": "今後表示しない"
+  },
+  "saveNoticeBack": {
+    "message": "戻る"
+  },
+  "saveNoticeConfirm": {
+    "message": "確定して保存"
+  },
+  "next": {
+    "message": "次へ"
+  },
+  "copy": {
+    "message": "コピー"
+  },
+  "copied": {
+    "message": "コピーしました"
+  },
+  "working": {
+    "message": "お待ちください…"
+  },
+  "unlock": {
+    "message": "ロック解除"
+  },
+  "onbIntroTitle": {
+    "message": "Nightstand へようこそ"
+  },
+  "onbIntroBody": {
+    "message": "アドレスバーに候補として出てきてほしくないサイトを、ブックマークバーではなくここに保存しましょう。保存したサイトにアクセスするたびに、Nightstand が該当する閲覧履歴を削除します。"
+  },
+  "onbIntroNote": {
+    "message": "Nightstand が何のためのものかを説明するのはこの画面だけです。画面を誰にも見られていないときに設定を終えることをおすすめします。"
+  },
+  "onbStart": {
+    "message": "はじめる"
+  },
+  "onbPassTitle": {
+    "message": "パスフレーズを設定"
+  },
+  "onbPassHint": {
+    "message": "ロックを解除するときは「絞り込み」欄にパスフレーズを入力します。スペースで区切ったいくつかの単語など、ふつうの絞り込みキーワードに見えるものがおすすめです。絞り込み欄に入力しているところを見られても、誰も気に留めません。"
+  },
+  "onbPassLabel": {
+    "message": "パスフレーズ"
+  },
+  "onbPassConfirmLabel": {
+    "message": "もう一度入力"
+  },
+  "errPassTooShort": {
+    "message": "パスフレーズは 4 文字以上にしてください"
+  },
+  "errPassLooksLikeCode": {
+    "message": "パスフレーズをリカバリーコードと同じ形式にすることはできません"
+  },
+  "errPassMismatch": {
+    "message": "パスフレーズが一致しません"
+  },
+  "onbCreating": {
+    "message": "鍵を生成しています…"
+  },
+  "onbCodeTitle": {
+    "message": "リカバリーコードを保管する"
+  },
+  "onbCodeBody": {
+    "message": "パスフレーズを忘れたときは、リカバリーコードを絞り込み欄に貼り付けて Enter キーを押すと、新しいパスフレーズを設定できます。リカバリーコードが表示されるのは今回だけです。書き留めるか、パスワード マネージャーに保存してください。"
+  },
+  "onbCodeConfirm": {
+    "message": "リカバリーコードを保管しました"
+  },
+  "onbHowTitle": {
+    "message": "これからの使い方"
+  },
+  "onbHowBody": {
+    "message": "これからはアイコンをクリックすると「クイックリンク」ツールが開きます。絞り込み欄にパスフレーズを入力して Enter キーを押すとロックが解除されます。ポップアップを閉じると再びロックされます。"
+  },
+  "onbFinish": {
+    "message": "完了"
+  },
+  "vaultTitle": {
+    "message": "保存済み"
+  },
+  "vaultOpen": {
+    "message": "開く"
+  },
+  "vaultSearchPlaceholder": {
+    "message": "検索…"
+  },
+  "vaultEmpty": {
+    "message": "まだ何も保存されていません。現在のタブを追加するか、URL を手動で入力してください。"
+  },
+  "noMatches": {
+    "message": "一致する項目はありません"
+  },
+  "vaultKeysHint": {
+    "message": "↑↓ 選択　↵ 開く",
+    "description": "Keyboard hint under the vault list."
+  },
+  "addCurrentTab": {
+    "message": "現在のページを追加"
+  },
+  "addManually": {
+    "message": "手動で追加"
+  },
+  "currentTabUnsupported": {
+    "message": "現在のタブは通常のウェブページではないため、追加できません。"
+  },
+  "entryAddTitle": {
+    "message": "リンクを追加"
+  },
+  "entryEditTitle": {
+    "message": "リンクを編集"
+  },
+  "fieldUrl": {
+    "message": "URL"
+  },
+  "fieldTitle": {
+    "message": "タイトル"
+  },
+  "untitledEntry": {
+    "message": "無題"
+  },
+  "fieldMatchMode": {
+    "message": "削除の範囲"
+  },
+  "matchSite": {
+    "message": "サイト全体（すべてのサブドメインを含む）"
+  },
+  "matchExact": {
+    "message": "この URL のみ"
+  },
+  "fieldExtraHosts": {
+    "message": "追加ドメイン（$COUNT$）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "fieldExtraHostsHint": {
+    "message": "1 行に 1 つのドメインを入力します（すべてのサブドメインを含む）。URL を貼り付けてもかまいません。支払いページや動画を再生するドメインなど、このサイトから移動する別のドメインに使います。それらの履歴もあわせて削除されます。"
+  },
+  "errInvalidUrl": {
+    "message": "http または https で始まる URL を入力してください"
+  },
+  "errDuplicate": {
+    "message": "保存済みです：$TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "errExtraHost": {
+    "message": "有効なドメインではありません：$TEXT$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "ftp://x"
+      }
+    }
+  },
+  "settingsTitle": {
+    "message": "設定"
+  },
+  "newPassLabel": {
+    "message": "新しいパスフレーズ"
+  },
+  "resetPassTitle": {
+    "message": "新しいパスフレーズを設定"
+  },
+  "resetPassHint": {
+    "message": "リカバリーコードでロックを解除しました。新しいパスフレーズを設定してください。以前のパスフレーズは使えなくなります。"
+  },
+  "decoyFilterPlaceholder": {
+    "message": "絞り込み…"
+  },
+  "decoyEmpty": {
+    "message": "一致するリンクはありません"
+  },
+  "decoyDataUnreadable": {
+    "message": "読み取れないデータがあります。新しいバージョンで書き込まれた可能性があります。拡張機能を更新してください（アンインストールはしないでください）。"
+  },
+  "decoySettingsTitle": {
+    "message": "クイックリンクの設定"
+  },
+  "decoyLinksSection": {
+    "message": "リンク"
+  },
+  "decoyLinkTitle": {
+    "message": "名前"
+  },
+  "decoyLinkUrl": {
+    "message": "URL"
+  },
+  "decoyAddLink": {
+    "message": "追加"
+  },
+  "decoyRestoreDefaults": {
+    "message": "デフォルトのリンクに戻す"
+  },
+  "iconSection": {
+    "message": "ツールバーのアイコン"
+  },
+  "iconNightstand": {
+    "message": "Nightstand"
+  },
+  "iconBook": {
+    "message": "本"
+  },
+  "iconStar": {
+    "message": "星"
+  },
+  "iconGrid": {
+    "message": "グリッド"
+  },
+  "saveNoticeSection": {
+    "message": "URL の保存"
+  },
+  "saveNoticeSetting": {
+    "message": "保存する前に、削除される履歴とブックマークを表示する"
+  },
+  "saveCheckSetting": {
+    "message": "保存した後に、アドレスバーの確認を促す"
+  },
+  "enhancedMode": {
+    "message": "強化モード"
+  },
+  "enhancedModeOn": {
+    "message": "強化モード：オン"
+  },
+  "enhancedModeOff": {
+    "message": "強化モード：オフ"
+  },
+  "coverSetting": {
+    "message": "「ページを表示」をクリックするまでページを覆う"
+  },
+  "coverShortHint": {
+    "message": "ページを離れたり、しばらく操作しなかったりすると、再び覆われます。"
+  },
+  "muteSetting": {
+    "message": "タブをミュートする（ページを表示すると音が戻ります）"
+  },
+  "idleSetting": {
+    "message": "操作がない状態が続いたら再び覆う"
+  },
+  "idleMinutesOption": {
+    "message": "$COUNT$ 分",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "coverNoticeSetting": {
+    "message": "上部のバーからオンにする前に、何をするのかを説明する"
+  },
+  "coverNoticeSettingLocked": {
+    "message": "ブラウザでアクセスが許可されるまでは毎回表示されます"
+  },
+  "coverNoticeTitle": {
+    "message": "強化モードをオンにする"
+  },
+  "coverNoticeIntro": {
+    "message": "リストにあるページを開くと："
+  },
+  "coverNoticeCover": {
+    "message": "「ページを表示」をクリックするまで覆われたままです"
+  },
+  "coverNoticeCoverMute": {
+    "message": "「ページを表示」をクリックするまで覆われ、ミュートされたままです"
+  },
+  "coverNoticeRecover": {
+    "message": "マウスをページの外に動かしたり、タブを切り替えたり、しばらく操作しなかったりすると、再び覆われます"
+  },
+  "coverNoticeAccess": {
+    "message": "まだ許可していない場合は、ブラウザがすべてのウェブサイトへのアクセスを求めます。これはページを覆うためだけに使われます。確認中にこのウィンドウが閉じることがあります。許可すると覆う機能が有効になります。"
+  },
+  "coverNoticeConfirm": {
+    "message": "オンにする"
+  },
+  "coverShow": {
+    "message": "ページを表示"
+  },
+  "coverShowTitle": {
+    "message": "$NAME$ がこのページを覆っています",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nightstand"
+      }
+    }
+  },
+  "coverTitle": {
+    "message": "新しいタブ"
+  },
+  "shortcutSection": {
+    "message": "すばやく閉じるショートカット"
+  },
+  "shortcutCurrentLabel": {
+    "message": "現在のショートカット"
+  },
+  "shortcutNone": {
+    "message": "ショートカットは設定されていません。"
+  },
+  "shortcutHint": {
+    "message": "保護しているサイトのタブを閉じ、すぐに履歴を削除して、ポップアップを閉じます（ロックされます）。"
+  },
+  "shortcutChange": {
+    "message": "ショートカットを変更"
+  },
+  "shortcutChangeFirefox": {
+    "message": "変更するには、about:addons を開き、歯車メニューから「拡張機能のショートカットキーを管理」を選んでください。"
+  },
+  "done": {
+    "message": "完了"
+  },
+  "backupTitle": {
+    "message": "バックアップと復元"
+  },
+  "backupExportSection": {
+    "message": "暗号化したバックアップをエクスポート"
+  },
+  "backupExportHint": {
+    "message": "暗号文だけを含む .nightstand ファイルをエクスポートします。インポートするには、エクスポートした時点のパスフレーズかリカバリーコードが必要です。"
+  },
+  "backupExport": {
+    "message": "バックアップをエクスポート"
+  },
+  "backupImportSection": {
+    "message": "バックアップをインポート"
+  },
+  "backupImportHint": {
+    "message": "バックアップの項目は現在のリストに統合されます。URL が重複する場合は新しいほうが残ります。現在のパスフレーズとリカバリーコードは変わりません。項目を保存するときと同じく、インポートしたサイトの履歴とブックマークは削除されます。"
+  },
+  "backupChooseFile": {
+    "message": "バックアップ ファイルを選択"
+  },
+  "backupPasteLabel": {
+    "message": "バックアップの内容を貼り付け"
+  },
+  "backupPasteHint": {
+    "message": ".nightstand ファイルをテキスト エディタで開き、すべて選択してコピーし、ここに貼り付けてください。"
+  },
+  "backupSecretLabel": {
+    "message": "バックアップのパスフレーズまたはリカバリーコード"
+  },
+  "backupSecretHint": {
+    "message": "このバックアップをエクスポートしたときのパスフレーズか、その時点のリカバリーコードを入力してください。"
+  },
+  "backupImport": {
+    "message": "インポート"
+  },
+  "backupImported": {
+    "message": "インポートが完了しました：追加 $ADDED$ 件、更新 $UPDATED$ 件。",
+    "placeholders": {
+      "added": {
+        "content": "$1",
+        "example": "3"
+      },
+      "updated": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "errBackupInvalid": {
+    "message": "有効な Nightstand のバックアップではないか、ファイルが壊れています。"
+  },
+  "errBackupNewer": {
+    "message": "このバックアップは新しいバージョンの Nightstand でエクスポートされました。先に拡張機能を更新してください。"
+  },
+  "errSaveFailed": {
+    "message": "保存できませんでした。もう一度お試しください。"
+  },
+  "errBackupSecret": {
+    "message": "パスフレーズまたはリカバリーコードが正しくありません。"
+  },
+  "plainExportSection": {
+    "message": "プレーンテキストでエクスポート"
+  },
+  "plainExport": {
+    "message": "暗号化されていないリストをエクスポート…"
+  },
+  "plainExportWarningTitle": {
+    "message": "警告：エクスポートしたファイルは暗号化されません"
+  },
+  "plainExportWarning": {
+    "message": "このファイルを開ける人なら誰でも、保存したすべての URL とタイトルを見ることができます。ファイルはブラウザのダウンロード履歴にも残ります。本当に必要なときだけエクスポートし、用が済んだらすぐに削除してください。"
+  },
+  "plainExportConfirm": {
+    "message": "理解したうえでエクスポートする"
+  },
+  "recoveryTitle": {
+    "message": "新しいリカバリーコードを生成"
+  },
+  "recoveryRotateBody": {
+    "message": "新しいリカバリーコードを生成すると、以前のコードはすぐに使えなくなります。以前のリカバリーコードのときにエクスポートしたバックアップは、その時点のパスフレーズで開けます。"
+  },
+  "recoveryRotate": {
+    "message": "新しいリカバリーコードを生成"
+  },
+  "recoveryNewBody": {
+    "message": "これが新しいリカバリーコードです。表示されるのは今回だけです。書き留めるか、パスワード マネージャーに保存してください。"
+  },
+  "changePassTitle": {
+    "message": "パスフレーズを変更"
+  },
+  "changePassHint": {
+    "message": "変更すると、以前のパスフレーズはすぐに使えなくなります。リカバリーコードは変わりません。"
+  },
+  "bmImportTitle": {
+    "message": "ブラウザのブックマークからインポート"
+  },
+  "bmImportEmpty": {
+    "message": "ブックマークにウェブページのリンクがありません。"
+  },
+  "bmUntitledFolder": {
+    "message": "（無題のフォルダ）"
+  },
+  "matchSiteShort": {
+    "message": "サイト全体"
+  },
+  "bmRemoveOriginals": {
+    "message": "インポート後に元のブックマークを削除する"
+  },
+  "bmImported": {
+    "message": "$COUNT$ 件をインポートしました。これらのサイトの閲覧履歴は削除済みです。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bmImportButton": {
+    "message": "選択した項目をインポート（$COUNT$）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "onbIntroRestore": {
+    "message": "バックアップから復元する場合は、まず設定を終えてから「設定 → バックアップと復元」でインポートしてください。"
+  },
+  "faqTitle": {
+    "message": "よくある質問"
+  },
+  "faqMatchLink": {
+    "message": "2 つの選択肢の違いは？"
+  },
+  "faqMatchQ": {
+    "message": "「サイト全体」と「この URL のみ」の違いは？"
+  },
+  "faqMatchIntro": {
+    "message": "保存した URL が example.com/docs/guide だとします。その後に次の URL にアクセスしたとき、履歴から削除されるかどうかは次のとおりです："
+  },
+  "faqColUrl": {
+    "message": "アクセスした URL"
+  },
+  "faqColSite": {
+    "message": "サイト全体"
+  },
+  "faqColExact": {
+    "message": "URL のみ"
+  },
+  "faqMarkDeleted": {
+    "message": "削除",
+    "description": "FAQ match table cell: this visit's history is deleted."
+  },
+  "faqMarkKept": {
+    "message": "残る",
+    "description": "FAQ match table cell: this visit's history is kept."
+  },
+  "faqMatchSite": {
+    "message": "サイト全体：ドメインだけを見ます。パス、プロトコル、ポートは関係ありません。このドメインやそのサブドメインのページは、アクセスした後に履歴から削除されます。親ドメイン（abc.def.com に対する def.com）や、よく似たドメイン（evil-example.com など）には影響しません。"
+  },
+  "faqMatchExact": {
+    "message": "この URL のみ：このアドレスだけを削除します。プロトコル（http か https か）、先頭の www.、# 以降、末尾のスラッシュは区別しませんが、? 以降のパラメータは完全に一致する必要があります。サイトのトップページやほかのページは履歴に残るため、アドレスバーにドメインを入力すると、ブラウザがまだこのサイトを候補に出すことがあります。"
+  },
+  "faqMatchWhen": {
+    "message": "削除のタイミング：項目を追加するとすぐに既存の履歴が削除され、その後はアクセスするたびにすぐ削除されます。さらに、15 分ごとと、ブラウザを起動するたびに、削除漏れがないか確認します。ロック中も削除は行われます。"
+  },
+  "faqMatchTip": {
+    "message": "アドレスバーにこのサイトを一切出したくない場合は、「サイト全体」を選んでください。"
+  },
+  "faqExtraLink": {
+    "message": "追加ドメインとは？どう見つける？"
+  },
+  "faqExtraQ": {
+    "message": "「追加ドメイン」とは何ですか？追加すべきドメインはどう見つけますか？"
+  },
+  "faqExtra1": {
+    "message": "サイトによっては、別のドメインに移動することがあります。支払いのときの専用の支払いページや、動画を再生するときの動画サーバーのアドレス（video.twimg.com など）です。これらのドメインはサイト本体には含まれないため「サイト全体」では対象にならず、履歴が残ってアドレスバーにも候補として出てきます。"
+  },
+  "faqExtra2": {
+    "message": "それらを項目の「追加ドメイン」に 1 行に 1 つずつ追加してください。項目自体がどちらの選択肢でも、追加ドメインは常に「サイト全体」（すべてのサブドメインを含む）として扱われます。保存すると既存の閲覧履歴とブックマークが削除され、その後のアクセスもロック中を含めて自動的に削除されます。"
+  },
+  "faqExtraFindTitle": {
+    "message": "ドメインの見つけ方"
+  },
+  "faqExtraFind1": {
+    "message": "アドレスバーで chrome://history を開き（Firefox では履歴ウィンドウ：Windows では Ctrl+Shift+H、Mac では ⌘⇧H）、次の言葉で検索します："
+  },
+  "faqExtraFind2": {
+    "message": "サイトのドメイン（例：example.com）——URL にそれを含む項目が見つかります。"
+  },
+  "faqExtraFind3": {
+    "message": "サイト名やページタイトルに含まれる言葉——別のドメインのページでも、URL は違うのにタイトルにはサイト名が入っていることがよくあります。"
+  },
+  "faqExtraFind4": {
+    "message": "各結果の横に表示されるドメインを見て、サイト本体と違うものが追加すべきドメインです。その項目の URL をコピーしてそのまま貼り付けてもかまいません。保存するときにドメインが取り出されます。"
+  },
+  "faqExtraTip": {
+    "message": "項目を追加する前に調べておくのがおすすめです。保存するとサイト自体の履歴は消え、検索の手がかりはタイトルの言葉だけになります。また、日常的に使う大きなサイト（google.com など）は追加しないでください。そのサイトとすべてのサブドメインの履歴がすべて削除されます。"
+  },
+  "faqCoverLink": {
+    "message": "強化モードとは？"
+  },
+  "faqCoverQ": {
+    "message": "強化モードでは何が起こりますか？"
+  },
+  "faqCover1": {
+    "message": "強化モードをオンにすると、リストにあるページは覆われた状態で開き、タブのタイトルは「新しいタブ」になります。覆いの中央にある「ページを表示」をクリックするまで内容は表示されません。プレゼンや画面共有のとき、周りに人がいるときに便利です。"
+  },
+  "faqCover2": {
+    "message": "表示した後も、マウスをページの外に動かしたり、タブを切り替えたり、ブラウザのウィンドウを離れたり、しばらく操作しなかったりすると（音声の再生中は除く）、再び覆われます。どれくらいの時間で覆うかは設定で決められます。"
+  },
+  "faqCover3": {
+    "message": "ミュートはデフォルトでオンです。覆われたページはミュートもされ、「ページを表示」をクリックすると音が戻ります。設定でオフにできます。"
+  },
+  "faqCover4": {
+    "message": "初めてオンにするとき、ブラウザがすべてのウェブサイトへのアクセスを求めます。これはページを覆うためだけに使われます。ブラウザが確認している間にこのウィンドウが閉じることがありますが、許可すると覆う機能が有効になります。その後は確認されず、強化モードをオフにしてもアクセス許可は残ります。取り消すには、ブラウザの拡張機能の詳細ページで削除してください。強化モードもオフになります。"
+  },
+  "faqCover5": {
+    "message": "リスト上部の稲妻ボタンか設定で、いつでもオン・オフを切り替えられます。オフにすると、開いているページの覆いとミュートはすぐに解除されます。再びオンにした場合、すでに開いているタブは次に読み込まれたときに覆われます。"
+  },
+  "faqCoverTip": {
+    "message": "覆いでは、アドレスバーのアドレスやタブのサイトアイコンは隠せません。また、PDF やブラウザ自体のページは覆われません。"
+  },
+  "faqStoreQ": {
+    "message": "データはどのように保存されますか？解読されることはありますか？"
+  },
+  "faqStore1": {
+    "message": "すべてのデータはこのコンピュータのブラウザ内にあり、どこにもアップロードされません。"
+  },
+  "faqStore2": {
+    "message": "リスト（URL、タイトル、追加ドメイン）は AES-256-GCM で暗号化されています。復号する鍵はロック解除中のポップアップのメモリ内にだけ存在し、ポップアップを閉じると破棄されます。ディスクに書き込まれることはありません。"
+  },
+  "faqStore3": {
+    "message": "パスフレーズとリカバリーコードは、それぞれ PBKDF2（600,000 回の反復）で鍵に変換され、その鍵でリストの鍵を開きます。暗号自体を現実的に破ることはできず、攻撃者が狙えるのはパスフレーズだけです。"
+  },
+  "faqStore4": {
+    "message": "注意点がひとつあります。ロック中でも履歴を削除できるよう、拡張機能はどのサイトを削除するかの照合表も保存しています。保存されるのはソルト付きハッシュだけなので URL を直接読むことはできませんが、ブラウザのデータを入手した人がよく知られたサイトの一覧をハッシュ化して照合すれば、有名なサイトを追加しているかどうかを確かめられます。項目の数も分かります。タイトルがこの方法で漏れることはありません。"
+  },
+  "faqStore5": {
+    "message": "Nightstand が防ぐのは周りの人の目です（プロジェクターでの投影、画面共有、背後からののぞき見）。このコンピュータを完全に操作できる人からは守れず、Google アカウントのアクティビティ、DNS、ネットワーク上の記録にも効果はありません。"
+  },
+  "faqSecretQ": {
+    "message": "パスフレーズとリカバリーコードはどこに保存されますか？"
+  },
+  "faqSecret1": {
+    "message": "どこにも保存されません。文字そのものも、その「指紋」（ハッシュ）も保存されません。Nightstand 自身もそれが何かを知りません。"
+  },
+  "faqSecret2": {
+    "message": "こう考えてください。ブラウザに保存されているのは、リストが入った鍵付きの金庫だけです。パスフレーズとリカバリーコードはその金庫の暗証番号で、どちらでも開けられます。"
+  },
+  "faqSecret3": {
+    "message": "金庫は自分の暗証番号を知りません。ロックを解除するとき、Nightstand は入力された内容で金庫を開けようとします。開けばパスフレーズは正しく、開かなければ間違いです。そのため、どこが間違っているかは教えられません。分かるのは金庫が開かなかったことだけです。"
+  },
+  "faqSecret4": {
+    "message": "パスフレーズとリカバリーコードはどこにも保存されていないので、Nightstand から漏れることはありません。金庫を開ける方法は 1 回ずつ推測すること（総当たり）だけなので、パスフレーズは長いほど安全です。"
+  },
+  "faqSecret5": {
+    "message": "金庫が開いているのはポップアップが開いている間だけです。ポップアップを閉じると再びロックされるので、開くたびにパスフレーズを入力します。"
+  },
+  "faqSecret6": {
+    "message": "パスフレーズを変更しても入れ替わるのは暗証番号のひとつだけで、リカバリーコードは引き続き使えます。新しいリカバリーコードを生成すると、以前のものはすぐに使えなくなります。リカバリーコードが表示されるのは生成したときの一度だけです。"
+  },
+  "faqSecret7": {
+    "message": "エクスポートしたバックアップ ファイルはこの金庫のコピーで、エクスポートした時点のパスフレーズまたはリカバリーコードで開けます。"
+  },
+  "faqSecretWarn": {
+    "message": "何も保存していないからこそ、忘れたパスフレーズは誰にも復元できません。金庫を開けられるのはリカバリーコードだけです。両方をなくすと、リストは二度と開けなくなります。"
+  }
+}
