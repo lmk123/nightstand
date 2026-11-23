@@ -25,10 +25,14 @@ const BRAND_SVG = readFileSync(join(ROOT, 'icons-src', 'nightstand.svg'), 'utf8'
 const BRAND_PNG = `data:image/png;base64,${readFileSync(join(ROOT, 'public', 'icons', 'nightstand', '128.png')).toString('base64')}`
 
 // Same reasoning as the popup's globals.css: the first listed font with Han
-// characters decides their shape, so Japanese gets its own stack (picked by
-// the page's lang in `render`).
-const FONT = `-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Segoe UI", "Microsoft YaHei", sans-serif`
-const FONT_JA = `-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif`
+// characters decides their shape, so zh_TW and ja get their own (the SC fonts
+// cover both, but in mainland glyph shapes).
+const FONTS: Record<Locale, string> = {
+  en: `-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+  zh_CN: `-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Segoe UI", "Microsoft YaHei", sans-serif`,
+  zh_TW: `-apple-system, BlinkMacSystemFont, "PingFang TC", "Segoe UI", "Microsoft JhengHei", sans-serif`,
+  ja: `-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif`
+}
 const INK = '#1f3029'
 const MUTED = '#4c5d55'
 const PAPER = '#efeae0'
@@ -102,15 +106,15 @@ async function capture(page: Page): Promise<string> {
   return `data:image/png;base64,${Buffer.from(png).toString('base64')}`
 }
 
-/** Renders an HTML page of exactly this size to a PNG file; `lang` is the catalog's `htmlLang`. */
-async function render(s: ChromeSession, lang: string, file: string, width: number, height: number, body: string, css: string) {
+/** Renders an HTML page of exactly this size to a PNG file. */
+async function render(s: ChromeSession, locale: Locale, file: string, width: number, height: number, body: string, css: string) {
   const page = await s.browser.newPage()
   await page.setViewport({width, height, deviceScaleFactor: 1})
+  // `lang` steers font fallback when the fonts in FONTS are missing.
   await page.setContent(
-    `<!doctype html><html lang="${lang}"><meta charset="utf-8"><style>
+    `<!doctype html><html lang="${messages(locale)('htmlLang')}"><meta charset="utf-8"><style>
       * { box-sizing: border-box; margin: 0 }
-      body { width: ${width}px; height: ${height}px; overflow: hidden; position: relative; font-family: ${FONT}; color: ${INK}; background: ${PAPER} }
-      html:lang(ja) body { font-family: ${FONT_JA} }
+      body { width: ${width}px; height: ${height}px; overflow: hidden; position: relative; font-family: ${FONTS[locale]}; color: ${INK}; background: ${PAPER} }
       ${css}
     </style><body>${body}</body>`
   )
@@ -154,12 +158,12 @@ const PAGE_HEIGHT = 800 - 56 - 44 - 56
 const MUTED_SVG = `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="${MUTED}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6h2.5l3.5-3v10l-3.5-3h-2.5z" fill="${MUTED}"/><path d="M11 6l4 4M15 6l-4 4"/></svg>`
 
 /** A browser corner with the popup open under the toolbar icon, next to the caption. */
-async function renderScreenshot(s: ChromeSession, lang: string, file: string, popup: string, popupHeight: number, caption: Caption) {
+async function renderScreenshot(s: ChromeSession, locale: Locale, file: string, popup: string, popupHeight: number, caption: Caption) {
   const top = 124
   const scale = Math.min(1.4, (800 - top - 28) / popupHeight)
   await render(
     s,
-    lang,
+    locale,
     file,
     1280,
     800,
@@ -181,10 +185,10 @@ async function renderScreenshot(s: ChromeSession, lang: string, file: string, po
  * title the page script swapped in and the muted tab; the site's own icon stays
  * on the tab, as it does in the browser.
  */
-async function renderCoverScreenshot(s: ChromeSession, lang: string, file: string, page: string, site: Site, title: string, caption: Caption) {
+async function renderCoverScreenshot(s: ChromeSession, locale: Locale, file: string, page: string, site: Site, title: string, caption: Caption) {
   await render(
     s,
-    lang,
+    locale,
     file,
     1280,
     800,
@@ -209,11 +213,11 @@ async function renderCoverScreenshot(s: ChromeSession, lang: string, file: strin
   )
 }
 
-async function renderPromos(s: ChromeSession, lang: string, locale: Locale, dir: string, decoy: string) {
+async function renderPromos(s: ChromeSession, locale: Locale, dir: string, decoy: string) {
   const {tagline} = COPY[locale]
   await render(
     s,
-    lang,
+    locale,
     join(dir, 'promo-small-440x280.png'),
     440,
     280,
@@ -226,7 +230,7 @@ async function renderPromos(s: ChromeSession, lang: string, locale: Locale, dir:
   )
   await render(
     s,
-    lang,
+    locale,
     join(dir, 'promo-marquee-1400x560.png'),
     1400,
     560,
@@ -346,13 +350,13 @@ async function shoot(locale: Locale) {
     for (const [i, [name, caption]] of shots.entries()) {
       const file = join(dir, `screenshot-${i + 1}-${name}.png`)
       if (name === 'cover') {
-        await renderCoverScreenshot(s, m('htmlLang'), file, coverPng, coverSite, coverTitle, caption)
+        await renderCoverScreenshot(s, locale, file, coverPng, coverSite, coverTitle, caption)
         continue
       }
       const shot = captures.get(name)!
-      await renderScreenshot(s, m('htmlLang'), file, shot.src, shot.height, caption)
+      await renderScreenshot(s, locale, file, shot.src, shot.height, caption)
     }
-    await renderPromos(s, m('htmlLang'), locale, dir, captures.get('decoy')!.src)
+    await renderPromos(s, locale, dir, captures.get('decoy')!.src)
   } finally {
     await s.browser.close()
     await server.close()
