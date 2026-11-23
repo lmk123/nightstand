@@ -1,4 +1,4 @@
-import {cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs'
+import {cpSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 
@@ -15,6 +15,13 @@ export function tempDir(prefix: string): string {
 export function cleanupTemp(): void {
   for (const dir of created.splice(0)) rmSync(dir, {recursive: true, force: true})
 }
+
+/**
+ * Chrome only reads catalogs named after its own UI languages, and it has no
+ * zh_HK: it skips that folder, and refuses to load a build whose default is
+ * zh_HK. A copy that keeps only zh_HK stores it under a name Chrome knows.
+ */
+const CHROME_FOLDER: Record<string, string> = {zh_HK: 'zh_TW'}
 
 /**
  * A throwaway copy of a build whose manifest (and optionally background
@@ -45,12 +52,13 @@ export function patchedCopy(
 ): string {
   const dir = tempDir('ext')
   cpSync(dist, dir, {recursive: true})
-  const {onlyLocale} = patch
-  if (onlyLocale) {
+  const onlyLocale = patch.onlyLocale && (CHROME_FOLDER[patch.onlyLocale] ?? patch.onlyLocale)
+  if (patch.onlyLocale && onlyLocale) {
     const locales = join(dir, '_locales')
     for (const locale of readdirSync(locales)) {
-      if (locale !== onlyLocale) rmSync(join(locales, locale), {recursive: true})
+      if (locale !== patch.onlyLocale) rmSync(join(locales, locale), {recursive: true})
     }
+    if (onlyLocale !== patch.onlyLocale) renameSync(join(locales, patch.onlyLocale), join(locales, onlyLocale))
   }
   if (patch.manifest || onlyLocale || patch.grantPageAccess) {
     const file = join(dir, 'manifest.json')

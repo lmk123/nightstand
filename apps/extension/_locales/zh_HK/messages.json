@@ -1,0 +1,711 @@
+{
+  "extName": {
+    "message": "Nightstand",
+    "description": "Extension name shown on the extensions page. Must stay neutral."
+  },
+  "extDescription": {
+    "message": "把常用連結放在手邊",
+    "description": "Extension description shown on the extensions page. Must stay neutral."
+  },
+  "actionTitle": {
+    "message": "快捷連結",
+    "description": "Toolbar button tooltip. Must stay neutral."
+  },
+  "commandPanic": {
+    "message": "快速收起",
+    "description": "Keyboard shortcut description on the shortcuts page. Must stay neutral."
+  },
+  "popupTitle": {
+    "message": "快捷連結",
+    "description": "Popup document title."
+  },
+  "htmlLang": {
+    "message": "zh-HK",
+    "description": "BCP 47 language tag of this catalog, set as the popup's <html lang>."
+  },
+  "back": {
+    "message": "返回"
+  },
+  "settings": {
+    "message": "設定"
+  },
+  "lock": {
+    "message": "鎖定"
+  },
+  "edit": {
+    "message": "編輯"
+  },
+  "delete": {
+    "message": "刪除"
+  },
+  "confirmDelete": {
+    "message": "確認刪除"
+  },
+  "cancel": {
+    "message": "取消"
+  },
+  "save": {
+    "message": "儲存"
+  },
+  "saveNoticeTitle": {
+    "message": "儲存前請確認"
+  },
+  "saveNoticeSite": {
+    "message": "確認儲存後，會立即刪除這個網站（包括所有子域名）的："
+  },
+  "saveNoticeSiteExtra": {
+    "message": "確認儲存後，會立即刪除這個網站和 $COUNT$ 個附加域名（都包括所有子域名）的：",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "saveNoticeExact": {
+    "message": "確認儲存後，會立即刪除這個網址的："
+  },
+  "saveNoticeExactExtra": {
+    "message": "確認儲存後，會立即刪除這個網址，以及 $COUNT$ 個附加域名（包括所有子域名）的：",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "saveNoticeHistory": {
+    "message": "$COUNT$ 個網頁的瀏覽記錄",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "saveNoticeBookmarks": {
+    "message": "$COUNT$ 個書籤",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "saveNoticeAutoClean": {
+    "message": "儲存後，以後每次瀏覽都會自動刪除瀏覽記錄"
+  },
+  "saveNoticeCover": {
+    "message": "開啟它的網頁時會先遮住頁面，按「顯示頁面」後才顯示（可隨時關閉增強模式）"
+  },
+  "saveNoticeCoverMute": {
+    "message": "開啟它的網頁時會先遮住頁面並靜音，按「顯示頁面」後才顯示（可隨時關閉增強模式）"
+  },
+  "saveNoticeEffects": {
+    "message": "刪除後無法還原，地址欄裏來自它們的建議也會一併消失。Cookie、快取和下載記錄不受影響。"
+  },
+  "saveCheckTitle": {
+    "message": "已儲存。請馬上檢查一下地址欄"
+  },
+  "saveCheckHow": {
+    "message": "開一個新分頁，在地址欄輸入這個網站域名開頭的幾個字母，也試試網站名稱裏的字詞，看看下拉建議裏還有沒有這個網站。"
+  },
+  "saveCheckOpenTab": {
+    "message": "這個網站的分頁仍然開着時，出現「切換至這個分頁」的建議是正常的，關掉分頁再試。"
+  },
+  "saveCheckIfStill": {
+    "message": "如果還有：看看那條建議的網址，域名不同的話就把它加進這個項目的「附加域名」；也可以用方向鍵選取它，按 Shift+Delete（Mac 上是 Shift+Fn+Delete）刪除。"
+  },
+  "saveCheckDismiss": {
+    "message": "知道了"
+  },
+  "saveNoticeSkip": {
+    "message": "不再提示"
+  },
+  "saveNoticeBack": {
+    "message": "返回修改"
+  },
+  "saveNoticeConfirm": {
+    "message": "確認儲存"
+  },
+  "next": {
+    "message": "下一步"
+  },
+  "copy": {
+    "message": "複製"
+  },
+  "copied": {
+    "message": "已複製"
+  },
+  "working": {
+    "message": "請稍候…"
+  },
+  "unlock": {
+    "message": "解鎖"
+  },
+  "onbIntroTitle": {
+    "message": "歡迎使用 Nightstand"
+  },
+  "onbIntroBody": {
+    "message": "把不想被地址欄提示出來的網站收在這裏，而不是書籤列。每次瀏覽這些網站後，Nightstand 會自動清除相關的瀏覽記錄。"
+  },
+  "onbIntroNote": {
+    "message": "這是唯一會說明用途的頁面，最好在別人看不到螢幕時完成設定。"
+  },
+  "onbStart": {
+    "message": "開始設定"
+  },
+  "onbPassTitle": {
+    "message": "設定解鎖密碼"
+  },
+  "onbPassHint": {
+    "message": "以後要在「篩選」欄輸入密碼來解鎖，所以密碼最好看起來像普通的篩選字詞，例如幾個用空格分隔的字。旁人看到你在篩選欄打字，也不會覺得奇怪。"
+  },
+  "onbPassLabel": {
+    "message": "密碼"
+  },
+  "onbPassConfirmLabel": {
+    "message": "再輸入一次"
+  },
+  "errPassTooShort": {
+    "message": "密碼最少需要 4 個字元"
+  },
+  "errPassLooksLikeCode": {
+    "message": "密碼不能和復原碼的格式相同"
+  },
+  "errPassMismatch": {
+    "message": "兩次輸入的密碼不一致"
+  },
+  "onbCreating": {
+    "message": "正在產生金鑰…"
+  },
+  "onbCodeTitle": {
+    "message": "保存復原碼"
+  },
+  "onbCodeBody": {
+    "message": "忘記密碼時，在篩選欄貼上復原碼再按 Enter，就可以重新設定密碼。復原碼只會顯示這一次，請抄下來或存進密碼管理工具。"
+  },
+  "onbCodeConfirm": {
+    "message": "我已妥善保存復原碼"
+  },
+  "onbHowTitle": {
+    "message": "以後怎樣使用"
+  },
+  "onbHowBody": {
+    "message": "以後打開看到的是一個「快捷連結」工具。在篩選欄輸入密碼，再按 Enter 就可以解鎖。關閉彈出視窗會自動上鎖。"
+  },
+  "onbFinish": {
+    "message": "完成"
+  },
+  "vaultTitle": {
+    "message": "收藏"
+  },
+  "vaultOpen": {
+    "message": "開啟"
+  },
+  "vaultSearchPlaceholder": {
+    "message": "搜尋…"
+  },
+  "vaultEmpty": {
+    "message": "還沒有收藏。可以加入目前的分頁，或手動輸入網址。"
+  },
+  "noMatches": {
+    "message": "沒有相符的項目"
+  },
+  "vaultKeysHint": {
+    "message": "↑↓ 選擇　↵ 開啟",
+    "description": "Keyboard hint under the vault list."
+  },
+  "addCurrentTab": {
+    "message": "加入目前頁面"
+  },
+  "addManually": {
+    "message": "手動加入"
+  },
+  "currentTabUnsupported": {
+    "message": "目前的分頁不是普通網頁，無法加入。"
+  },
+  "entryAddTitle": {
+    "message": "加入連結"
+  },
+  "entryEditTitle": {
+    "message": "編輯連結"
+  },
+  "fieldUrl": {
+    "message": "網址"
+  },
+  "fieldTitle": {
+    "message": "標題"
+  },
+  "untitledEntry": {
+    "message": "未命名"
+  },
+  "fieldMatchMode": {
+    "message": "清理範圍"
+  },
+  "matchSite": {
+    "message": "整個網站（包括所有子域名）"
+  },
+  "matchExact": {
+    "message": "只限這個網址"
+  },
+  "fieldExtraHosts": {
+    "message": "附加域名（$COUNT$）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "fieldExtraHostsHint": {
+    "message": "每行一個域名，包括所有子域名，也可以直接貼上網址。用於這個網站會跳轉去的其他域名，例如付款頁面、播放影片的域名；它們的記錄會一併刪除。"
+  },
+  "errInvalidUrl": {
+    "message": "請輸入以 http 或 https 開頭的網址"
+  },
+  "errDuplicate": {
+    "message": "已經收藏過：$TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "errExtraHost": {
+    "message": "無法識別的域名：$TEXT$",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "ftp://x"
+      }
+    }
+  },
+  "settingsTitle": {
+    "message": "設定"
+  },
+  "newPassLabel": {
+    "message": "新密碼"
+  },
+  "resetPassTitle": {
+    "message": "設定新密碼"
+  },
+  "resetPassHint": {
+    "message": "已用復原碼解鎖。請設定一個新密碼，舊密碼將會失效。"
+  },
+  "decoyFilterPlaceholder": {
+    "message": "篩選…"
+  },
+  "decoyEmpty": {
+    "message": "沒有相符的連結"
+  },
+  "decoyDataUnreadable": {
+    "message": "部分資料無法讀取，可能是由較新版本寫入的。請更新擴充功能，不要解除安裝。"
+  },
+  "decoySettingsTitle": {
+    "message": "快捷連結設定"
+  },
+  "decoyLinksSection": {
+    "message": "連結"
+  },
+  "decoyLinkTitle": {
+    "message": "名稱"
+  },
+  "decoyLinkUrl": {
+    "message": "網址"
+  },
+  "decoyAddLink": {
+    "message": "加入"
+  },
+  "decoyRestoreDefaults": {
+    "message": "還原預設連結"
+  },
+  "iconSection": {
+    "message": "工具列圖示"
+  },
+  "iconNightstand": {
+    "message": "床頭櫃"
+  },
+  "iconBook": {
+    "message": "書本"
+  },
+  "iconStar": {
+    "message": "星形"
+  },
+  "iconGrid": {
+    "message": "格子"
+  },
+  "saveNoticeSection": {
+    "message": "儲存網址"
+  },
+  "saveNoticeSetting": {
+    "message": "儲存前提醒：會立即刪除該網站或網址的瀏覽記錄和書籤"
+  },
+  "saveCheckSetting": {
+    "message": "儲存後提醒：馬上檢查地址欄裏還有沒有這個網站"
+  },
+  "enhancedMode": {
+    "message": "增強模式"
+  },
+  "enhancedModeOn": {
+    "message": "增強模式：已開啟"
+  },
+  "enhancedModeOff": {
+    "message": "增強模式：已關閉"
+  },
+  "coverSetting": {
+    "message": "先遮住頁面，按「顯示頁面」後才顯示"
+  },
+  "coverShortHint": {
+    "message": "離開頁面或一段時間沒有操作時，會重新遮住。"
+  },
+  "muteSetting": {
+    "message": "自動靜音（頁面顯示後恢復聲音）"
+  },
+  "idleSetting": {
+    "message": "沒有操作多久後重新遮住"
+  },
+  "idleMinutesOption": {
+    "message": "$COUNT$ 分鐘",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "coverNoticeSetting": {
+    "message": "開啟前提醒：從頂欄開啟時，先說明增強模式會做甚麼"
+  },
+  "coverNoticeSettingLocked": {
+    "message": "瀏覽器授權之前，開啟時總會先說明"
+  },
+  "coverNoticeTitle": {
+    "message": "開啟增強模式"
+  },
+  "coverNoticeIntro": {
+    "message": "開啟列表裏的網頁時："
+  },
+  "coverNoticeCover": {
+    "message": "先遮住頁面，按「顯示頁面」後才顯示"
+  },
+  "coverNoticeCoverMute": {
+    "message": "先遮住頁面並靜音，按「顯示頁面」後才顯示"
+  },
+  "coverNoticeRecover": {
+    "message": "滑鼠移離頁面、切換分頁或一段時間沒有操作時，重新遮住"
+  },
+  "coverNoticeAccess": {
+    "message": "還沒授權時，瀏覽器會要求「存取所有網站」的權限，只用來蓋上遮罩；詢問時這個視窗可能會關閉，允許後即時生效。"
+  },
+  "coverNoticeConfirm": {
+    "message": "開啟"
+  },
+  "coverShow": {
+    "message": "顯示頁面"
+  },
+  "coverShowTitle": {
+    "message": "$NAME$ 暫時遮住了這個頁面",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Nightstand"
+      }
+    }
+  },
+  "coverTitle": {
+    "message": "新分頁"
+  },
+  "shortcutSection": {
+    "message": "快速收起快捷鍵"
+  },
+  "shortcutCurrentLabel": {
+    "message": "目前的快捷鍵"
+  },
+  "shortcutNone": {
+    "message": "目前沒有設定快捷鍵。"
+  },
+  "shortcutHint": {
+    "message": "按下後會關閉受保護網站的分頁，立即清理瀏覽記錄，並關閉彈出視窗（即上鎖）。"
+  },
+  "shortcutChange": {
+    "message": "更改快捷鍵"
+  },
+  "shortcutChangeFirefox": {
+    "message": "更改方法：打開 about:addons，按齒輪選單裏的「管理擴充套件快速鍵」。"
+  },
+  "done": {
+    "message": "完成"
+  },
+  "backupTitle": {
+    "message": "備份與還原"
+  },
+  "backupExportSection": {
+    "message": "匯出加密備份"
+  },
+  "backupExportHint": {
+    "message": "匯出一個 .nightstand 檔案，裏面只有密文。匯入時需要當時的密碼或復原碼。"
+  },
+  "backupExport": {
+    "message": "匯出備份"
+  },
+  "backupImportSection": {
+    "message": "匯入備份"
+  },
+  "backupImportHint": {
+    "message": "備份中的項目會合併到目前的列表，重複的網址保留較新的一項。目前的密碼和復原碼不變。和儲存項目時一樣，匯入網站的瀏覽記錄和書籤會被刪除。"
+  },
+  "backupChooseFile": {
+    "message": "選擇備份檔案"
+  },
+  "backupPasteLabel": {
+    "message": "貼上備份內容"
+  },
+  "backupPasteHint": {
+    "message": "用文字編輯器打開 .nightstand 檔案，全選並複製，然後貼上到這裏。"
+  },
+  "backupSecretLabel": {
+    "message": "備份的密碼或復原碼"
+  },
+  "backupSecretHint": {
+    "message": "輸入匯出這份備份時使用的密碼，或當時的復原碼。"
+  },
+  "backupImport": {
+    "message": "匯入"
+  },
+  "backupImported": {
+    "message": "匯入完成：新增 $ADDED$ 項，更新 $UPDATED$ 項。",
+    "placeholders": {
+      "added": {
+        "content": "$1",
+        "example": "3"
+      },
+      "updated": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "errBackupInvalid": {
+    "message": "這不是有效的 Nightstand 備份，或檔案已損壞。"
+  },
+  "errBackupNewer": {
+    "message": "這份備份由較新版本的 Nightstand 匯出，請先更新擴充功能。"
+  },
+  "errSaveFailed": {
+    "message": "儲存失敗，請再試一次。"
+  },
+  "errBackupSecret": {
+    "message": "密碼或復原碼不正確。"
+  },
+  "plainExportSection": {
+    "message": "匯出明文"
+  },
+  "plainExport": {
+    "message": "匯出未加密的列表…"
+  },
+  "plainExportWarningTitle": {
+    "message": "注意：匯出的檔案沒有加密"
+  },
+  "plainExportWarning": {
+    "message": "任何能打開這個檔案的人都能看到你收藏的全部網址和標題。檔案亦會出現在瀏覽器的下載記錄裏。只在確實有需要時匯出，用完請立即刪除。"
+  },
+  "plainExportConfirm": {
+    "message": "我明白，仍然匯出"
+  },
+  "recoveryTitle": {
+    "message": "重新產生復原碼"
+  },
+  "recoveryRotateBody": {
+    "message": "產生新的復原碼後，舊的復原碼立即失效。用舊復原碼匯出的備份仍然可以用當時的密碼打開。"
+  },
+  "recoveryRotate": {
+    "message": "產生新的復原碼"
+  },
+  "recoveryNewBody": {
+    "message": "這是新的復原碼，只會顯示這一次。請抄下來或存進密碼管理工具。"
+  },
+  "changePassTitle": {
+    "message": "更改密碼"
+  },
+  "changePassHint": {
+    "message": "更改後，舊密碼立即失效。復原碼不變。"
+  },
+  "bmImportTitle": {
+    "message": "從瀏覽器書籤匯入"
+  },
+  "bmImportEmpty": {
+    "message": "書籤裏沒有網頁連結。"
+  },
+  "bmUntitledFolder": {
+    "message": "（未命名資料夾）"
+  },
+  "matchSiteShort": {
+    "message": "整個網站"
+  },
+  "bmRemoveOriginals": {
+    "message": "匯入後刪除原有書籤"
+  },
+  "bmImported": {
+    "message": "已匯入 $COUNT$ 項，並清理了這些網站的瀏覽記錄。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bmImportButton": {
+    "message": "匯入所選項目（$COUNT$）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "onbIntroRestore": {
+    "message": "要從備份還原？先完成設定，再到「設定 → 備份與還原」匯入。"
+  },
+  "faqTitle": {
+    "message": "常見問題"
+  },
+  "faqMatchLink": {
+    "message": "兩種範圍有甚麼分別？"
+  },
+  "faqMatchQ": {
+    "message": "「整個網站」和「只限這個網址」有甚麼分別？"
+  },
+  "faqMatchIntro": {
+    "message": "假設加入的網址是 example.com/docs/guide，之後瀏覽以下這些網址時，瀏覽記錄會不會被刪除："
+  },
+  "faqColUrl": {
+    "message": "瀏覽的網址"
+  },
+  "faqColSite": {
+    "message": "整個網站"
+  },
+  "faqColExact": {
+    "message": "只限這個網址"
+  },
+  "faqMarkDeleted": {
+    "message": "刪除",
+    "description": "FAQ match table cell: this visit's history is deleted."
+  },
+  "faqMarkKept": {
+    "message": "保留",
+    "description": "FAQ match table cell: this visit's history is kept."
+  },
+  "faqMatchSite": {
+    "message": "整個網站：只看域名，不管路徑、通訊協定和連接埠。這個域名和它所有子域名下的任何頁面，瀏覽後都會從瀏覽記錄裏刪除。上一級域名（例如 def.com 之於 abc.def.com）和名稱相近的域名（例如 evil-example.com）不受影響。"
+  },
+  "faqMatchExact": {
+    "message": "只限這個網址：只刪除這一個網址。通訊協定（http 或 https）、開頭的 www.、# 之後的部分和結尾的斜線都不影響判斷；但 ? 之後的參數必須完全相同。同一網站的首頁和其他頁面會留在瀏覽記錄裏，所以在地址欄輸入域名時，瀏覽器仍然可能建議這個網站。"
+  },
+  "faqMatchWhen": {
+    "message": "甚麼時候清理：加入後立即清理已有的瀏覽記錄；之後每次瀏覽，馬上刪除這次的記錄；另外每 15 分鐘和每次瀏覽器啟動時會再掃描一次。鎖定時亦照常清理。"
+  },
+  "faqMatchTip": {
+    "message": "想地址欄完全不會建議這個網站，請選「整個網站」。"
+  },
+  "faqExtraLink": {
+    "message": "附加域名是甚麼？怎樣找？"
+  },
+  "faqExtraQ": {
+    "message": "「附加域名」是甚麼？怎樣找到要填的域名？"
+  },
+  "faqExtra1": {
+    "message": "有些網站會把你帶到別的域名：付款時跳轉到專門的付款頁面，播放影片時直接打開影片伺服器的網址（例如 video.twimg.com）。這些域名不屬於網站本身，「整個網站」管不到，它們的記錄會留在瀏覽記錄裏，地址欄照樣會建議。"
+  },
+  "faqExtra2": {
+    "message": "把它們填進項目的「附加域名」，每行一個。附加域名一律按「整個網站」處理，包括所有子域名，和項目本身選哪種範圍無關：儲存時刪除它們已有的瀏覽記錄和書籤，以後每次瀏覽亦會自動刪除，鎖定時照常。"
+  },
+  "faqExtraFindTitle": {
+    "message": "怎樣找到這些域名"
+  },
+  "faqExtraFind1": {
+    "message": "在地址欄打開 chrome://history（Firefox 上是「歷史」視窗：Windows 按 Ctrl+Shift+H，Mac 按 ⌘⇧H），在搜尋欄輸入："
+  },
+  "faqExtraFind2": {
+    "message": "網站的域名，例如 example.com：找出網址裏有這個域名的記錄；"
+  },
+  "faqExtraFind3": {
+    "message": "網站名稱或頁面標題裏的字詞：跳轉到別的域名的頁面，標題裏往往仍然有網站名稱，網址卻是另一個域名。"
+  },
+  "faqExtraFind4": {
+    "message": "看每項結果旁邊顯示的域名，和網站本身不同的就是要填的附加域名。也可以複製那項記錄的網址直接貼上，儲存時會自動取出域名。"
+  },
+  "faqExtraTip": {
+    "message": "最好在加入項目之前先查：儲存後網站本身的記錄已經刪除，只能靠標題裏的字詞去找。另外別填常用的大型網站（例如 google.com）：它和所有子域名的記錄都會被刪除。"
+  },
+  "faqCoverLink": {
+    "message": "增強模式是甚麼？"
+  },
+  "faqCoverQ": {
+    "message": "增強模式會做甚麼？"
+  },
+  "faqCover1": {
+    "message": "開啟增強模式後，開啟列表裏的網頁時，頁面會先被一層遮罩蓋住，分頁標題換成「新分頁」；按遮罩中間的「顯示頁面」後才顯示內容。適合投影、分享螢幕或身邊有人時使用。"
+  },
+  "faqCover2": {
+    "message": "顯示之後，滑鼠移離頁面、切換分頁、離開瀏覽器視窗，或一段時間沒有操作（播放聲音時除外）時，會重新遮住。沒有操作多久算「一段時間」，可以在設定裏選擇。"
+  },
+  "faqCover3": {
+    "message": "「自動靜音」預設開啟：頁面被遮住時同時靜音，按「顯示頁面」後恢復聲音。可以在設定裏關閉。"
+  },
+  "faqCover4": {
+    "message": "第一次開啟時，瀏覽器會要求「存取所有網站」的權限，只用來蓋上遮罩；詢問時這個視窗可能會關閉，允許後即時生效。之後開關不會再詢問，關閉增強模式也不會收回這項權限；要收回的話，到瀏覽器的擴充功能詳情頁撤銷，增強模式亦會隨之關閉。"
+  },
+  "faqCover5": {
+    "message": "隨時可以用保險箱列表頂欄的閃電按鈕或在設定裏開關。關閉後，已打開的頁面立即撤走遮罩、恢復聲音；重新開啟後，已打開的分頁要等下次載入時才會遮住。"
+  },
+  "faqCoverTip": {
+    "message": "遮罩擋不住地址欄裏的網址和分頁上的網站圖示；PDF 和瀏覽器內置的頁面也不會被遮住。"
+  },
+  "faqStoreQ": {
+    "message": "資料是怎樣保存的？會被破解嗎？"
+  },
+  "faqStore1": {
+    "message": "所有資料只保存在這部電腦的瀏覽器裏，不會上載到任何地方。"
+  },
+  "faqStore2": {
+    "message": "你的列表（網址、標題、附加域名）用 AES-256-GCM 加密。解開它的金鑰只存在於解鎖後的彈出視窗記憶體裏，關閉彈出視窗就會銷毀，從不寫入磁碟。"
+  },
+  "faqStore3": {
+    "message": "密碼和復原碼各自經過 PBKDF2（60 萬次運算）換算出一把鑰匙，用來解開那個金鑰。加密本身無法直接破解，能被攻擊的只有密碼。"
+  },
+  "faqStore4": {
+    "message": "有一點需要知道：為了在鎖定時也能清理瀏覽記錄，擴充功能另外保存了一份「哪些網站要清理」的對照表。它只保存加鹽雜湊，直接看不出網址；但取得瀏覽器資料的人可以拿常見網站列表逐一比對，確認你有沒有加入某個知名網站，也能看出項目數量。標題不會因此洩漏。"
+  },
+  "faqStore5": {
+    "message": "Nightstand 防的是旁人：投影、分享螢幕、有人湊過來看。它防不了能完全控制這部電腦的人，也管不到 Google 帳戶的活動記錄、DNS 和網絡層面的記錄。"
+  },
+  "faqSecretQ": {
+    "message": "密碼和復原碼保存在哪裏？"
+  },
+  "faqSecret1": {
+    "message": "哪裏都不保存：既不保存原文，也不保存它們的「指紋」（雜湊）。Nightstand 自己也不知道它們是甚麼。"
+  },
+  "faqSecret2": {
+    "message": "打個比喻：瀏覽器裏保存的，只是一個鎖好的保險箱，你的列表就在裏面。密碼和復原碼就是打開這個保險箱的兩條鑰匙，用哪一條都能打開。"
+  },
+  "faqSecret3": {
+    "message": "保險箱自己並不知道鑰匙是怎樣的。解鎖時，Nightstand 拿你輸入的密碼去開：打得開，說明密碼正確；打不開，就是不正確。所以輸入錯誤時它說不出錯在哪裏，它只知道打不開。"
+  },
+  "faqSecret4": {
+    "message": "正因為密碼和復原碼沒有存在任何地方，它們不可能從 Nightstand 這裏洩漏。想打開保險箱，唯一的辦法是逐個去猜（暴力破解），所以密碼越長越安全。"
+  },
+  "faqSecret5": {
+    "message": "保險箱只在彈出視窗開着時保持打開，關閉彈出視窗就重新鎖上，所以每次打開都要重新輸入密碼。"
+  },
+  "faqSecret6": {
+    "message": "更改密碼，只是換掉其中一條鑰匙，復原碼照樣能用。產生新的復原碼後，舊的立即失效。復原碼只在產生時顯示這一次。"
+  },
+  "faqSecret7": {
+    "message": "匯出的備份檔案就是這個保險箱的一份副本，用匯出時的密碼或復原碼都能打開。"
+  },
+  "faqSecretWarn": {
+    "message": "正因為哪裏都沒有保存，忘記了密碼誰也找不回來，只能用復原碼打開。密碼和復原碼都遺失了，列表就再也打不開。"
+  }
+}

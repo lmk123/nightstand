@@ -172,6 +172,10 @@
         font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
         -webkit-font-smoothing: antialiased;
     }
+    /* Traditional characters in PingFang SC / YaHei take mainland glyph shapes. */
+    :lang(zh-HK) body {
+        font-family: system-ui, -apple-system, "Segoe UI", "PingFang HK", "Microsoft JhengHei", sans-serif;
+    }
 }
 
 @layer components {
