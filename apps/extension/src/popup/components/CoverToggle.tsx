@@ -10,7 +10,7 @@ import {usePrefs} from '../prefs'
  * without unlocking. Only its name here: the settings view explains it.
  */
 export function CoverToggle() {
-  const {prefs, failed, changeCover} = usePrefs()
+  const {prefs, failed, toggleCover} = usePrefs()
   // Unreadable: no button rather than one that never comes on (it is disabled only while loading).
   if (!prefs && failed) return null
   const on = prefs?.cover === true
@@ -21,7 +21,7 @@ export function CoverToggle() {
       size="icon-lg"
       className={cn('rounded-[10px]', on ? 'text-primary bg-primary/10 hover:bg-primary/15 hover:text-primary' : 'text-subtle-foreground')}
       disabled={!prefs}
-      onClick={() => changeCover(!on)}
+      onClick={toggleCover}
       aria-label={t('enhancedMode')}
       aria-pressed={on}
       title={label}

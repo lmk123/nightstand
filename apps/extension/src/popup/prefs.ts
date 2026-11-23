@@ -16,6 +16,8 @@ export function usePrefs(): {
   failed: boolean
   changePrefs: (patch: Partial<Prefs>) => void
   changeCover: (cover: boolean) => void
+  /** Call straight from a click, like `changeCover`. */
+  toggleCover: () => void
 } {
   const [prefs, setPrefs] = useState<Prefs | null>(null)
   const [failed, setFailed] = useState(false)
@@ -63,5 +65,9 @@ export function usePrefs(): {
       if (granted) changePrefs({cover})
     }, console.error)
   }
-  return {prefs, failed, changePrefs, changeCover}
+  // From `latest`, not a render's `prefs`: a click may come before the last change has rendered.
+  const toggleCover = () => {
+    if (latest.current) changeCover(!latest.current.cover)
+  }
+  return {prefs, failed, changePrefs, changeCover, toggleCover}
 }

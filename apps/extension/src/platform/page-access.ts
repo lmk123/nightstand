@@ -17,6 +17,9 @@ export const PAGE_ORIGINS = ['http://*/*', 'https://*/*']
  */
 const ASKED_KEY = 'asked'
 
+/** The popup's open request, if any. */
+let pending: Promise<boolean> | null = null
+
 export function hasPageAccess(): Promise<boolean> {
   return chrome.permissions.contains({origins: PAGE_ORIGINS})
 }
@@ -28,12 +31,25 @@ export function hasPageAccess(): Promise<boolean> {
  * it answers at once without asking.
  */
 export function requestPageAccess(): Promise<boolean> {
+  // One at a time (a double click): `asked` is a single flag, and a second
+  // request ending first would clear it while the first prompt is still open.
+  if (pending) return pending
   // Not awaited: the request must stay in the click. The write is issued first, so it lands before any answer.
-  const marked = chrome.storage.session.set({[ASKED_KEY]: true})
+  const marked = chrome.storage.session.set({[ASKED_KEY]: true}).then(
+    () => true,
+    (error: unknown) => {
+      console.error(error)
+      return false
+    }
+  )
   const answer = chrome.permissions.request({origins: PAGE_ORIGINS})
   // An answer that reaches the popup is acted on there, not by the background.
-  const close = () => marked.then(() => chrome.storage.session.remove(ASKED_KEY)).catch(console.error)
+  const close = () => {
+    pending = null
+    marked.then((set) => (set ? chrome.storage.session.remove(ASKED_KEY) : undefined)).catch(console.error)
+  }
   answer.then(close, close)
+  pending = answer
   return answer
 }
 
