@@ -79,6 +79,7 @@ const SHADOW_CSS = `
    the catalog, not the page's language. */
 .cover:lang(zh-CN) { font-family: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif; }
 .cover:lang(zh-TW) { font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", "Microsoft YaHei", system-ui, sans-serif; }
+.cover:lang(ja) { font-family: -apple-system, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", system-ui, sans-serif; }
 button {
   font: inherit; color: inherit; cursor: pointer;
   display: inline-flex; align-items: center; gap: 8px;
@@ -151,6 +152,8 @@ export default function main(): (() => void) | undefined {
   style.textContent = SHADOW_CSS
   const cover = document.createElement('div')
   cover.className = 'cover'
+  // Picks the catalog's CJK font stack in SHADOW_CSS; without it, Han glyph
+  // shapes would follow the page's language.
   cover.lang = t('htmlLang')
   // The toolbar's icon and, on hover only (a bystander sees just the
   // button), who covered the page: otherwise the owner may not connect a

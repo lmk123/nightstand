@@ -21,9 +21,9 @@ pnpm run store
 
 ## 商品详情（Store listing）
 
-- **说明**：英文 [`description.en.txt`](description.en.txt)，简体中文 [`description.zh_CN.txt`](description.zh_CN.txt)，繁体中文（台湾）[`description.zh_TW.txt`](description.zh_TW.txt)，原样粘贴。商店的说明不渲染 Markdown，所以是纯文本。
+- **说明**：英文 [`description.en.txt`](description.en.txt)，简体中文 [`description.zh_CN.txt`](description.zh_CN.txt)，繁体中文（台湾）[`description.zh_TW.txt`](description.zh_TW.txt)，日语 [`description.ja.txt`](description.ja.txt)，原样粘贴。商店的说明不渲染 Markdown，所以是纯文本。
 - **类别**：Privacy & Security（没有的话选 Tools）。
-- **语言**：English（默认）、中文（简体）和中文（繁体）。名称和简介由 `_locales` 提供。
+- **语言**：English（默认）、中文（简体）、中文（繁体）和日本語。名称和简介由 `_locales` 提供。
 - **官方网址 / 支持网址**：<https://github.com/lmk123/nightstand>，支持：<https://github.com/lmk123/nightstand/issues>。
 - **公开范围**：公开。
 

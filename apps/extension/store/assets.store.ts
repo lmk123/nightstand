@@ -24,11 +24,14 @@ const PASSPHRASE = 'tea garden notes'
 const BRAND_SVG = readFileSync(join(ROOT, 'icons-src', 'nightstand.svg'), 'utf8')
 const BRAND_PNG = `data:image/png;base64,${readFileSync(join(ROOT, 'public', 'icons', 'nightstand', '128.png')).toString('base64')}`
 
-// TC fonts for zh_TW: the SC ones cover Traditional characters too, but in mainland glyph shapes.
+// Same reasoning as the popup's globals.css: the first listed font with Han
+// characters decides their shape, so zh_TW and ja get their own (the SC fonts
+// cover both, but in mainland glyph shapes).
 const FONTS: Record<Locale, string> = {
   en: `-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
   zh_CN: `-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Segoe UI", "Microsoft YaHei", sans-serif`,
-  zh_TW: `-apple-system, BlinkMacSystemFont, "PingFang TC", "Segoe UI", "Microsoft JhengHei", sans-serif`
+  zh_TW: `-apple-system, BlinkMacSystemFont, "PingFang TC", "Segoe UI", "Microsoft JhengHei", sans-serif`,
+  ja: `-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif`
 }
 const INK = '#1f3029'
 const MUTED = '#4c5d55'
@@ -107,7 +110,7 @@ async function capture(page: Page): Promise<string> {
 async function render(s: ChromeSession, locale: Locale, file: string, width: number, height: number, body: string, css: string) {
   const page = await s.browser.newPage()
   await page.setViewport({width, height, deviceScaleFactor: 1})
-  // `lang` steers font fallback when the TC/SC fonts in FONTS are missing.
+  // `lang` steers font fallback when the fonts in FONTS are missing.
   await page.setContent(
     `<!doctype html><html lang="${messages(locale)('htmlLang')}"><meta charset="utf-8"><style>
       * { box-sizing: border-box; margin: 0 }

@@ -172,13 +172,18 @@
         font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
         -webkit-font-smoothing: antialiased;
     }
-    /* system-ui only after the CJK fonts: on Windows its glyph shapes follow the system's region, not the catalog.
-       YaHei after JhengHei covers simplified-only characters. src/content/cover.ts repeats both lists. */
+    /* Han characters take their shape from the first listed font that has them, and <html lang> doesn't
+       override a listed family: without these, Traditional Chinese and Japanese render in mainland shapes.
+       system-ui only after the CJK fonts: on Windows its glyph shapes follow the system's region, not the catalog.
+       YaHei after JhengHei covers simplified-only characters. src/content/cover.ts repeats these lists. */
     html:lang(zh-CN) body {
         font-family: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
     }
     html:lang(zh-TW) body {
         font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    html:lang(ja) body {
+        font-family: -apple-system, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
     }
 }
 
