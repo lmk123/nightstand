@@ -7,7 +7,7 @@ import {cleanupTemp} from './support/temp'
 // The rest of the suite drives the zh_CN UI. This checks which catalog each
 // browser language gets: en is the default, so anything without its own
 // catalog falls back to English. Chrome runs a zh-HK browser with the zh-TW
-// UI locale, so it gets zh_TW.
+// UI locale, so it gets zh_TW (seen on macOS; Windows not yet checked).
 const cases = [
   {lang: 'en-US', htmlLang: 'en', title: 'Quick Links', intro: 'Welcome to Nightstand', start: 'Get started', next: 'Choose a passphrase'},
   {lang: 'zh-HK', htmlLang: 'zh-TW', title: '快速連結', intro: '歡迎使用 Nightstand', start: '開始設定', next: '設定解鎖密語'},

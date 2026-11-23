@@ -172,13 +172,13 @@
         font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
         -webkit-font-smoothing: antialiased;
     }
-    /* No system-ui for Chinese: on Windows it is the OS UI font (YaHei UI or JhengHei UI), whose glyph shapes follow the
-       system's region, not the catalog. The page cover (src/content/cover.ts) repeats both font lists. */
+    /* system-ui only after the CJK fonts: on Windows its glyph shapes follow the system's region, not the catalog.
+       YaHei after JhengHei covers simplified-only characters. src/content/cover.ts repeats both lists. */
     html:lang(zh-CN) body {
-        font-family: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        font-family: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
     }
     html:lang(zh-TW) body {
-        font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+        font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", "Microsoft YaHei", system-ui, sans-serif;
     }
 }
 

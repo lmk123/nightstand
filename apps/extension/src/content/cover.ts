@@ -77,8 +77,8 @@ const SHADOW_CSS = `
 }
 /* Same CJK fonts as the popup (globals.css), so the label's glyph shapes follow
    the catalog, not the page's language. */
-.cover:lang(zh-CN) { font-family: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
-.cover:lang(zh-TW) { font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+.cover:lang(zh-CN) { font-family: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif; }
+.cover:lang(zh-TW) { font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", "Microsoft YaHei", system-ui, sans-serif; }
 button {
   font: inherit; color: inherit; cursor: pointer;
   display: inline-flex; align-items: center; gap: 8px;
