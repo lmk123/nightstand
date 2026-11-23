@@ -15,7 +15,10 @@ export interface FirefoxSession {
 /**
  * Headless Firefox on `profile`, driven over WebDriver BiDi. On macOS it is
  * started through `open` (by launchd): started from inside Claude Code it
- * hangs on a "profile missing" dialog.
+ * hangs on a "profile missing" dialog (macOS 27, Firefox 154: it can't read
+ * its own Application Support folder). Another `--profile` location, another
+ * `HOME` or no remote-debugging flags hang the same; which permission blocks
+ * it is unknown.
  */
 export async function launchFirefox(profile: string, prefs: Record<string, unknown>): Promise<FirefoxSession> {
   if (process.platform !== 'darwin') {
