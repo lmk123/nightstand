@@ -186,7 +186,9 @@ describe.skipIf(!hasChrome)('site access is optional in the shipped build (Chrom
     await clickText(p, '取消')
     await p.waitForSelector(sheet, {hidden: true})
     await openSettings(p)
+    // Locked on while there is no access: the sheet would come back anyway.
     expect(await switchOn(p, '开启前提醒')).toBe(true)
+    expect(await hasText(p, '浏览器授权之前')).toBe(true)
     // The settings switch says the browser will ask, while it hasn't been granted.
     expect(await hasText(p, '询问时这个窗口可能会关闭')).toBe(true)
     await p.close()

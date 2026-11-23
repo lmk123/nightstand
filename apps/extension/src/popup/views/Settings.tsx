@@ -109,8 +109,14 @@ export function Settings({
               >
                 {t('idleSetting')}
               </SettingRow>
-              <SwitchRow checked={settings.skipCoverNotice !== true} onChange={(on) => onChange({skipCoverNotice: !on})}>
+              {/* Without access the list shows the sheet anyway (and clears the flag), so it is locked on here. */}
+              <SwitchRow
+                checked={access === false || settings.skipCoverNotice !== true}
+                disabled={access === false}
+                onChange={(on) => onChange({skipCoverNotice: !on})}
+              >
                 {t('coverNoticeSetting')}
+                {access === false && <span className="text-muted-foreground mt-1 block text-xs">{t('coverNoticeSettingLocked')}</span>}
               </SwitchRow>
             </div>
             <HelpLink topic="enhancedMode" label="faqCoverLink" />

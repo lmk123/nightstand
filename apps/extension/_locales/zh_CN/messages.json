@@ -378,6 +378,9 @@
   "coverNoticeSetting": {
     "message": "开启前提醒：从顶栏开启时，先说明增强模式会做什么"
   },
+  "coverNoticeSettingLocked": {
+    "message": "浏览器授权之前，开启时总会先说明"
+  },
   "coverNoticeTitle": {
     "message": "开启增强模式"
   },

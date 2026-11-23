@@ -86,8 +86,10 @@ export function CoverNotice({
   }
 
   // On the document: a click on the sheet's text leaves focus on the body.
+  // Not while hidden: the help opened from its link hides the list, sheet and all.
+  const sheet = useRef<HTMLElement>(null)
   const onKey = useEffectEvent((event: KeyboardEvent) => {
-    if (event.key !== 'Escape') return
+    if (event.key !== 'Escape' || !sheet.current?.checkVisibility()) return
     event.preventDefault()
     cancel()
   })
@@ -100,6 +102,7 @@ export function CoverNotice({
     <>
       <div aria-hidden className="bg-scrim absolute inset-0" onClick={cancel} />
       <section
+        ref={sheet}
         role="alertdialog"
         aria-modal
         aria-labelledby="cover-notice-title"
@@ -134,8 +137,9 @@ export function CoverNotice({
           <Button type="button" variant="outline" className={cn(mainButtonClass, outlineButtonClass)} onClick={cancel}>
             {t('cancel')}
           </Button>
-          {/* Ignores clicks for the few milliseconds a write takes; not `disabled`, which would drop the focus. */}
-          <Button type="button" className={mainButtonClass} autoFocus aria-disabled={saving > 0 || undefined} onClick={confirm}>
+          {/* Ignores clicks for the few milliseconds a write takes; not `disabled`, which would drop the focus,
+              so dimmed by hand (the shared Button only dims `disabled`). */}
+          <Button type="button" className={cn(mainButtonClass, 'aria-disabled:cursor-default aria-disabled:opacity-50')} autoFocus aria-disabled={saving > 0 || undefined} onClick={confirm}>
             {t('coverNoticeConfirm')}
           </Button>
         </div>

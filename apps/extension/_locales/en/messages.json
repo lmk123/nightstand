@@ -378,6 +378,9 @@
   "coverNoticeSetting": {
     "message": "Before turning it on from the top bar, explain what it does"
   },
+  "coverNoticeSettingLocked": {
+    "message": "Always shown until the browser has granted access"
+  },
   "coverNoticeTitle": {
     "message": "Turn on enhanced mode"
   },

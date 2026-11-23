@@ -42,6 +42,8 @@ export function VaultList({
   // "Don't show again" counts only once the access was granted: the first time
   // it is stored on the tick (see CoverNotice), before the user has answered
   // the prompt, or may have left the popup without turning anything on.
+  // Until the access is known, a stored tick can't be judged: the toggle waits
+  // (disabled) rather than show the sheet and clear a tick that counts.
   const access = usePageAccess()
   const showCoverNotice = !skipCoverNotice || access !== true
   const visible = useMemo(() => searchEntries(entries, query), [entries, query])
@@ -80,6 +82,7 @@ export function VaultList({
           actions={
             <>
               <CoverToggle
+                disabled={skipCoverNotice && access === null}
                 confirmOn={showCoverNotice ? (turnOn, current) => setCoverNotice({mute: current.mute, granted: access === true, turnOn}) : undefined}
               />
               <Button
