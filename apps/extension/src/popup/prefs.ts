@@ -59,7 +59,7 @@ export function usePrefs(): {
   }
   // Call straight from a click. The first request prompts and closes the
   // popup (the background then turns covering on); turning off keeps the
-  // permission, so later requests answer at once. See cover-behavior.md.
+  // permission, so later requests answer at once.
   // Clicks while a request is open are dropped: `latest` still says off until
   // it answers, so a second click would ask to turn on again, not turn off.
   const requesting = useRef(false)

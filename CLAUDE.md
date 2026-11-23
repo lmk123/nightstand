@@ -49,6 +49,7 @@ pnpm run store          # 构建并打 zip，再生成 Chrome 网上应用店的
 - **磁盘上不能有明文。** 不要把编辑草稿或其他解密后的数据持久化到存储里。
 - **旁人可能看到的地方一律用中性措辞。** manifest 的 name/description/title/命令描述绝不能含 private、hide、secret、隐私、隐藏、私密之类的词——`apps/extension/tools/check-manifest-words.mjs` 在 `lint` 里强制检查。存储键也是中性的（`shelf`、`index`、`links`、`state`、`prefs`）。
 - 属于用户的决定（界面风格、默认值、体验取舍），列出选项问用户，不要自行假设。
+- PR 标题和正文用简体中文（代码标识符、路径、命令保持原样）。
 
 ## 威胁模型（所有设计取舍都以此为准）
 
@@ -66,7 +67,6 @@ pnpm run store          # 构建并打 zip，再生成 Chrome 网上应用店的
 
 ## 更多上下文
 - 各包和各模块的专属约定、背景会按路径通过 rule 自动加载（`apps/extension/CLAUDE.md`、`packages/core/CLAUDE.md` 在碰到对应包的文件时加载），不用手动查
-- 做新需求、评估方案前，先看 `.context/README.md` 和 `apps/extension/.context/README.md`：各功能的预期行为、浏览器限制导致做不到或有意不做的事
-- 记下读代码看不出来的项目知识（原因、踩坑、实测数字、外部约束）：只涉及一个文件的写成紧贴代码的短注释，几个文件共用的写进 `.claude/rules/`；经过、数字等扩展内容和挂不到代码上的写进 `.context/`，原处留「重点 + 什么时候读 + 路径」（装了 context-keeper 插件就用 `record-context`）。不写成长注释，也不只记在自动记忆里；改动让已有注释、rule 或 `.context/` 文档里的说法不再成立时，同一次改动里改掉
+- 记项目知识：只记 Claude 不知道就会做错、读代码推不出来、测试和 lint 拦不住、错了不报错或代价高的结论（被纠正过的做法、外部系统的实测特性、不可逆操作的约束），一条结论最多带一句理由。只涉及一个文件的写成紧贴代码的短注释，几个文件共用的写进 `.claude/rules/`，流程写成 skill（装了 context-keeper 插件就用 `record-context`）。经过、状态、实测流水留在 commit 和 PR 里，不写进仓库文件，也不留指针；不写成长注释，也不只记在自动记忆里。改动让已有的结论不再成立时，同一次改动里改掉或删掉
 - 发布流程：用 `/release`
 - 里程碑的手动验收：用 `/manual-acceptance`

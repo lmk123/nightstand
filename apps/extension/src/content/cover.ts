@@ -221,6 +221,8 @@ export default function main(): (() => void) | undefined {
     if (state === 'covered' && !host.open) raise()
   })
 
+  // The tab's icon stays: Chrome would cache a stand-in, and the entry could
+  // never capture the real icon again.
   // Tab title: the page's own while shown, a neutral one while covered.
   const neutralTitle = t('coverTitle')
   let pageTitle: string | null = null
@@ -336,9 +338,8 @@ export default function main(): (() => void) | undefined {
   // Leaving: anything that may be a leave covers, while the page still
   // paints: a missed leave flashes the page on switching back, an extra
   // cover only costs a click. Listened to only while the page is shown.
-  // Before changing what counts as a leave, read
-  // apps/extension/.context/cover/cover-behavior.md (which events count,
-  // edge and zoom rules, extra covers accepted on purpose).
+  // The page gets no event before its tab is hidden (no `blur`, no
+  // animation frame): the mouse leaving is the only warning.
   const LEAVE_EVENTS = ['mouseout', 'mouseup', 'dragleave', 'dragend'] as const
 
   /**
@@ -431,9 +432,9 @@ export default function main(): (() => void) | undefined {
   async function matchHere(): Promise<boolean | null> {
     const {cover, matcher} = await lookup()
     if (!cover || !matcher || matcher.isEmpty) return false
-    // Plain http asks the background on purpose: a bundled SHA-256 was
-    // measured and rejected. Before hashing here instead, read
-    // apps/extension/.context/cover/http-page-hashing.md (measurements).
+    // Plain http asks the background on purpose; no bundled SHA-256 without new
+    // evidence: it was faster only on the first page after the worker stopped
+    // (~25 ms, 2026-11, Chrome on macOS), and Web Crypto-only forbids it.
     if (!globalThis.crypto?.subtle) return null
     return matcher.matches(location.href)
   }

@@ -15,7 +15,10 @@ export interface FirefoxSession {
 /**
  * Headless Firefox on `profile`, driven over WebDriver BiDi. On macOS it is
  * started through `open` (by launchd): started from inside Claude Code it
- * hangs on a "profile missing" dialog (see .context/e2e/harness.md).
+ * hangs on a "profile missing" dialog (macOS 27, Firefox 154: it can't read
+ * its own Application Support folder). Another `--profile` location, another
+ * `HOME` or no remote-debugging flags hang the same; which permission blocks
+ * it is unknown.
  */
 export async function launchFirefox(profile: string, prefs: Record<string, unknown>): Promise<FirefoxSession> {
   if (process.platform !== 'darwin') {
@@ -60,9 +63,9 @@ export async function launchFirefox(profile: string, prefs: Record<string, unkno
   const exitsWithin = (ms: number) => Promise.race([exited.then(() => true), sleep(ms).then(() => false)])
   /** Kills Firefox and waits for it to exit; if it won't, stops `open` from holding the test process open. */
   const stop = async () => {
-    // Firefox runs under launchd, so there's no child pid. Anchored on the
-    // bundle so only Firefox is killed, never the `open` we wait on: `open -W`
-    // exits once Firefox has.
+    // Firefox runs under launchd (no child pid): kill it by its bundle path, and
+    // `open -W` exits once it has. `open` rewrites its argv (no `--profile` in
+    // `ps`), so the profile path never matches `open` itself.
     const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const pattern = `^${escape(app)}/.* --profile ${escape(profile)}( |$)`
     let failed: unknown
