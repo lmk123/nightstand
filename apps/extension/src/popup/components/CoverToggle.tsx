@@ -10,7 +10,9 @@ import {usePrefs} from '../prefs'
  * without unlocking. Only its name here: the settings view explains it.
  */
 export function CoverToggle() {
-  const {prefs, changeCover} = usePrefs()
+  const {prefs, failed, changeCover} = usePrefs()
+  // Unreadable: no button rather than one that never comes on (it is disabled only while loading).
+  if (!prefs && failed) return null
   const on = prefs?.cover === true
   const label = t(on ? 'enhancedModeOn' : 'enhancedModeOff')
   return (

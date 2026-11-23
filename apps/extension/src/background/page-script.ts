@@ -1,16 +1,16 @@
 import {parsePrefs} from '@nightstand/core'
 import {serialQueue} from '@/lib/concurrency'
-import {hasPageAccess, PAGE_ORIGINS} from '@/platform/page-access'
+import {hasPageAccess, PAGE_ORIGINS, takePageAccessRequest} from '@/platform/page-access'
 import {loadPrefs, STORAGE_KEYS, updatePrefs} from '@/platform/storage'
 
 /**
  * Registers the page script (`scripts/cover.ts`) only while covering is on
  * and its optional all-sites permission is granted; not declared in the
  * manifest, which would make that permission a required one. The permission
- * and `prefs.cover` are kept in step here: a grant turns covering on (Chrome
- * closes the popup when its prompt opens), a withdrawal turns it off, and
- * install / update / startup reconcile the two. Turning covering off keeps
- * the permission. Why each way round: read
+ * and `prefs.cover` are kept in step here: a grant in answer to the popup's
+ * request turns covering on (Chrome closes the popup when its prompt opens),
+ * a withdrawal turns it off, and install / update / startup reconcile the
+ * two. Turning covering off keeps the permission. Why each way round: read
  * `apps/extension/.context/cover/cover-behavior.md` before changing it.
  */
 const SCRIPT_ID = 'cover'
@@ -67,12 +67,16 @@ function follow(cover: boolean): Promise<void> {
 
 // Whether the whole block is held is checked rather than the event's
 // origins: granting other hosts doesn't give the whole block, and taking
-// some away may break it. A grant without hosts is ignored: the block stays
-// held while covering is off, and an unrelated grant must not turn it on.
+// some away may break it. A grant turns covering on only in answer to the
+// popup's request: the block stays held while covering is off, and a grant
+// made elsewhere (the extension menu's site access, the details page) must
+// not turn it back on.
 chrome.permissions.onAdded.addListener(({origins}) => {
   if (!origins?.length) return
   hasPageAccess()
-    .then((access) => (access ? follow(true) : undefined))
+    .then(async (access) => {
+      if (access && (await takePageAccessRequest())) await follow(true)
+    })
     .catch(console.error)
 })
 

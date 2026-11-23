@@ -263,7 +263,8 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
   })
 
   it('turns on and off from the header toggle, locked and unlocked alike', async () => {
-    const toggle = 'button[aria-label="增强模式"]'
+    // Not disabled: it is until the preferences are read, and a click then would be lost.
+    const toggle = 'button[aria-label="增强模式"]:not([disabled])'
     const pressed = (p: Page, on: boolean) =>
       p.waitForFunction((toggle, on) => document.querySelector(toggle)?.getAttribute('aria-pressed') === String(on), {}, toggle, on)
     const stored = (on: boolean) => waitStorage(s, (snapshot) => (snapshot.prefs as {cover?: unknown} | undefined)?.cover === on)
@@ -281,7 +282,7 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await waitPageScript(s, false)
 
     // On the vault list; the settings switch shows the same setting.
-    await submitUnlock(p, 'notes')
+    expect(await submitUnlock(p, 'notes')).toBe(true)
     await pressed(p, false)
     await p.click(toggle)
     await pressed(p, true)

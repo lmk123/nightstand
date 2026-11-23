@@ -12,10 +12,13 @@ import {loadPrefs, updatePrefs, watchPrefs} from '@/platform/storage'
  */
 export function usePrefs(): {
   prefs: Prefs | null
+  /** The first read failed and nothing has been written since. */
+  failed: boolean
   changePrefs: (patch: Partial<Prefs>) => void
   changeCover: (cover: boolean) => void
 } {
   const [prefs, setPrefs] = useState<Prefs | null>(null)
+  const [failed, setFailed] = useState(false)
   const latest = useRef<Prefs | null>(null)
   const show = useCallback((next: Prefs) => {
     latest.current = next
@@ -28,9 +31,15 @@ export function usePrefs(): {
       changed = true
       show(next)
     })
-    loadPrefs().then((next) => {
-      if (!changed) show(next)
-    }, console.error)
+    loadPrefs().then(
+      (next) => {
+        if (!changed) show(next)
+      },
+      (error: unknown) => {
+        console.error(error)
+        setFailed(true)
+      }
+    )
     return stop
   }, [show])
   const changePrefs = (patch: Partial<Prefs>) => {
@@ -54,5 +63,5 @@ export function usePrefs(): {
       if (granted) changePrefs({cover})
     }, console.error)
   }
-  return {prefs, changePrefs, changeCover}
+  return {prefs, failed, changePrefs, changeCover}
 }
