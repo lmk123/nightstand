@@ -3,13 +3,13 @@
 // this one. Unlike the manifest, store pages say plainly what Nightstand does:
 // the store's policies require it.
 
-export const LOCALES = ['en', 'zh_CN'] as const
+export const LOCALES = ['en', 'zh_CN', 'ja'] as const
 export type Locale = (typeof LOCALES)[number]
 
 export type ShotName = 'decoy' | 'vault' | 'cover' | 'form' | 'notice'
 
 export interface Caption {
-  /** `\n` marks a line break (Chinese has no spaces to balance lines on). */
+  /** `\n` marks a line break (Chinese and Japanese have no spaces to balance lines on). */
   title: string
   body: string
 }
@@ -145,6 +145,64 @@ export const COPY: Record<Locale, Copy> = {
       {host: 'clinic.example', title: '体检报告', emoji: '🩺'},
       {host: 'rings.example', title: '求婚戒指', emoji: '💍'},
       {host: 'jobs.example', title: '招聘机会', emoji: '💼'}
+    ]
+  },
+  ja: {
+    tagline: 'アドレスバーに、特定のサイトを忘れさせる',
+    shots: [
+      [
+        'decoy',
+        {
+          title: '見た目は\nふつうのクイックリンク',
+          body: 'アイコンをクリックしても、見えるのはこれだけ。絞り込み欄にパスフレーズを入力して Enter キーを押すと、ロックが解除されます。'
+        }
+      ],
+      [
+        'vault',
+        {
+          title: 'あなたのサイトは\n暗号化されたリストに',
+          body: 'アクセスするたびに閲覧履歴が削除されるので、アドレスバーに候補として出てこなくなります。'
+        }
+      ],
+      [
+        'cover',
+        {
+          title: '表示すると決めるまで\n覆っておく',
+          body: '強化モードをオンにすると、保存したサイトは覆われてミュートされた状態で、目立たないタブタイトルのまま開きます。マウスを離す、タブを切り替える、1 分間操作しないと、再び覆われます。'
+        }
+      ],
+      [
+        'notice',
+        {
+          title: '保存する前に、\n消えるものを確認',
+          body: 'サイトを保存すると、既存の閲覧履歴とブックマークが削除されます。Nightstand はその数を先に表示します。'
+        }
+      ],
+      [
+        'form',
+        {
+          title: 'サイト全体でも、\n1 ページだけでも',
+          body: 'すべてのサブドメインを含むサイト全体も、1 つの URL だけも対象にできます。サイトから移動する別のドメインもあわせて削除できます。'
+        }
+      ]
+    ],
+    links: [
+      {host: 'news.example', title: 'ニュース', emoji: '📰'},
+      {host: 'weather.example', title: '天気', emoji: '⛅'},
+      {host: 'calendar.example', title: 'カレンダー', emoji: '📅'},
+      {host: 'mail.example', title: 'メール', emoji: '✉️'},
+      {host: 'docs.example', title: 'ドキュメント', emoji: '📝'},
+      {host: 'maps.example', title: '地図', emoji: '🗺️'},
+      {host: 'translate.example', title: '翻訳', emoji: '🌐'},
+      {host: 'music.example', title: '音楽', emoji: '🎧'}
+    ],
+    saved: [
+      {host: 'gifts.example', title: '母の誕生日プレゼント候補', emoji: '🎁'},
+      {host: 'homes.example', title: '賃貸物件情報', emoji: '🏠'},
+      {host: 'party.example', title: 'サプライズパーティーの準備', emoji: '🎉'},
+      {host: 'clinic.example', title: '健康診断の結果', emoji: '🩺'},
+      {host: 'rings.example', title: '婚約指輪', emoji: '💍'},
+      {host: 'jobs.example', title: '求人情報', emoji: '💼'}
     ]
   }
 }

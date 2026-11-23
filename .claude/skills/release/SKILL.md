@@ -16,7 +16,7 @@ description: 发布 Nightstand 新版本：升版本号、跑完检查、打 tag
 
 1. 版本号在三个地方，一起改：`apps/extension/src/manifest.json`、`apps/extension/package.json`、`packages/core/package.json`（`git grep -n '"version"'` 核对）。
 2. 检查：`pnpm lint && pnpm type-check && pnpm test`，然后 `pnpm test:e2e`（大约 2 分钟，放后台跑）。
-3. 打包和商店图片：先 `rm -rf apps/extension/dist/store`（防止旧截图残留），再运行 `pnpm run store`。它会生成 `apps/extension/dist/nightstand-<版本>-chromium.zip` 和 `dist/store/{en,zh_CN}/` 下的截图与宣传图。
+3. 打包和商店图片：先 `rm -rf apps/extension/dist/store`（防止旧截图残留），再运行 `pnpm run store`。它会生成 `apps/extension/dist/nightstand-<版本>-chromium.zip` 和 `dist/store/{en,zh_CN,ja}/` 下的截图与宣传图。
    - 用 `unzip -p <zip> manifest.json | grep version` 确认版本号。
    - 用 `file dist/store/*/*.png` 确认图片是 `8-bit/color RGB`：商店拒收带 alpha 通道的图。
    - 商店每种语言**最多 5 张截图**。`store/copy.ts` 的 `shots` 必须保持在 5 张以内。
@@ -56,7 +56,8 @@ open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$H
 2. **商品详情**（`edit/listing`）：
    - 语言下拉框默认是“英语 – en”。说明文字填 `apps/extension/store/description.en.txt`，然后保存草稿。
    - 切到“中文（中国） – zh-CN”，填 `description.zh_CN.txt`，然后保存草稿。
-   - 截图：**全球通用的屏幕截图 = `dist/store/en/`**，**zh-CN 的“以当地语言显示的屏幕截图” = `dist/store/zh_CN/`**。
+   - 切到“日语 – ja”，填 `description.ja.txt`，然后保存草稿。
+   - 截图：**全球通用的屏幕截图 = `dist/store/en/`**，**zh-CN 的“以当地语言显示的屏幕截图” = `dist/store/zh_CN/`**，**ja 的 = `dist/store/ja/`**。
      - 删除截图：点 `[role=button][aria-label^="移除图片 屏幕截图"]`，会弹出确认框，点框里的“移除”。全球通用的截图在 `[data-is-global="true"]` 里，本地化的没有这个标记；只删自己要换的那一组。
      - 上传截图：对“全球通用的屏幕截图 * 将图片拖放到此处”或“以当地语言显示的屏幕截图 * 将图片拖放到此处”的 uid 调用 `upload_file`，**每次一张**，按编号顺序传。偶尔会报 “could not accept the file”，重试一次就好。
      - 宣传图块是全球通用的；只有宣传图的文案或伪装界面变了才需要换。

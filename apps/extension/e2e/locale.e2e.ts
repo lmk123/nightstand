@@ -10,7 +10,8 @@ import {cleanupTemp} from './support/temp'
 const cases = [
   {lang: 'en-US', htmlLang: 'en', title: 'Quick Links', intro: 'Welcome to Nightstand', start: 'Get started', next: 'Choose a passphrase'},
   {lang: 'zh-TW', htmlLang: 'en', title: 'Quick Links', intro: 'Welcome to Nightstand', start: 'Get started', next: 'Choose a passphrase'},
-  {lang: 'zh-CN', htmlLang: 'zh-CN', title: '快捷链接', intro: '欢迎使用 Nightstand', start: '开始设置', next: '设置解锁口令'}
+  {lang: 'zh-CN', htmlLang: 'zh-CN', title: '快捷链接', intro: '欢迎使用 Nightstand', start: '开始设置', next: '设置解锁口令'},
+  {lang: 'ja', htmlLang: 'ja', title: 'クイックリンク', intro: 'Nightstand へようこそ', start: 'はじめる', next: 'パスフレーズを設定'}
 ]
 
 describe.skipIf(!hasChrome)('UI language (Chrome)', () => {
