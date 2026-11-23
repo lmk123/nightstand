@@ -8,7 +8,7 @@
 pnpm run store
 ```
 
-它会先构建（并打出 `apps/extension/dist/nightstand-<版本>-chromium.zip`），再用真实构建驱动本机的 Chrome 截图，输出到 `apps/extension/dist/store/`：
+它会先构建（并打出 `apps/extension/dist/nightstand-<版本>-chromium.zip`），再用真实构建驱动本机的 Chrome 截图，输出到 `apps/extension/dist/store/`（语言目录是 `en`、`zh_CN`、`zh_HK`）：
 
 | 文件 | 用途 | 尺寸 |
 |---|---|---|
@@ -21,9 +21,9 @@ pnpm run store
 
 ## 商品详情（Store listing）
 
-- **说明**：英文 [`description.en.txt`](description.en.txt)，简体中文 [`description.zh_CN.txt`](description.zh_CN.txt)，原样粘贴。商店的说明不渲染 Markdown，所以是纯文本。
+- **说明**：英文 [`description.en.txt`](description.en.txt)，简体中文 [`description.zh_CN.txt`](description.zh_CN.txt)，繁体中文（香港）[`description.zh_HK.txt`](description.zh_HK.txt)，原样粘贴。商店的说明不渲染 Markdown，所以是纯文本。
 - **类别**：Privacy & Security（没有的话选 Tools）。
-- **语言**：English（默认）和中文（简体）。名称和简介由 `_locales` 提供。
+- **语言**：English（默认）、中文（简体），以及中文（香港）——如果后台的语言列表里有的话（Chrome 本身不认 zh_HK，商店后台未确认）。名称和简介由 `_locales` 提供。
 - **官方网址 / 支持网址**：<https://github.com/lmk123/nightstand>，支持：<https://github.com/lmk123/nightstand/issues>。
 - **公开范围**：公开。
 

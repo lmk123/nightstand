@@ -25,6 +25,8 @@ const BRAND_SVG = readFileSync(join(ROOT, 'icons-src', 'nightstand.svg'), 'utf8'
 const BRAND_PNG = `data:image/png;base64,${readFileSync(join(ROOT, 'public', 'icons', 'nightstand', '128.png')).toString('base64')}`
 
 const FONT = `-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Segoe UI", "Microsoft YaHei", sans-serif`
+// Traditional characters in PingFang SC take mainland glyph shapes.
+const FONT_HK = `-apple-system, BlinkMacSystemFont, "PingFang HK", "Segoe UI", "Microsoft JhengHei", sans-serif`
 const INK = '#1f3029'
 const MUTED = '#4c5d55'
 const PAPER = '#efeae0'
@@ -99,13 +101,13 @@ async function capture(page: Page): Promise<string> {
 }
 
 /** Renders an HTML page of exactly this size to a PNG file. */
-async function render(s: ChromeSession, file: string, width: number, height: number, body: string, css: string) {
+async function render(s: ChromeSession, locale: Locale, file: string, width: number, height: number, body: string, css: string) {
   const page = await s.browser.newPage()
   await page.setViewport({width, height, deviceScaleFactor: 1})
   await page.setContent(
     `<!doctype html><meta charset="utf-8"><style>
       * { box-sizing: border-box; margin: 0 }
-      body { width: ${width}px; height: ${height}px; overflow: hidden; position: relative; font-family: ${FONT}; color: ${INK}; background: ${PAPER} }
+      body { width: ${width}px; height: ${height}px; overflow: hidden; position: relative; font-family: ${locale === 'zh_HK' ? FONT_HK : FONT}; color: ${INK}; background: ${PAPER} }
       ${css}
     </style><body>${body}</body>`
   )
@@ -149,11 +151,12 @@ const PAGE_HEIGHT = 800 - 56 - 44 - 56
 const MUTED_SVG = `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="${MUTED}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6h2.5l3.5-3v10l-3.5-3h-2.5z" fill="${MUTED}"/><path d="M11 6l4 4M15 6l-4 4"/></svg>`
 
 /** A browser corner with the popup open under the toolbar icon, next to the caption. */
-async function renderScreenshot(s: ChromeSession, file: string, popup: string, popupHeight: number, caption: Caption) {
+async function renderScreenshot(s: ChromeSession, locale: Locale, file: string, popup: string, popupHeight: number, caption: Caption) {
   const top = 124
   const scale = Math.min(1.4, (800 - top - 28) / popupHeight)
   await render(
     s,
+    locale,
     file,
     1280,
     800,
@@ -175,9 +178,10 @@ async function renderScreenshot(s: ChromeSession, file: string, popup: string, p
  * title the page script swapped in and the muted tab; the site's own icon stays
  * on the tab, as it does in the browser.
  */
-async function renderCoverScreenshot(s: ChromeSession, file: string, page: string, site: Site, title: string, caption: Caption) {
+async function renderCoverScreenshot(s: ChromeSession, locale: Locale, file: string, page: string, site: Site, title: string, caption: Caption) {
   await render(
     s,
+    locale,
     file,
     1280,
     800,
@@ -206,6 +210,7 @@ async function renderPromos(s: ChromeSession, locale: Locale, dir: string, decoy
   const {tagline} = COPY[locale]
   await render(
     s,
+    locale,
     join(dir, 'promo-small-440x280.png'),
     440,
     280,
@@ -218,6 +223,7 @@ async function renderPromos(s: ChromeSession, locale: Locale, dir: string, decoy
   )
   await render(
     s,
+    locale,
     join(dir, 'promo-marquee-1400x560.png'),
     1400,
     560,
@@ -337,11 +343,11 @@ async function shoot(locale: Locale) {
     for (const [i, [name, caption]] of shots.entries()) {
       const file = join(dir, `screenshot-${i + 1}-${name}.png`)
       if (name === 'cover') {
-        await renderCoverScreenshot(s, file, coverPng, coverSite, coverTitle, caption)
+        await renderCoverScreenshot(s, locale, file, coverPng, coverSite, coverTitle, caption)
         continue
       }
       const shot = captures.get(name)!
-      await renderScreenshot(s, file, shot.src, shot.height, caption)
+      await renderScreenshot(s, locale, file, shot.src, shot.height, caption)
     }
     await renderPromos(s, locale, dir, captures.get('decoy')!.src)
   } finally {

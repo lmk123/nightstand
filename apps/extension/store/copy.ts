@@ -3,7 +3,7 @@
 // this one. Unlike the manifest, store pages say plainly what Nightstand does:
 // the store's policies require it.
 
-export const LOCALES = ['en', 'zh_CN'] as const
+export const LOCALES = ['en', 'zh_CN', 'zh_HK'] as const
 export type Locale = (typeof LOCALES)[number]
 
 export type ShotName = 'decoy' | 'vault' | 'cover' | 'form' | 'notice'
@@ -145,6 +145,64 @@ export const COPY: Record<Locale, Copy> = {
       {host: 'clinic.example', title: '体检报告', emoji: '🩺'},
       {host: 'rings.example', title: '求婚戒指', emoji: '💍'},
       {host: 'jobs.example', title: '招聘机会', emoji: '💼'}
+    ]
+  },
+  zh_HK: {
+    tagline: '讓地址欄忘記某些網站',
+    shots: [
+      [
+        'decoy',
+        {
+          title: '看起來只是一個\n普通的快捷連結工具',
+          body: '別人按下圖示，看到的就只有這些。在篩選欄輸入密碼、按 Enter，才會解鎖。'
+        }
+      ],
+      [
+        'vault',
+        {
+          title: '你的網站，\n存在加密列表裏',
+          body: '每次瀏覽後自動刪除瀏覽記錄，地址欄就不會再建議它們。'
+        }
+      ],
+      [
+        'cover',
+        {
+          title: '收藏的網站，\n先遮住再顯示',
+          body: '開啟增強模式後，打開收藏的網站時頁面會被蓋住、分頁靜音，按「顯示頁面」才會出現。滑鼠移開、切換分頁或一分鐘沒有操作，又會重新遮住。'
+        }
+      ],
+      [
+        'notice',
+        {
+          title: '儲存之前，\n先看清要刪除甚麼',
+          body: '儲存網站時會刪除它已有的瀏覽記錄和書籤，Nightstand 會先告訴你有多少。'
+        }
+      ],
+      [
+        'form',
+        {
+          title: '整個網站，\n或者只是一個網址',
+          body: '可以清理一個網站和它的所有子域名，也可以只清理一個網址；網站會跳轉去的其他域名也能一併清理。'
+        }
+      ]
+    ],
+    links: [
+      {host: 'news.example', title: '新聞', emoji: '📰'},
+      {host: 'weather.example', title: '天氣', emoji: '⛅'},
+      {host: 'calendar.example', title: '日曆', emoji: '📅'},
+      {host: 'mail.example', title: '郵件', emoji: '✉️'},
+      {host: 'docs.example', title: '文件', emoji: '📝'},
+      {host: 'maps.example', title: '地圖', emoji: '🗺️'},
+      {host: 'translate.example', title: '翻譯', emoji: '🌐'},
+      {host: 'music.example', title: '音樂', emoji: '🎧'}
+    ],
+    saved: [
+      {host: 'gifts.example', title: '給媽媽的生日禮物', emoji: '🎁'},
+      {host: 'homes.example', title: '租樓資訊', emoji: '🏠'},
+      {host: 'party.example', title: '驚喜派對籌備', emoji: '🎉'},
+      {host: 'clinic.example', title: '身體檢查報告', emoji: '🩺'},
+      {host: 'rings.example', title: '求婚戒指', emoji: '💍'},
+      {host: 'jobs.example', title: '招聘職位', emoji: '💼'}
     ]
   }
 }
