@@ -107,8 +107,9 @@ async function capture(page: Page): Promise<string> {
 async function render(s: ChromeSession, locale: Locale, file: string, width: number, height: number, body: string, css: string) {
   const page = await s.browser.newPage()
   await page.setViewport({width, height, deviceScaleFactor: 1})
+  // `lang` steers font fallback when the TC/SC fonts in FONTS are missing.
   await page.setContent(
-    `<!doctype html><meta charset="utf-8"><style>
+    `<!doctype html><html lang="${messages(locale)('htmlLang')}"><meta charset="utf-8"><style>
       * { box-sizing: border-box; margin: 0 }
       body { width: ${width}px; height: ${height}px; overflow: hidden; position: relative; font-family: ${FONTS[locale]}; color: ${INK}; background: ${PAPER} }
       ${css}
