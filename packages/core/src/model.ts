@@ -57,6 +57,12 @@ export interface VaultSettings {
    * like `skipSaveNotice`, so no payload version bump.
    */
   skipSaveCheck?: boolean
+  /**
+   * The user ticked "don't show again" on the explanation shown before the
+   * vault list's header toggle turns enhanced mode on. Absent means it is
+   * shown. Optional, like `skipSaveNotice`, so no payload version bump.
+   */
+  skipCoverNotice?: boolean
 }
 
 /**
@@ -64,7 +70,7 @@ export interface VaultSettings {
  * 1 — initial; 2 — entries gain `extraHosts`; 3 — entries lose `note` and
  * `tags`; 4 — entries gain an optional `icon`. Optional fields whose loss
  * on an older build only costs a preference (`skipSaveNotice`,
- * `skipSaveCheck`) were added without a bump (see
+ * `skipSaveCheck`, `skipCoverNotice`) were added without a bump (see
  * packages/core/.claude/rules/storage/versioning.md). Settings once had an
  * `openMode` (current tab / new tab / incognito); entries now always open in
  * a new tab. It was removed without a bump too, as that rule allows: older
@@ -397,5 +403,6 @@ export function migrateVaultData(raw: unknown): VaultData {
   const out: VaultSettings = {}
   if (typeof settings.skipSaveNotice === 'boolean') out.skipSaveNotice = settings.skipSaveNotice
   if (typeof settings.skipSaveCheck === 'boolean') out.skipSaveCheck = settings.skipSaveCheck
+  if (typeof settings.skipCoverNotice === 'boolean') out.skipCoverNotice = settings.skipCoverNotice
   return {version: VAULT_DATA_VERSION, entries, settings: out}
 }

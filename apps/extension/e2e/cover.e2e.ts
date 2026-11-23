@@ -270,30 +270,67 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     const stored = (on: boolean) => waitStorage(s, (snapshot) => (snapshot.prefs as {cover?: unknown} | undefined)?.cover === on)
 
     // Not on the Quick Links screen: anyone there could turn it off and uncover open tabs.
-    const p = await openPopup(s)
+    let p = await openPopup(s)
     await waitText(p, '快捷链接')
     expect(await p.$('button[aria-label="增强模式"]')).toBe(null)
 
-    // On the vault list. A real click: the request needs a user gesture.
+    // On the vault list, turning on explains it first: cancelling leaves it off.
+    const sheet = '[role="alertdialog"]'
     expect(await submitUnlock(p, 'notes')).toBe(true)
     await pressed(p, false)
     await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await clickText(p, '取消')
+    await p.waitForSelector(sheet, {hidden: true})
+    await pressed(p, false)
+
+    // A real click on "Turn on": the request needs a user gesture.
+    await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await clickText(p, '开启')
     await pressed(p, true)
     await stored(true)
     await waitPageScript(s, true)
+    // Turning off never asks.
     await p.click(toggle)
     await pressed(p, false)
     await stored(false)
     await waitPageScript(s, false)
+    expect(await p.$(sheet)).toBe(null)
 
-    // The settings switch shows the same setting.
+    // "Don't show again" sticks across popups (it lives in the vault).
     await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await p.click(`${sheet} [data-slot=checkbox]`)
+    await clickText(p, '开启')
     await pressed(p, true)
     await waitPageScript(s, true)
+    await p.click(toggle)
+    await pressed(p, false)
+    // Let the vault write land before closing.
+    await sleep(500)
+    await p.close()
+    p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    await pressed(p, false)
+    await p.click(toggle)
+    await pressed(p, true)
+    expect(await p.$(sheet)).toBe(null)
+    await waitPageScript(s, true)
+
+    // The settings switch shows the same setting, and the reminder can be turned back on there.
     await openSettings(p)
     expect(await switchOn(p, '先遮住页面')).toBe(true)
+    expect(await switchOn(p, '开启前提醒')).toBe(false)
+    await setSwitch(p, '开启前提醒', true)
     await setSwitch(p, '先遮住页面', false)
     await waitPageScript(s, false)
+    await p.click('button[aria-label="返回"]')
+    await pressed(p, false)
+    await p.click(toggle)
+    await p.waitForSelector(sheet)
+    await clickText(p, '取消')
+    await pressed(p, false)
     await p.close()
   })
 })

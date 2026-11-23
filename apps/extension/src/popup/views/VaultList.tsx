@@ -5,6 +5,7 @@ import {cn} from 'cn'
 import {Button} from '@/components/ui/button'
 import {t} from '@/platform/i18n'
 import {SiteAvatar} from '../components/Avatar'
+import {CoverNotice} from '../components/CoverNotice'
 import {CoverToggle} from '../components/CoverToggle'
 import {Header} from '../components/Header'
 import {buttonClass, outlineButtonClass} from '../components/styles'
@@ -13,6 +14,8 @@ import {entryTitle} from '../title'
 export function VaultList({
   entries,
   notice,
+  skipCoverNotice,
+  onSkipCoverNotice,
   onOpen,
   onEdit,
   onAddCurrent,
@@ -22,6 +25,8 @@ export function VaultList({
 }: {
   entries: VaultEntry[]
   notice?: React.ReactNode
+  skipCoverNotice: boolean
+  onSkipCoverNotice: () => void
   onOpen: (entry: VaultEntry) => void
   onEdit: (entry: VaultEntry) => void
   onAddCurrent: () => void
@@ -31,6 +36,7 @@ export function VaultList({
 }) {
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [coverNotice, setCoverNotice] = useState(false)
   const visible = useMemo(() => searchEntries(entries, query), [entries, query])
   // Opening a site is never a single click: a stray click on a shared screen
   // must not load it. A click (or the arrow keys) only selects a row; its
@@ -52,7 +58,8 @@ export function VaultList({
   }
 
   return (
-    <div className="flex max-h-[580px] flex-col">
+    // Tall enough for the sheet while it is open, however short the list.
+    <div className={cn('relative flex max-h-[580px] flex-col', coverNotice && 'min-h-[480px]')}>
       <Header
         bordered={false}
         title={
@@ -63,7 +70,7 @@ export function VaultList({
         }
         actions={
           <>
-            <CoverToggle />
+            <CoverToggle onTurnOn={skipCoverNotice ? undefined : () => setCoverNotice(true)} />
             <Button
               variant="ghost"
               size="icon-lg"
@@ -190,6 +197,7 @@ export function VaultList({
           {t('addManually')}
         </Button>
       </footer>
+      {coverNotice && <CoverNotice onSkipFromNow={onSkipCoverNotice} onClose={() => setCoverNotice(false)} />}
     </div>
   )
 }

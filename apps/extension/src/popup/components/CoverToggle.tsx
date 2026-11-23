@@ -8,9 +8,10 @@ import {usePrefs} from '../prefs'
  * Enhanced mode (covering, and muting with it) as a header button on the
  * vault list. Not on the Quick Links screen: anyone at the locked popup could
  * turn it off there, which uncovers every protected tab already open. Only
- * its name here: the settings view explains it.
+ * its name here: the help explains it. With `onTurnOn`, turning on calls it
+ * instead (the list shows `CoverNotice` first); turning off never asks.
  */
-export function CoverToggle() {
+export function CoverToggle({onTurnOn}: {onTurnOn?: () => void}) {
   const {prefs, failed, toggleCover} = usePrefs()
   // Unreadable: no button rather than one that never comes on (it is disabled only while loading).
   if (!prefs && failed) return null
@@ -22,7 +23,7 @@ export function CoverToggle() {
       size="icon-lg"
       className={cn('rounded-[10px]', on ? 'text-primary bg-primary/10 hover:bg-primary/15 hover:text-primary' : 'text-subtle-foreground')}
       disabled={!prefs}
-      onClick={toggleCover}
+      onClick={() => (!on && onTurnOn ? onTurnOn() : toggleCover())}
       aria-label={t('enhancedMode')}
       aria-pressed={on}
       title={label}
