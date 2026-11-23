@@ -37,6 +37,8 @@ export function Decoy({
   async function tryUnlock() {
     const input = query
     if (!stored || !input.trim()) return
+    // No limit or delay on attempts, on purpose: a back-off also locked out
+    // the owner, and helps little against someone guessing by hand.
     // Attempts themselves may overlap (a wrong one must never swallow the
     // owner's next Enter), but only the first success opens the vault.
     const result = await attemptUnlock(stored, input)

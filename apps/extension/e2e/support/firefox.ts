@@ -15,7 +15,7 @@ export interface FirefoxSession {
 /**
  * Headless Firefox on `profile`, driven over WebDriver BiDi. On macOS it is
  * started through `open` (by launchd): started from inside Claude Code it
- * hangs on a "profile missing" dialog (see .context/e2e/harness.md).
+ * hangs on a "profile missing" dialog.
  */
 export async function launchFirefox(profile: string, prefs: Record<string, unknown>): Promise<FirefoxSession> {
   if (process.platform !== 'darwin') {

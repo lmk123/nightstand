@@ -10,8 +10,7 @@ import {loadPrefs, STORAGE_KEYS, updatePrefs} from '@/platform/storage'
  * and `prefs.cover` are kept in step here: a grant in answer to the popup's
  * request turns covering on (Chrome closes the popup when its prompt opens),
  * a withdrawal turns it off, and install / update / startup reconcile the
- * two. Turning covering off keeps the permission. Why each way round: read
- * `apps/extension/.context/cover/cover-behavior.md` before changing it.
+ * two. Turning covering off keeps the permission.
  */
 const SCRIPT_ID = 'cover'
 
