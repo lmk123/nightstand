@@ -122,12 +122,23 @@ function isPrerendering(): boolean {
 }
 
 /**
- * Starts the page script; returns its stop, which says whether this copy was
- * keeping the page out of sight (covered, or held invisible while deciding).
- * `hold`: hide the page while deciding even if it has already painted (a copy
- * replacing one that kept the page out of sight).
+ * What a stopped copy leaves to the copy that replaces it (see `scripts/cover.ts`).
+ * - `hidden`: it kept the page out of sight (covered, or held invisible while deciding).
+ * - `title`: it was covered and left the neutral tab title in place; holds
+ *   the page's own title (and the `<title>` it created, if any) to restore
+ *   once the page is uncovered.
  */
-export default function main({hold: holdPainted = false}: {hold?: boolean} = {}): (() => boolean) | undefined {
+export interface Handover {
+  hidden: boolean
+  title?: {page: string | null; own: HTMLTitleElement | null}
+}
+
+/**
+ * Starts the page script and returns its stop. `inherit` is what the copy it
+ * replaces left: a page that copy kept out of sight stays out of sight, and
+ * one it covered is covered again at once, under the title it left masked.
+ */
+export default function main(inherit?: Handover): (() => Handover) | undefined {
   if (window.top !== window) return undefined
   const firstRoot = document.documentElement
   if (!(firstRoot instanceof HTMLElement)) return undefined
@@ -140,12 +151,12 @@ export default function main({hold: holdPainted = false}: {hold?: boolean} = {})
   // paint before the cover is up. `opacity` on the root can't be undone by
   // any descendant (unlike `visibility`). The lookup is one storage read and
   // a few hashes, normally done before the first paint anyway. Injected into
-  // a page that has already painted (covering just turned on), hiding it
-  // would only make every open page blink, unless it replaces a copy that
-  // kept the page out of sight.
+  // a page that already has a body (covering just turned on, even one still
+  // loading), the page may have painted: hiding it would only make every open
+  // page blink, unless it replaces a copy that kept the page out of sight.
   const hold = document.createElement('style')
   hold.textContent = 'html{opacity:0!important}'
-  if (holdPainted || document.readyState === 'loading') firstRoot.append(hold)
+  if (inherit?.hidden === true || document.body === null) firstRoot.append(hold)
   const release = () => hold.remove()
 
   // The cover: a modal dialog in the top layer, so it sits above the page's
@@ -404,12 +415,13 @@ export default function main({hold: holdPainted = false}: {hold?: boolean} = {})
     if (report) void send({type: 'pageCovered'})
   }
 
-  function uncover(): void {
+  /** `keepTitle`: leave the neutral title for the copy taking over. */
+  function uncover(keepTitle = false): void {
     watcher.disconnect()
     // Its `close` event comes later, when `state` no longer says covered.
     if (host.open) host.close()
     host.remove()
-    restoreTitle()
+    if (!keepTitle) restoreTitle()
   }
 
   function show(report: boolean): void {
@@ -421,8 +433,8 @@ export default function main({hold: holdPainted = false}: {hold?: boolean} = {})
     if (report) void send({type: 'pageShown'})
   }
 
-  function off(): void {
-    if (state === 'covered') uncover()
+  function off(keepTitle = false): void {
+    if (state === 'covered') uncover(keepTitle)
     stopIdle()
     watchLeaving(false)
     state = 'off'
@@ -594,12 +606,23 @@ export default function main({hold: holdPainted = false}: {hold?: boolean} = {})
   }
   chrome.storage.onChanged.addListener(onStorage)
 
+  // The copy this one replaces covered the page: cover it again in this same
+  // task, so neither the page nor its title shows in between. The page then
+  // decides as it would have (`load` follows the background's record).
+  if (inherit?.title) {
+    pageTitle = inherit.title.page
+    ownTitle = inherit.title.own
+    coverPage(false)
+  }
+
   queueEvaluate('load')
 
   return () => {
-    const hiding = state === 'covered' || hold.isConnected
+    const covered = state === 'covered'
+    const handover: Handover = {hidden: covered || hold.isConnected}
+    if (covered) handover.title = {page: pageTitle, own: ownTitle}
     stopped = true
-    off()
+    off(covered)
     document.removeEventListener('toggle', onTopLayer, true)
     document.removeEventListener('fullscreenchange', onTopLayer, true)
     document.removeEventListener('visibilitychange', onVisibility)
@@ -613,6 +636,6 @@ export default function main({hold: holdPainted = false}: {hold?: boolean} = {})
     } catch {
       // Extension updated or removed since this page loaded: nothing to remove from.
     }
-    return hiding
+    return handover
   }
 }

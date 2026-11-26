@@ -426,17 +426,30 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await waitCovered(page, true)
     expect(await page.evaluate(() => document.querySelectorAll(':root > dialog').length)).toBe(1)
 
-    // Injected again while covered: the page stays out of sight throughout
-    // (the new copy holds it invisible until it covers), with one cover.
+    // Injected again while covered: the new copy covers at once, in the task
+    // the old one stops in, so neither the page nor its title ever shows.
+    const pageTitle = serverTitle(url)
+    await page.evaluate(() => {
+      const seen: string[] = []
+      new MutationObserver(() => seen.push(document.title)).observe(document, {childList: true, subtree: true, characterData: true})
+      Object.assign(window, {seenTitles: seen})
+    })
     await s.sw.evaluate(async (url) => {
       const [tab] = await chrome.tabs.query({url})
       if (tab?.id === undefined) throw new Error(`no tab at ${url}`)
       await chrome.scripting.executeScript({target: {tabId: tab.id}, files: ['scripts/cover.js'], injectImmediately: true})
     }, url)
-    expect((await covered(page)) || !(await painted(page))).toBe(true)
-    await waitCovered(page, true)
+    expect(await covered(page)).toBe(true)
+    expect(await page.title()).toBe('新标签页')
+    await sleep(300)
+    expect(await page.evaluate(() => (window as unknown as {seenTitles: string[]}).seenTitles)).not.toContain(pageTitle)
     expect(await painted(page)).toBe(true)
     expect(await page.evaluate(() => document.querySelectorAll(':root > dialog').length)).toBe(1)
+    // Shown, it gets its own title back.
+    await page.bringToFront()
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await page.title()).toBe(pageTitle)
     await plain.close()
     await page.close()
   })

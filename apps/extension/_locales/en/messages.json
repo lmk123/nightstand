@@ -658,7 +658,7 @@
     "message": "The first time you turn it on, the browser asks for access to all websites, used only to cover pages. This window may close while the browser asks; covering starts once you allow it. After that it no longer asks, and turning enhanced mode off keeps that access; to take it back, remove it on the extension’s details page in the browser, which also turns enhanced mode off."
   },
   "faqCover5": {
-    "message": "Turn it on or off at any time with the lightning button at the top of the list, or in Settings. Turning it off uncovers and unmutes open pages at once; after turning it back on, tabs already open are covered the next time they load."
+    "message": "Turn it on or off at any time with the lightning button at the top of the list, or in Settings. Turning it off uncovers and unmutes open pages at once; turning it back on covers the pages from your list that are already open right away."
   },
   "faqCoverTip": {
     "message": "The cover can’t hide the address in the address bar or the site icon on the tab, and PDFs and the browser’s own pages are not covered."

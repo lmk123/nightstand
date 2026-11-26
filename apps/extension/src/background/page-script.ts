@@ -35,19 +35,18 @@ const serial = serialQueue()
 /**
  * A registration that is already there is rewritten too: it persists across
  * sessions (and may across updates), so it can come from an older build
- * whose script or options differ. Registering it anew injects it into the
- * open tabs as well, without waiting: a tab that can't run it now (a page
- * showing `alert()`) would hold up every change queued after this one. An
- * injection that lands after covering is turned off again finds it off and
- * stays idle.
+ * whose script or options differ. Registering it anew, or after an update
+ * (open tabs still run the old build's copy, cut off from this background),
+ * injects it into the open tabs as well, without waiting: a tab that can't
+ * run it now (a page showing `alert()`) would hold up every change queued
+ * after this one. An injection that lands after covering is turned off again
+ * finds it off and stays idle.
  */
-async function setRegistered(on: boolean): Promise<void> {
+async function setRegistered(on: boolean, updated: boolean): Promise<void> {
   const registered = (await chrome.scripting.getRegisteredContentScripts({ids: [SCRIPT_ID]})).length > 0
-  if (on && registered) {
-    await chrome.scripting.updateContentScripts([SCRIPT])
-  } else if (on) {
-    await chrome.scripting.registerContentScripts([SCRIPT])
-    injectOpenTabs().catch(console.error)
+  if (on) {
+    await (registered ? chrome.scripting.updateContentScripts([SCRIPT]) : chrome.scripting.registerContentScripts([SCRIPT]))
+    if (updated || !registered) injectOpenTabs().catch(console.error)
   } else if (registered) {
     await chrome.scripting.unregisterContentScripts({ids: [SCRIPT_ID]})
   }
@@ -80,17 +79,18 @@ async function injectOpenTabs(): Promise<void> {
  * when the setting changes. Covering on without the permission is turned off.
  * The permission itself is never given back here: once granted it is kept
  * while covering is off, so turning it back on doesn't ask again.
+ * `updated`: the extension was just updated (see `setRegistered`).
  */
-export function reconcilePageScript(): Promise<void> {
+export function reconcilePageScript({updated = false}: {updated?: boolean} = {}): Promise<void> {
   return serial(async () => {
     const [prefs, access] = await Promise.all([loadPrefs(), hasPageAccess()])
     if (prefs.cover && !access) {
       // The change to `prefs` reconciles again; nothing is registered meanwhile.
       await updatePrefs({cover: false})
-      await setRegistered(false)
+      await setRegistered(false, updated)
       return
     }
-    await setRegistered(prefs.cover && access)
+    await setRegistered(prefs.cover && access, updated)
   })
 }
 
