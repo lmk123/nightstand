@@ -121,7 +121,13 @@ function isPrerendering(): boolean {
   return (document as Document & {prerendering?: boolean}).prerendering === true
 }
 
-export default function main(): (() => void) | undefined {
+/**
+ * Starts the page script; returns its stop, which says whether this copy was
+ * keeping the page out of sight (covered, or held invisible while deciding).
+ * `hold`: hide the page while deciding even if it has already painted (a copy
+ * replacing one that kept the page out of sight).
+ */
+export default function main({hold: holdPainted = false}: {hold?: boolean} = {}): (() => boolean) | undefined {
   if (window.top !== window) return undefined
   const firstRoot = document.documentElement
   if (!(firstRoot instanceof HTMLElement)) return undefined
@@ -135,10 +141,11 @@ export default function main(): (() => void) | undefined {
   // any descendant (unlike `visibility`). The lookup is one storage read and
   // a few hashes, normally done before the first paint anyway. Injected into
   // a page that has already painted (covering just turned on), hiding it
-  // would only make every open page blink.
+  // would only make every open page blink, unless it replaces a copy that
+  // kept the page out of sight.
   const hold = document.createElement('style')
   hold.textContent = 'html{opacity:0!important}'
-  if (document.readyState === 'loading') firstRoot.append(hold)
+  if (holdPainted || document.readyState === 'loading') firstRoot.append(hold)
   const release = () => hold.remove()
 
   // The cover: a modal dialog in the top layer, so it sits above the page's
@@ -590,6 +597,7 @@ export default function main(): (() => void) | undefined {
   queueEvaluate('load')
 
   return () => {
+    const hiding = state === 'covered' || hold.isConnected
     stopped = true
     off()
     document.removeEventListener('toggle', onTopLayer, true)
@@ -599,7 +607,12 @@ export default function main(): (() => void) | undefined {
     window.removeEventListener('pageshow', onPageShow)
     document.removeEventListener('prerenderingchange', onActivated)
     for (const type of ACTIVITY_EVENTS) window.removeEventListener(type, onActivity, {capture: true})
-    chrome.runtime.onMessage.removeListener(onNotice)
-    chrome.storage.onChanged.removeListener(onStorage)
+    try {
+      chrome.runtime.onMessage.removeListener(onNotice)
+      chrome.storage.onChanged.removeListener(onStorage)
+    } catch {
+      // Extension updated or removed since this page loaded: nothing to remove from.
+    }
+    return hiding
   }
 }

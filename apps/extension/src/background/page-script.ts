@@ -36,7 +36,10 @@ const serial = serialQueue()
  * A registration that is already there is rewritten too: it persists across
  * sessions (and may across updates), so it can come from an older build
  * whose script or options differ. Registering it anew injects it into the
- * open tabs as well.
+ * open tabs as well, without waiting: a tab that can't run it now (a page
+ * showing `alert()`) would hold up every change queued after this one. An
+ * injection that lands after covering is turned off again finds it off and
+ * stays idle.
  */
 async function setRegistered(on: boolean): Promise<void> {
   const registered = (await chrome.scripting.getRegisteredContentScripts({ids: [SCRIPT_ID]})).length > 0
@@ -44,7 +47,7 @@ async function setRegistered(on: boolean): Promise<void> {
     await chrome.scripting.updateContentScripts([SCRIPT])
   } else if (on) {
     await chrome.scripting.registerContentScripts([SCRIPT])
-    await injectOpenTabs()
+    injectOpenTabs().catch(console.error)
   } else if (registered) {
     await chrome.scripting.unregisterContentScripts({ids: [SCRIPT_ID]})
   }

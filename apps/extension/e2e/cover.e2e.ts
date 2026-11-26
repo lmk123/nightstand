@@ -425,6 +425,18 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await plain.bringToFront()
     await waitCovered(page, true)
     expect(await page.evaluate(() => document.querySelectorAll(':root > dialog').length)).toBe(1)
+
+    // Injected again while covered: the page stays out of sight throughout
+    // (the new copy holds it invisible until it covers), with one cover.
+    await s.sw.evaluate(async (url) => {
+      const [tab] = await chrome.tabs.query({url})
+      if (tab?.id === undefined) throw new Error(`no tab at ${url}`)
+      await chrome.scripting.executeScript({target: {tabId: tab.id}, files: ['scripts/cover.js'], injectImmediately: true})
+    }, url)
+    expect((await covered(page)) || !(await painted(page))).toBe(true)
+    await waitCovered(page, true)
+    expect(await painted(page)).toBe(true)
+    expect(await page.evaluate(() => document.querySelectorAll(':root > dialog').length)).toBe(1)
     await plain.close()
     await page.close()
   })
