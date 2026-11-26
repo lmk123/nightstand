@@ -45,7 +45,7 @@ pnpm run store
 | `alarms` | Schedules the periodic scan (every 15 minutes) that deletes history of saved sites a visit-time clean-up may have missed. |
 | `bookmarks` | When a site is saved, counts and deletes the bookmarks that point to it, since they would keep it in address bar suggestions; also lets the user import sites from their bookmarks. |
 | `favicon` | Shows each site's icon in the popup, read from the browser's local icon cache. No icon is ever fetched from the network. |
-| `scripting` | Registers the page-covering content script only while the user has covering ("Enhanced mode") turned on, and unregisters it when they turn it off, so that its host permission can be optional instead of granted at install. |
+| `scripting` | Registers the page-covering content script only while the user has covering ("Enhanced mode") turned on, and unregisters it when they turn it off, so that its host permission can be optional instead of granted at install. On turning it on (and after an extension update while it is on), also injects that same script into the tabs already open, and into a page from the user's list that the browser restores from its back/forward cache, so pages from the user's list that are already open are covered too. |
 
 - **Host permissions**（可选的 `optional_host_permissions`：`http://*/*`、`https://*/*`，只在用户第一次开启遮罩时申请，之后保留；0.2.0 安装时就授予，从它更新上来的用户保留）：
 

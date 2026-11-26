@@ -21,6 +21,7 @@ import {createMatcher, defaultPrefs, parseDecoyConfig, parsePrefs, type IconSet,
 import {t} from '@/platform/i18n'
 import {isPageNotice, type PageReply, type PageRequest, type PageRequestBody} from '@/platform/messages'
 import {loadLinks, loadPrefsAndIndex, STORAGE_KEYS} from '@/platform/storage'
+import {isChromiumLike} from '@/lib/browser'
 import {createIcon} from './cover-icons'
 
 /** The unit of the idle time setting. */
@@ -68,6 +69,22 @@ const HOST_STYLE = [
 ]
   .map((rule) => `${rule}!important`)
   .join(';')
+
+/** Holds the page invisible while it decides (see `main`). */
+const HOLD_CSS = 'html{opacity:0!important}'
+
+/**
+ * On the cover while it is up: the page's own title (which the page has
+ * anyway), for the copy that takes over after an update (see `Leftovers`).
+ */
+const TITLE_ATTR = 'data-title'
+
+/**
+ * Dispatched on the document by a copy as it starts: a copy cut off by an
+ * update steps back (a live one ignores it, so a page dispatching it can't
+ * stop the cover). Keep the name across builds.
+ */
+const RETIRE_EVENT = 'cover-step-back'
 
 const SHADOW_CSS = `
 .cover {
@@ -121,20 +138,92 @@ function isPrerendering(): boolean {
   return (document as Document & {prerendering?: boolean}).prerendering === true
 }
 
-export default function main(): (() => void) | undefined {
-  if (window.top !== window) return undefined
+/**
+ * A cover drawn by a copy of this script (this one, one cut off by an
+ * extension update, or one from 0.3.0 and before, which drew the same).
+ */
+function isCover(node: unknown): node is HTMLDialogElement {
+  return node instanceof HTMLDialogElement && node.getAttribute('style') === HOST_STYLE
+}
+
+/**
+ * The extension was updated or removed since this copy started: its
+ * extension APIs are dead, though its DOM listeners still run.
+ */
+function isCutOff(): boolean {
+  try {
+    return chrome.runtime?.id === undefined
+  } catch {
+    return true
+  }
+}
+
+/**
+ * What a copy cut off from the extension left in the page, once it stepped
+ * back (see `RETIRE_EVENT`) or was destroyed (Firefox, on an update): its
+ * cover or its hold kept the page out of sight. `title`: it was covered,
+ * with its neutral title (`neutral`, which another build or browser language
+ * may word differently) still on the tab; `page` is the page's own title to
+ * restore once the page is shown.
+ */
+interface Leftovers {
+  title?: {page: string; neutral: string}
+}
+
+/**
+ * Starts the page script; false where it doesn't run (and nothing was done).
+ * `scripts/cover.ts` starts it once per page: on load (the registration) or
+ * when injected into a page already open. A copy that an extension update
+ * cut off may still run in the page (Chromium gives the new copy another
+ * global, so they can't see each other): it is told to step back, and the
+ * page it kept out of sight stays so, covered again in this same task under
+ * the title it left masked.
+ */
+export default function main(): boolean {
+  if (window.top !== window) return false
   const firstRoot = document.documentElement
-  if (!(firstRoot instanceof HTMLElement)) return undefined
+  if (!(firstRoot instanceof HTMLElement)) return false
+  // A cover from 0.3.0 and before (no TITLE_ATTR): on Chromium the copy that
+  // drew it still runs after the update and can't be told to step back.
+  // Starting beside it would draw a second cover, so this page stays as that
+  // copy keeps it until it loads again. On Firefox that copy is gone.
+  if (isChromiumLike && [...firstRoot.children].some((child) => isCover(child) && !child.hasAttribute(TITLE_ATTR))) {
+    return false
+  }
+
+  const neutralTitle = t('coverTitle')
+
+  /** Removes what a copy cut off from the extension left (see `Leftovers`). */
+  function takeLeftovers(): Leftovers | undefined {
+    let found: Leftovers | undefined
+    for (const child of [...firstRoot.children]) {
+      if (isCover(child)) {
+        found = {}
+        const page = child.getAttribute(TITLE_ATTR)
+        if (page !== null) found.title = {page, neutral: document.title}
+        child.remove()
+      } else if (child instanceof HTMLStyleElement && child.textContent === HOLD_CSS) {
+        found ??= {}
+        child.remove()
+      }
+    }
+    return found
+  }
 
   let state: State = 'deciding'
+  // Set on stepping back: an evaluation still on its way then does nothing.
+  let stopped = false
 
   // Hide everything until the lookup answers: on a protected page nothing may
   // paint before the cover is up. `opacity` on the root can't be undone by
   // any descendant (unlike `visibility`). The lookup is one storage read and
-  // a few hashes, normally done before the first paint anyway.
+  // a few hashes, normally done before the first paint anyway. Injected into
+  // a page that already has a body (covering just turned on, even one still
+  // loading), the page may have painted: hiding it would only make every open
+  // page blink, unless it takes over from a copy that kept the page out of
+  // sight. Put in place at the end, once everything else is set up.
   const hold = document.createElement('style')
-  hold.textContent = 'html{opacity:0!important}'
-  firstRoot.append(hold)
+  hold.textContent = HOLD_CSS
   const release = () => hold.remove()
 
   // The cover: a modal dialog in the top layer, so it sits above the page's
@@ -225,14 +314,19 @@ export default function main(): (() => void) | undefined {
   // The tab's icon stays: Chrome would cache a stand-in, and the entry could
   // never capture the real icon again.
   // Tab title: the page's own while shown, a neutral one while covered.
-  const neutralTitle = t('coverTitle')
   let pageTitle: string | null = null
   let ownTitle: HTMLTitleElement | null = null
+
+  function setPageTitle(title: string | null): void {
+    pageTitle = title
+    if (title === null) host.removeAttribute(TITLE_ATTR)
+    else host.setAttribute(TITLE_ATTR, title)
+  }
 
   function maskTitle(): void {
     const current = document.title
     if (current === neutralTitle) return
-    pageTitle = current
+    setPageTitle(current)
     const existing = document.querySelector('title')
     document.title = neutralTitle
     // With no <title> yet, the setter creates one (once there is a <head>).
@@ -245,7 +339,7 @@ export default function main(): (() => void) | undefined {
     if (ownTitle && !pageTitle) ownTitle.remove()
     else if (pageTitle !== null && document.title === neutralTitle) document.title = pageTitle
     ownTitle = null
-    pageTitle = null
+    setPageTitle(null)
   }
 
   // While covered: keep the title masked and the cover attached, whatever
@@ -255,14 +349,16 @@ export default function main(): (() => void) | undefined {
   const watcher = new MutationObserver((records) => {
     if (state !== 'covered') return
     const pageDialogOpened = records.some(
-      ({type, target}) => type === 'attributes' && target !== host && target instanceof HTMLDialogElement && target.open
+      ({type, target}) => type === 'attributes' && target instanceof HTMLDialogElement && target.open && !isCover(target)
     )
     if (!host.isConnected || pageDialogOpened) raise()
     maskTitle()
   })
 
   function onTopLayer(event: Event): void {
-    if (state !== 'covered' || event.target === host) return
+    // Another copy's cover (one from 0.3.0 that can't step back) is left
+    // alone: raising over each other's, the two would never stop.
+    if (state !== 'covered' || isCover(event.target)) return
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined)
     raise()
   }
@@ -388,6 +484,9 @@ export default function main(): (() => void) | undefined {
     raise()
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined)
     maskTitle()
+    // Also when the page's own title is the neutral one: a cover without it
+    // is taken for one from 0.3.0 (see `main`).
+    if (!host.hasAttribute(TITLE_ATTR)) host.setAttribute(TITLE_ATTR, document.title)
     watcher.observe(document, {childList: true, subtree: true, characterData: true, attributeFilter: ['open']})
     release()
     if (report) void send({type: 'pageCovered'})
@@ -452,11 +551,15 @@ export default function main(): (() => void) | undefined {
    * - `activate`: a prerendered page became the tab's page.
    * - `restore`: the page came back from the back/forward cache, where it
    *   heard of no change; the tab may have been shown on another page since.
+   * - `enable`: covering was turned on. A page that had decided "off" (or
+   *   loaded while covering was off) decides as on load; any other, as on
+   *   `release`.
    */
-  type Reason = 'load' | 'release' | 'activate' | 'restore'
+  type Reason = 'load' | 'release' | 'activate' | 'restore' | 'enable'
 
   /** Decides for the current URL. Every path that uncovers goes through here. */
-  async function evaluate(reason: Reason): Promise<void> {
+  async function evaluate(why: Reason): Promise<void> {
+    const reason = why === 'enable' ? (state === 'off' ? 'load' : 'release') : why
     // Nothing to release on a page that isn't covered or shown, and only a
     // page that covered itself while prerendering has anything to activate.
     if (reason === 'release' && state !== 'covered' && state !== 'shown') return
@@ -469,6 +572,7 @@ export default function main(): (() => void) | undefined {
       console.error(error)
       local = null
     }
+    if (stopped) return
     if (local === false) {
       off()
       return
@@ -476,6 +580,7 @@ export default function main(): (() => void) | undefined {
     if (local === true && reason === 'release') return
     const settled = state === 'covered' || state === 'shown'
     const reply = await send({type: 'pageQuery'})
+    if (stopped) return
     // Only a clear "not protected" uncovers a page this script couldn't
     // check: no answer (or one the background couldn't give) keeps it covered.
     if (local === null && reply?.inside === false) {
@@ -554,8 +659,10 @@ export default function main(): (() => void) | undefined {
   window.addEventListener('pagehide', onPageHide)
   window.addEventListener('pageshow', onPageShow)
 
-  const onNotice = (message: unknown) => {
+  const onNotice = (message: unknown, _sender: unknown, respond: () => void) => {
     if (!isPageNotice(message)) return
+    // An answer tells the background a page script is here (see its `notify`).
+    respond()
     if (message.type === 'cover') {
       if (state === 'shown') coverPage(false)
     } else if (message.type === 'quiet') {
@@ -571,20 +678,31 @@ export default function main(): (() => void) | undefined {
     const links = changes[STORAGE_KEYS.links]
     // Only once the icon is shown or on its way; otherwise the next read gets it.
     if (links && (iconSet || iconLoading)) setIcon(parseDecoyConfig(links.newValue).icon)
-    // Only the list and turning covering off can release a page; the idle
-    // time is taken as it is, without matching again on every open page.
+    // Only the list and turning covering on or off make a page decide again;
+    // the idle time is taken as it is, without matching on every open page.
     const prefs = changes[STORAGE_KEYS.prefs]
     if (prefs) setIdleMs(parsePrefs(prefs.newValue).idleMinutes * MINUTE_MS)
-    if (STORAGE_KEYS.index in changes || (prefs && parsePrefs(prefs.oldValue).cover !== parsePrefs(prefs.newValue).cover)) {
-      queueEvaluate('release')
-    }
+    const cover = prefs && parsePrefs(prefs.newValue).cover
+    if (prefs && parsePrefs(prefs.oldValue).cover !== cover) queueEvaluate(cover ? 'enable' : 'release')
+    else if (STORAGE_KEYS.index in changes) queueEvaluate('release')
   }
   chrome.storage.onChanged.addListener(onStorage)
 
-  queueEvaluate('load')
+  const onRetire = () => {
+    if (isCutOff()) retire()
+  }
 
-  return () => {
-    off()
+  /**
+   * Stops reacting to anything, leaving the cover, the hold and the masked
+   * title in place for the copy that takes over (see `Leftovers`).
+   */
+  function retire(): void {
+    stopped = true
+    state = 'off'
+    watcher.disconnect()
+    stopIdle()
+    watchLeaving(false)
+    document.removeEventListener(RETIRE_EVENT, onRetire)
     document.removeEventListener('toggle', onTopLayer, true)
     document.removeEventListener('fullscreenchange', onTopLayer, true)
     document.removeEventListener('visibilitychange', onVisibility)
@@ -592,7 +710,30 @@ export default function main(): (() => void) | undefined {
     window.removeEventListener('pageshow', onPageShow)
     document.removeEventListener('prerenderingchange', onActivated)
     for (const type of ACTIVITY_EVENTS) window.removeEventListener(type, onActivity, {capture: true})
-    chrome.runtime.onMessage.removeListener(onNotice)
-    chrome.storage.onChanged.removeListener(onStorage)
+    try {
+      chrome.runtime.onMessage.removeListener(onNotice)
+      chrome.storage.onChanged.removeListener(onStorage)
+    } catch {
+      // Cut off from the extension: nothing to remove from.
+    }
   }
+
+  // Everything is set up: only now take over, so nothing that fails above
+  // leaves the page to no copy at all.
+  document.dispatchEvent(new Event(RETIRE_EVENT))
+  const left = takeLeftovers()
+  if (left || document.body === null) firstRoot.append(hold)
+  // It was covered: cover again in this same task, so neither the page nor
+  // its title shows in between. The page then decides as on load.
+  if (left?.title) {
+    const {page, neutral} = left.title
+    setPageTitle(page)
+    // Masked with another wording: `maskTitle` would take it for the page's own.
+    if (neutral !== neutralTitle && document.title === neutral) document.title = neutralTitle
+    coverPage(false)
+  }
+  document.addEventListener(RETIRE_EVENT, onRetire)
+
+  queueEvaluate('load')
+  return true
 }

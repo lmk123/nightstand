@@ -1,12 +1,22 @@
-// Build entry for the page script, which lives in src/content/cover.ts. It is
-// registered at run time (src/background/page-script.ts) instead of declared
-// in the manifest, so that its all-sites host permission can be optional.
+// Entry for the page script (background/page-script.ts registers this file).
+// Not listed in the manifest's `content_scripts`: the registration's matches
+// are optional host permissions, asked for when the user turns covering on.
 //
-// No default export on purpose: Extension.js would wrap a default-exported
-// entry in `scripts/` to start at `document_idle` (it only knows a run time
+// Not a default-exported function: Extension.js would load that one
+// asynchronously (its wrapper for HMR, which it adds only in development and
 // for scripts the manifest declares), too late to hide the page before it
 // paints. A plain call runs as soon as the browser injects the script, at the
 // `document_start` it is registered with.
 import main from '@/content/cover'
 
-main()
+/**
+ * Set once a copy runs in this page. The background also injects the script
+ * into open tabs (covering turned on, an update, a page back from the
+ * back/forward cache), some of which already run it: that copy decides again
+ * on its own when covering turns on, so no second one starts. A copy from
+ * before an extension update runs on another global and doesn't count.
+ */
+const RUNNING = 'nightstandRunning'
+
+const slot = globalThis as typeof globalThis & {[RUNNING]?: true}
+if (!slot[RUNNING] && main()) slot[RUNNING] = true

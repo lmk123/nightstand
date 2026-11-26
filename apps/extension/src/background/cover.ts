@@ -4,6 +4,7 @@ import type {PageNotice, PageReply, PageRequest} from '@/platform/messages'
 import {loadPrefs, STORAGE_KEYS} from '@/platform/storage'
 import {cached} from './cached'
 import {getMatcher, invalidateMatcher, isProtectedTab} from './cleaner'
+import {injectPageScript} from './page-script'
 
 /**
  * Covering and muting protected pages. The page script (`content/cover.ts`)
@@ -16,8 +17,8 @@ import {getMatcher, invalidateMatcher, isProtectedTab} from './cleaner'
  * - `covered`: on a protected page, not shown (muted when muting is on)
  * - `shown`: on a protected page the user chose to show
  * - absent: not on a protected page, covering is off, or no page script has
- *   asked about this page yet (none can: a PDF, a page loaded while
- *   covering was off). Recorded on that `pageQuery`, see `onTabUrl`.
+ *   asked about this page yet (none can: a PDF, a browser error page).
+ *   Recorded on that `pageQuery`, see `onTabUrl`.
  *
  * Only tab ids are kept, never URLs or hosts.
  */
@@ -118,11 +119,16 @@ async function openTabs(): Promise<Map<number, chrome.tabs.Tab>> {
   return open
 }
 
-function notify(tabId: number, notice: PageNotice): void {
-  chrome.tabs.sendMessage(tabId, notice).catch(() => {
-    // No page script there (PDF, browser page, still loading, or loaded while
-    // covering was off): nothing to tell.
-  })
+/**
+ * Tells the tab's page script; false when there is none to tell (PDF,
+ * browser page, still loading, or a page restored from the back/forward
+ * cache that loaded while covering was off).
+ */
+function notify(tabId: number, notice: PageNotice): Promise<boolean> {
+  return chrome.tabs.sendMessage(tabId, notice).then(
+    () => true,
+    () => false
+  )
 }
 
 /**
@@ -133,7 +139,7 @@ function notify(tabId: number, notice: PageNotice): void {
  * state) already has right.
  *
  * A tab is muted only where a page script covers it ("Show page" can undo
- * the mute): not in a PDF, nor in a page loaded while covering was off. So
+ * the mute): not in a PDF, nor in a page the page script can't run in. So
  * entering is not recorded here but on the `pageQuery` the page script
  * sends on this notice (or at load), which carries its current address.
  * That mutes a little later than this event would (accepted).
@@ -146,19 +152,23 @@ function notify(tabId: number, notice: PageNotice): void {
  * isn't undone by a decision made before it.
  */
 async function onTabUrl(tabId: number, url: string, tab: chrome.tabs.Tab): Promise<void> {
-  const moved = await updateTabs(async (tabs): Promise<boolean> => {
+  const moved = await updateTabs(async (tabs): Promise<'entered' | 'left' | null> => {
     const inside = await covers(url)
     const before = tabs[tabId]
     if (inside === Boolean(before)) {
       if (!inside && isOurMute(tab)) await unmuteOurs(tabId)
-      return false
+      return null
     }
-    if (inside) return true
+    if (inside) return 'entered'
     delete tabs[tabId]
     await unmuteOurs(tabId)
-    return true
+    return 'left'
   })
-  if (moved) notify(tabId, {type: 'recheck'})
+  if (!moved) return
+  // Entered with no page script to tell: a page restored from the back/forward
+  // cache that loaded while covering was off gets one now (in a page still
+  // loading that gets the registration's too, the second does nothing).
+  if (!(await notify(tabId, {type: 'recheck'})) && moved === 'entered') await injectPageScript(tabId)
 }
 
 /** Covers every shown tab outside the focused window (WINDOW_ID_NONE: none is focused). */
@@ -177,7 +187,7 @@ async function onWindowFocus(windowId: number): Promise<void> {
     }
     return ids
   })
-  for (const id of covered) notify(id, {type: 'cover'})
+  for (const id of covered) void notify(id, {type: 'cover'})
 }
 
 /**
@@ -268,9 +278,9 @@ async function unmuteAll(): Promise<void> {
 
 /**
  * Covering off: every mute goes and every tab is forgotten (their page
- * scripts uncover themselves). Turned on, open pages stay as they are until
- * they load again: those loaded while covering was off have no page script
- * (`onTabUrl` leaves them alone). Muting off: every mute goes. Muting back
+ * scripts uncover themselves). Turned on, nothing to do here: the page
+ * script is injected into the open tabs (`page-script.ts`) and records
+ * their protected pages on its `pageQuery`. Muting off: every mute goes. Muting back
  * on (covering on): covered tabs are muted again.
  */
 async function onPrefsChange(before: Prefs, after: Prefs): Promise<void> {
@@ -295,7 +305,7 @@ async function onPrefsChange(before: Prefs, after: Prefs): Promise<void> {
  * worker awake.
  */
 async function onTabQuiet(tabId: number): Promise<void> {
-  if (await updateTabs((tabs) => tabs[tabId] === 'shown')) notify(tabId, {type: 'quiet'})
+  if (await updateTabs((tabs) => tabs[tabId] === 'shown')) void notify(tabId, {type: 'quiet'})
 }
 
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {

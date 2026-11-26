@@ -1,3 +1,5 @@
+import {readFileSync, writeFileSync} from 'node:fs'
+import {join} from 'node:path'
 import type {Page, Protocol} from 'puppeteer-core'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {
@@ -241,7 +243,7 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     const p = await openPopup(s)
     await submitUnlock(p, 'notes')
     await addEntry(p, `localhost:${server.port}/secret`, 'exact')
-    // Loaded while covering is off: no page script.
+    // Loaded while covering is off: the page script is injected when it turns on.
     const tab = await s.browser.newPage()
     await tab.goto(`${origin}/before`)
 
@@ -252,15 +254,12 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await waitPageScript(s, true)
     await waitStorage(s, (snapshot) => (snapshot.prefs as {cover?: unknown} | undefined)?.cover === true)
 
-    // That page moves onto the protected address without loading: nothing
-    // can cover it, so it isn't muted either ("Show page" could never undo it).
+    // That page moves onto the protected address without loading: covered.
     await tab.bringToFront()
     await tab.evaluate(() => history.pushState(null, '', '/secret'))
-    // Long enough for the background to act on the move, so a mute it set would show.
-    await sleep(500)
-    expect(await muted(s, `${origin}/secret`)).toBe(false)
-    expect(await covered(tab)).toBe(false)
-    // A page loaded now has the page script, which covers it when it moves there.
+    await waitCovered(tab, true)
+    expect(await muted(s, `${origin}/secret`)).toBe(true)
+    // So is a page loaded now, which gets the page script from the registration.
     await tab.goto(`${origin}/after`)
     await tab.evaluate(() => history.pushState(null, '', '/secret'))
     await waitCovered(tab, true)
@@ -387,7 +386,283 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await pressed(p, false)
     await p.close()
   })
+
+  it('covers protected pages already open when covering is turned on, with one copy per page', async () => {
+    const url = 'http://example.com/open-before'
+    const pageTitle = serverTitle(url)
+    const page = await s.browser.newPage()
+    await page.goto(url)
+    const plain = await s.browser.newPage()
+    await plain.goto('http://example.org/open-before')
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+
+    await turnCoverOn(s)
+    await waitCovered(page, true)
+    expect(await page.title()).toBe('新标签页')
+    expect(await muted(s, url)).toBe(true)
+    await sleep(300)
+    expect(await covered(plain)).toBe(false)
+    expect(await painted(plain)).toBe(true)
+
+    // Shown, then switched away from: covered again, like any protected page.
+    await page.bringToFront()
+    await clickShow(page)
+    await waitCovered(page, false)
+    await plain.bringToFront()
+    await waitCovered(page, true)
+
+    // Off and on again: the copy already there covers again, and no second one starts.
+    await turnCoverOff(s)
+    await waitCovered(page, false)
+    await turnCoverOn(s)
+    await waitCovered(page, true)
+    await sleep(300)
+    expect(await dialogs(page)).toBe(1)
+    await page.bringToFront()
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await page.title()).toBe(pageTitle)
+    await plain.bringToFront()
+    await waitCovered(page, true)
+
+    // Injected again while covered: nothing changes.
+    await inject(s, url)
+    await sleep(300)
+    expect(await covered(page)).toBe(true)
+    expect(await page.title()).toBe('新标签页')
+    expect(await painted(page)).toBe(true)
+    expect(await dialogs(page)).toBe(1)
+    await page.bringToFront()
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await page.title()).toBe(pageTitle)
+    await plain.close()
+    await page.close()
+  })
+
+  it('takes over the cover, hold and masked title a copy cut off by an update left behind', async () => {
+    // The cover's inline style, from a page covered for real.
+    await turnCoverOn(s)
+    const sample = await s.browser.newPage()
+    await sample.goto('http://example.com/style-sample')
+    await waitCovered(sample, true)
+    const style = await sample.evaluate(() => document.querySelector(':root > dialog')!.getAttribute('style')!)
+    await sample.close()
+
+    await turnCoverOff(s)
+    const url = 'http://example.com/takeover'
+    const pageTitle = serverTitle(url)
+    const page = await s.browser.newPage()
+    await page.goto(url)
+    // What such a copy leaves (Firefox destroys it on an update): its cover,
+    // with the page's own title on it, its hold, and its neutral title, worded
+    // by another build or browser language.
+    await page.evaluate((style) => {
+      const left = document.createElement('dialog')
+      left.setAttribute('style', style)
+      left.setAttribute('data-title', document.title)
+      const hold = document.createElement('style')
+      hold.textContent = 'html{opacity:0!important}'
+      document.documentElement.append(hold, left)
+      left.showModal()
+      document.title = 'OLD'
+    }, style)
+    const plain = await s.browser.newPage()
+    await plain.goto('http://example.org/takeover')
+
+    await turnCoverOn(s)
+    await page.waitForFunction(() => document.title === '新标签页')
+    expect(await covered(page)).toBe(true)
+    expect(await dialogs(page)).toBe(1)
+    expect(await painted(page)).toBe(true)
+    await page.bringToFront()
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await page.title()).toBe(pageTitle)
+    expect(await dialogs(page)).toBe(0)
+    await plain.close()
+    await page.close()
+  })
+
+  it('covers a protected page that comes back from the back/forward cache, loaded while covering was off', async () => {
+    await turnCoverOff(s)
+    const url = 'http://example.com/bfcache'
+    const page = await s.browser.newPage()
+    await page.goto(url)
+    await page.evaluate(() => Object.assign(window, {kept: true}))
+    await page.goto('http://example.org/bfcache-next')
+    await turnCoverOn(s)
+    await page.goBack()
+    // The same document, not loaded again (no registration reached it).
+    expect(await page.evaluate(() => (window as unknown as {kept?: boolean}).kept)).toBe(true)
+    await waitCovered(page, true)
+    expect(await muted(s, url)).toBe(true)
+    await page.close()
+  })
+
+  it('starts no copy beside a cover from 0.3.0 or before, whose copy still runs on Chromium after an update', async () => {
+    await turnCoverOn(s)
+    const sample = await s.browser.newPage()
+    await sample.goto('http://example.com/style-sample')
+    await waitCovered(sample, true)
+    const style = await sample.evaluate(() => document.querySelector(':root > dialog')!.getAttribute('style')!)
+    await sample.close()
+
+    await turnCoverOff(s)
+    const url = 'http://example.com/legacy'
+    const page = await s.browser.newPage()
+    await page.goto(url)
+    // Such a cover has no page title on it.
+    await page.evaluate((style) => {
+      const left = document.createElement('dialog')
+      left.setAttribute('style', style)
+      document.documentElement.append(left)
+      left.showModal()
+    }, style)
+    await turnCoverOn(s)
+    await sleep(500)
+    expect(await dialogs(page)).toBe(1)
+    expect(await page.title()).toBe(serverTitle(url))
+    expect(await muted(s, url)).toBe(false)
+    // A new document starts afresh.
+    await page.reload()
+    await waitCovered(page, true)
+    expect(await dialogs(page)).toBe(1)
+    await page.close()
+  })
 })
+
+/**
+ * A real update: the same unpacked build installed again under a new version
+ * (`onInstalled` with reason "update"). On Chromium the new build's page
+ * script runs on another global than the old one's, which is cut off from
+ * the extension but still runs.
+ */
+describe.skipIf(!hasChrome)('covering across an extension update (Chrome)', () => {
+  let s: ChromeSession
+  let server: Awaited<ReturnType<typeof startTestServer>>
+  let dir: string
+
+  beforeAll(async () => {
+    server = await startTestServer()
+    dir = patchedCopy(DIST_CHROMIUM, {onlyLocale: 'zh_CN', grantPageAccess: true, manifest: (m) => (m.version = '0.3.0')})
+    s = await launchChrome({serverPort: server.port, extension: dir})
+    const p = await openPopup(s)
+    await onboard(p, 'notes')
+    await addEntry(p, 'example.com')
+    await p.close()
+    await turnCoverOn(s)
+  })
+  afterAll(async () => {
+    await s?.browser.close()
+    await server?.close()
+    cleanupTemp()
+  })
+
+  /** Installs the build again as `version` and switches `s.sw` to the new worker. */
+  async function update(version: string): Promise<void> {
+    const file = join(dir, 'manifest.json')
+    const manifest = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>
+    manifest.version = version
+    writeFileSync(file, JSON.stringify(manifest))
+    const before = new Set(s.browser.targets())
+    await s.browser.installExtension(dir)
+    const target = await s.browser.waitForTarget(
+      (t) => !before.has(t) && t.type() === 'service_worker' && t.url().startsWith('chrome-extension://')
+    )
+    s.sw = (await target.worker())!
+    await waitPageScript(s, true)
+    // The injection into open tabs isn't awaited by the background.
+    await sleep(1000)
+  }
+
+  it('leaves open pages to the copies already there after an update from 0.3.0, then hands them over on the next', async () => {
+    const url = 'http://example.com/updated'
+    const pageTitle = serverTitle(url)
+    const page = await s.browser.newPage()
+    await page.goto(url)
+    await waitCovered(page, true)
+    const plain = await s.browser.newPage()
+    await plain.goto(`http://localhost:${server.port}/updated-plain`)
+    await sleep(300)
+
+    // From 0.3.0: nothing is injected; the old copy keeps the page covered.
+    await update('0.4.0')
+    expect(await responsive(page)).toBe(true)
+    expect(await scriptGlobals(page)).toBe(1)
+    expect(await covered(page)).toBe(true)
+    expect(await dialogs(page)).toBe(1)
+
+    // From 0.4.0: the new copy takes over from the old one, which steps back.
+    await update('0.4.1')
+    expect(await responsive(page)).toBe(true)
+    expect(await scriptGlobals(page)).toBe(2)
+    expect(await covered(page)).toBe(true)
+    expect(await dialogs(page)).toBe(1)
+    expect(await page.title()).toBe('新标签页')
+    expect(await muted(s, url)).toBe(true)
+    // The new copy can read the list: a page that isn't protected stays as it is.
+    expect(await responsive(plain)).toBe(true)
+    expect(await covered(plain)).toBe(false)
+    expect(await painted(plain)).toBe(true)
+
+    // Shown, then switched away from: covered again by the new copy alone.
+    await page.bringToFront()
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await page.title()).toBe(pageTitle)
+    expect(await muted(s, url)).toBe(false)
+    await plain.bringToFront()
+    await waitCovered(page, true)
+    expect(await dialogs(page)).toBe(1)
+    expect(await responsive(page)).toBe(true)
+    await plain.close()
+    await page.close()
+  })
+})
+
+/** Injects the page script into the tab at `url`, as the background does. */
+async function inject(s: ChromeSession, url: string): Promise<void> {
+  await s.sw.evaluate(async (url) => {
+    const [tab] = await chrome.tabs.query({url})
+    if (tab?.id === undefined) throw new Error(`no tab at ${url}`)
+    await chrome.scripting.executeScript({target: {tabId: tab.id}, files: ['scripts/cover.js'], injectImmediately: true})
+  }, url)
+}
+
+/** Every dialog on the root element: the page script's covers (page dialogs live in the body). */
+function dialogs(page: Page): Promise<number> {
+  return page.evaluate(() => document.querySelectorAll(':root > dialog').length)
+}
+
+/** The page still runs script: two covers raising over each other would hang it. */
+async function responsive(page: Page): Promise<boolean> {
+  return Promise.race([page.evaluate(() => true), sleep(3000).then(() => false)])
+}
+
+/** How many globals the extension's content scripts have in the page (one per build since it loaded). */
+async function scriptGlobals(page: Page): Promise<number> {
+  const cdp = await page.createCDPSession()
+  const names: string[] = []
+  cdp.on('Runtime.executionContextCreated', ({context}) => {
+    const aux = context.auxData as {type?: string} | undefined
+    if (aux?.type === 'isolated' && !context.name.startsWith('__puppeteer')) names.push(context.name)
+  })
+  await cdp.send('Runtime.enable')
+  await sleep(200)
+  await cdp.detach()
+  return names.length
+}
+
+/** Turns covering off and waits for the page script to be unregistered. */
+async function turnCoverOff(s: ChromeSession): Promise<void> {
+  await s.sw.evaluate(async () => {
+    const stored = (await chrome.storage.local.get('prefs')).prefs as Record<string, unknown> | undefined
+    await chrome.storage.local.set({prefs: {...stored, cover: false}})
+  })
+  await waitPageScript(s, false)
+}
 
 describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () => {
   let s: ChromeSession
