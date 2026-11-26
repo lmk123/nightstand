@@ -1,7 +1,6 @@
 import {compareVersions, parsePrefs} from '@nightstand/core'
 import {isChromiumLike} from '@/lib/browser'
 import {serialQueue} from '@/lib/concurrency'
-import {LAST_LEGACY_VERSION, LEGACY_COPY, STOP_KEY} from '@/platform/cover-slot'
 import {hasPageAccess, PAGE_ORIGINS, takePageAccessRequest} from '@/platform/page-access'
 import {loadPrefs, STORAGE_KEYS, updatePrefs} from '@/platform/storage'
 
@@ -21,6 +20,12 @@ import {loadPrefs, STORAGE_KEYS, updatePrefs} from '@/platform/storage'
 const SCRIPT_ID = 'cover'
 
 const SCRIPT_FILE = 'scripts/cover.js'
+
+/**
+ * The last version whose page script can't be told to step back: after a
+ * Chromium update from it, those copies keep running in the open tabs.
+ */
+const LAST_LEGACY_VERSION = '0.3.0'
 
 const SCRIPT: chrome.scripting.RegisteredContentScript = {
   id: SCRIPT_ID,
@@ -42,21 +47,15 @@ const serial = serialQueue()
  * injects it into the open tabs as well, without waiting: a tab that can't
  * run it now (a page showing `alert()`) would hold up every change queued
  * after this one. An injection that lands after covering is turned off again
- * finds it off and stays idle.
- *
- * After a Chromium update from a build whose copy can't be replaced (see
- * `LEGACY_COPY`), open tabs are marked instead, so that no copy ever starts
- * beside it: their pages stay as that build left them until they load again.
+ * finds it off and stays idle. Not after a Chromium update from
+ * `LAST_LEGACY_VERSION` or before: a new copy would run beside the old one.
  */
 async function setRegistered(on: boolean, updatedFrom: string | undefined): Promise<void> {
   const registered = (await chrome.scripting.getRegisteredContentScripts({ids: [SCRIPT_ID]})).length > 0
   if (on) {
     await (registered ? chrome.scripting.updateContentScripts([SCRIPT]) : chrome.scripting.registerContentScripts([SCRIPT]))
-    if (updatedFrom !== undefined && isChromiumLike && compareVersions(updatedFrom, LAST_LEGACY_VERSION) <= 0) {
-      eachOpenTab(markLegacy).catch(console.error)
-    } else if (updatedFrom !== undefined || !registered) {
-      eachOpenTab(injectPageScript).catch(console.error)
-    }
+    const legacy = updatedFrom !== undefined && isChromiumLike && compareVersions(updatedFrom, LAST_LEGACY_VERSION) <= 0
+    if (!legacy && (updatedFrom !== undefined || !registered)) eachOpenTab(injectPageScript).catch(console.error)
   } else if (registered) {
     await chrome.scripting.unregisterContentScripts({ids: [SCRIPT_ID]})
   }
@@ -74,26 +73,12 @@ async function eachOpenTab(run: (tabId: number) => Promise<void>): Promise<void>
 /**
  * Runs the page script in the tab's top frame, as the registration would
  * have done had it been there when the page loaded. The page decides for
- * itself, as on load; one that already runs the script replaces it. A tab
+ * itself, as on load; in one that already runs it, it does nothing. A tab
  * that refuses (an error page, the web store, a PDF) has nothing to cover.
  */
 export async function injectPageScript(tabId: number): Promise<void> {
   await chrome.scripting
     .executeScript({target: {tabId}, files: [SCRIPT_FILE], injectImmediately: true})
-    .catch(() => undefined)
-}
-
-async function markLegacy(tabId: number): Promise<void> {
-  await chrome.scripting
-    .executeScript({
-      target: {tabId},
-      // Runs in the page (serialized): only its arguments reach it.
-      func: (...[key, value]: unknown[]) => {
-        Object.assign(globalThis, {[String(key)]: value})
-      },
-      args: [STOP_KEY, LEGACY_COPY],
-      injectImmediately: true
-    })
     .catch(() => undefined)
 }
 

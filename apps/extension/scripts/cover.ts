@@ -7,19 +7,16 @@
 // for scripts the manifest declares), too late to hide the page before it
 // paints. A plain call runs as soon as the browser injects the script, at the
 // `document_start` it is registered with.
-import main, {type Handover} from '@/content/cover'
-import {LEGACY_COPY, STOP_KEY} from '@/platform/cover-slot'
+import main from '@/content/cover'
 
 /**
- * Turning covering on (or updating the extension while it is on) injects the
- * script into open tabs, some of which already run it: the new copy replaces
- * that one instead of running beside it. `main` stops it only once it knows
- * it can take over (see `main`).
+ * Set once a copy runs in this page. The background also injects the script
+ * into open tabs (covering turned on, an update, a page back from the
+ * back/forward cache), some of which already run it: that copy decides again
+ * on its own when covering turns on, so no second one starts. A copy from
+ * before an extension update runs on another global and doesn't count.
  */
-const slot = globalThis as typeof globalThis & {[STOP_KEY]?: (() => Handover) | typeof LEGACY_COPY}
+const RUNNING = 'nightstandRunning'
 
-const running = slot[STOP_KEY]
-if (running !== LEGACY_COPY) {
-  const stop = main(typeof running === 'function' ? running : undefined)
-  if (stop) slot[STOP_KEY] = stop
-}
+const slot = globalThis as typeof globalThis & {[RUNNING]?: true}
+if (!slot[RUNNING] && main()) slot[RUNNING] = true

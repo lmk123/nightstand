@@ -166,8 +166,8 @@ async function onTabUrl(tabId: number, url: string, tab: chrome.tabs.Tab): Promi
   })
   if (!moved) return
   // Entered with no page script to tell: a page restored from the back/forward
-  // cache that loaded while covering was off gets one now (a page still
-  // loading has the registration's, which this one replaces).
+  // cache that loaded while covering was off gets one now (in a page still
+  // loading that gets the registration's too, the second does nothing).
   if (!(await notify(tabId, {type: 'recheck'})) && moved === 'entered') await injectPageScript(tabId)
 }
 
