@@ -16,8 +16,8 @@ import {getMatcher, invalidateMatcher, isProtectedTab} from './cleaner'
  * - `covered`: on a protected page, not shown (muted when muting is on)
  * - `shown`: on a protected page the user chose to show
  * - absent: not on a protected page, covering is off, or no page script has
- *   asked about this page yet (none can: a PDF, a page loaded while
- *   covering was off). Recorded on that `pageQuery`, see `onTabUrl`.
+ *   asked about this page yet (none can: a PDF, a page the injection on
+ *   turning covering on didn't reach). Recorded on that `pageQuery`, see `onTabUrl`.
  *
  * Only tab ids are kept, never URLs or hosts.
  */
@@ -120,8 +120,8 @@ async function openTabs(): Promise<Map<number, chrome.tabs.Tab>> {
 
 function notify(tabId: number, notice: PageNotice): void {
   chrome.tabs.sendMessage(tabId, notice).catch(() => {
-    // No page script there (PDF, browser page, still loading, or loaded while
-    // covering was off): nothing to tell.
+    // No page script there (PDF, browser page, still loading, or not reached
+    // by the injection on turning covering on): nothing to tell.
   })
 }
 
@@ -133,7 +133,7 @@ function notify(tabId: number, notice: PageNotice): void {
  * state) already has right.
  *
  * A tab is muted only where a page script covers it ("Show page" can undo
- * the mute): not in a PDF, nor in a page loaded while covering was off. So
+ * the mute): not in a PDF, nor in a page the page script never reached. So
  * entering is not recorded here but on the `pageQuery` the page script
  * sends on this notice (or at load), which carries its current address.
  * That mutes a little later than this event would (accepted).
@@ -268,9 +268,9 @@ async function unmuteAll(): Promise<void> {
 
 /**
  * Covering off: every mute goes and every tab is forgotten (their page
- * scripts uncover themselves). Turned on, open pages stay as they are until
- * they load again: those loaded while covering was off have no page script
- * (`onTabUrl` leaves them alone). Muting off: every mute goes. Muting back
+ * scripts uncover themselves). Turned on, nothing to do here: the page
+ * script is injected into the open tabs (`page-script.ts`) and records
+ * their protected pages on its `pageQuery`. Muting off: every mute goes. Muting back
  * on (covering on): covered tabs are muted again.
  */
 async function onPrefsChange(before: Prefs, after: Prefs): Promise<void> {

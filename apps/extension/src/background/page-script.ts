@@ -11,12 +11,18 @@ import {loadPrefs, STORAGE_KEYS, updatePrefs} from '@/platform/storage'
  * request turns covering on (Chrome closes the popup when its prompt opens),
  * a withdrawal turns it off, and install / update / startup reconcile the
  * two. Turning covering off keeps the permission.
+ *
+ * A registration only reaches pages loaded after it, so turning covering on
+ * also injects the script into the open http(s) tabs: their protected pages
+ * cover at once, as on load, instead of only after a reload.
  */
 const SCRIPT_ID = 'cover'
 
+const SCRIPT_FILE = 'scripts/cover.js'
+
 const SCRIPT: chrome.scripting.RegisteredContentScript = {
   id: SCRIPT_ID,
-  js: ['scripts/cover.js'],
+  js: [SCRIPT_FILE],
   matches: PAGE_ORIGINS,
   runAt: 'document_start',
   allFrames: false,
@@ -29,12 +35,40 @@ const serial = serialQueue()
 /**
  * A registration that is already there is rewritten too: it persists across
  * sessions (and may across updates), so it can come from an older build
- * whose script or options differ.
+ * whose script or options differ. Registering it anew injects it into the
+ * open tabs as well.
  */
 async function setRegistered(on: boolean): Promise<void> {
   const registered = (await chrome.scripting.getRegisteredContentScripts({ids: [SCRIPT_ID]})).length > 0
-  if (on) await (registered ? chrome.scripting.updateContentScripts([SCRIPT]) : chrome.scripting.registerContentScripts([SCRIPT]))
-  else if (registered) await chrome.scripting.unregisterContentScripts({ids: [SCRIPT_ID]})
+  if (on && registered) {
+    await chrome.scripting.updateContentScripts([SCRIPT])
+  } else if (on) {
+    await chrome.scripting.registerContentScripts([SCRIPT])
+    await injectOpenTabs()
+  } else if (registered) {
+    await chrome.scripting.unregisterContentScripts({ids: [SCRIPT_ID]})
+  }
+}
+
+/**
+ * The top frame of every open http(s) tab, as the registration would have
+ * done had it been there when they loaded. Each page decides for itself, as
+ * on load; a page that already runs the script (loaded before covering was
+ * last turned off) replaces it. A discarded tab is skipped: it loads again
+ * when shown, under the registration. A tab that refuses (an error page,
+ * the web store) has nothing to cover.
+ */
+async function injectOpenTabs(): Promise<void> {
+  const tabs = await chrome.tabs.query({url: PAGE_ORIGINS, discarded: false})
+  await Promise.all(
+    tabs.map(({id}) =>
+      id === undefined
+        ? undefined
+        : chrome.scripting
+            .executeScript({target: {tabId: id}, files: [SCRIPT_FILE], injectImmediately: true})
+            .catch(() => undefined)
+    )
+  )
 }
 
 /**

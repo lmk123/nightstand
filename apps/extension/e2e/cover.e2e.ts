@@ -241,7 +241,7 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     const p = await openPopup(s)
     await submitUnlock(p, 'notes')
     await addEntry(p, `localhost:${server.port}/secret`, 'exact')
-    // Loaded while covering is off: no page script.
+    // Loaded while covering is off: the page script is injected when it turns on.
     const tab = await s.browser.newPage()
     await tab.goto(`${origin}/before`)
 
@@ -252,15 +252,12 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await waitPageScript(s, true)
     await waitStorage(s, (snapshot) => (snapshot.prefs as {cover?: unknown} | undefined)?.cover === true)
 
-    // That page moves onto the protected address without loading: nothing
-    // can cover it, so it isn't muted either ("Show page" could never undo it).
+    // That page moves onto the protected address without loading: covered.
     await tab.bringToFront()
     await tab.evaluate(() => history.pushState(null, '', '/secret'))
-    // Long enough for the background to act on the move, so a mute it set would show.
-    await sleep(500)
-    expect(await muted(s, `${origin}/secret`)).toBe(false)
-    expect(await covered(tab)).toBe(false)
-    // A page loaded now has the page script, which covers it when it moves there.
+    await waitCovered(tab, true)
+    expect(await muted(s, `${origin}/secret`)).toBe(true)
+    // So is a page loaded now, which gets the page script from the registration.
     await tab.goto(`${origin}/after`)
     await tab.evaluate(() => history.pushState(null, '', '/secret'))
     await waitCovered(tab, true)
@@ -386,6 +383,50 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await clickText(p, '取消')
     await pressed(p, false)
     await p.close()
+  })
+
+  it('covers protected pages already open when covering is turned on, replacing a copy left from before', async () => {
+    const url = 'http://example.com/open-before'
+    const page = await s.browser.newPage()
+    await page.goto(url)
+    const plain = await s.browser.newPage()
+    await plain.goto('http://example.org/open-before')
+    await sleep(300)
+    expect(await covered(page)).toBe(false)
+
+    await turnCoverOn(s)
+    await waitCovered(page, true)
+    expect(await page.title()).toBe('新标签页')
+    expect(await muted(s, url)).toBe(true)
+    await sleep(300)
+    expect(await covered(plain)).toBe(false)
+    expect(await painted(plain)).toBe(true)
+
+    // Shown, then switched away from: covered again, like any protected page.
+    await page.bringToFront()
+    await clickShow(page)
+    await waitCovered(page, false)
+    await plain.bringToFront()
+    await waitCovered(page, true)
+
+    // Off and on again: the copy injected before is replaced, not doubled.
+    await s.sw.evaluate(async () => {
+      const stored = (await chrome.storage.local.get('prefs')).prefs as Record<string, unknown> | undefined
+      await chrome.storage.local.set({prefs: {...stored, cover: false}})
+    })
+    await waitPageScript(s, false)
+    await waitCovered(page, false)
+    await turnCoverOn(s)
+    await waitCovered(page, true)
+    expect(await page.evaluate(() => document.querySelectorAll(':root > dialog').length)).toBe(1)
+    await page.bringToFront()
+    await clickShow(page)
+    await waitCovered(page, false)
+    await plain.bringToFront()
+    await waitCovered(page, true)
+    expect(await page.evaluate(() => document.querySelectorAll(':root > dialog').length)).toBe(1)
+    await plain.close()
+    await page.close()
   })
 })
 

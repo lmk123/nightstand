@@ -127,14 +127,18 @@ export default function main(): (() => void) | undefined {
   if (!(firstRoot instanceof HTMLElement)) return undefined
 
   let state: State = 'deciding'
+  // Set by the returned stop: an evaluation still on its way then does nothing.
+  let stopped = false
 
   // Hide everything until the lookup answers: on a protected page nothing may
   // paint before the cover is up. `opacity` on the root can't be undone by
   // any descendant (unlike `visibility`). The lookup is one storage read and
-  // a few hashes, normally done before the first paint anyway.
+  // a few hashes, normally done before the first paint anyway. Injected into
+  // a page that has already painted (covering just turned on), hiding it
+  // would only make every open page blink.
   const hold = document.createElement('style')
   hold.textContent = 'html{opacity:0!important}'
-  firstRoot.append(hold)
+  if (document.readyState === 'loading') firstRoot.append(hold)
   const release = () => hold.remove()
 
   // The cover: a modal dialog in the top layer, so it sits above the page's
@@ -469,6 +473,7 @@ export default function main(): (() => void) | undefined {
       console.error(error)
       local = null
     }
+    if (stopped) return
     if (local === false) {
       off()
       return
@@ -476,6 +481,7 @@ export default function main(): (() => void) | undefined {
     if (local === true && reason === 'release') return
     const settled = state === 'covered' || state === 'shown'
     const reply = await send({type: 'pageQuery'})
+    if (stopped) return
     // Only a clear "not protected" uncovers a page this script couldn't
     // check: no answer (or one the background couldn't give) keeps it covered.
     if (local === null && reply?.inside === false) {
@@ -584,6 +590,7 @@ export default function main(): (() => void) | undefined {
   queueEvaluate('load')
 
   return () => {
+    stopped = true
     off()
     document.removeEventListener('toggle', onTopLayer, true)
     document.removeEventListener('fullscreenchange', onTopLayer, true)

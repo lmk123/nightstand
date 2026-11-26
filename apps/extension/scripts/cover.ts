@@ -9,4 +9,14 @@
 // `document_start` it is registered with.
 import main from '@/content/cover'
 
-main()
+/**
+ * The running copy's stop, on the content scripts' own global (pages can't
+ * see it). Turning covering on injects the script into open tabs, some of
+ * which already run it (loaded before covering was last turned off): the new
+ * copy replaces that one instead of running beside it.
+ */
+const STOP_KEY = 'nightstandStop'
+const slot = globalThis as typeof globalThis & {[STOP_KEY]?: () => void}
+
+slot[STOP_KEY]?.()
+slot[STOP_KEY] = main()
