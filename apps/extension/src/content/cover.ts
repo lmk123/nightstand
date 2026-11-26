@@ -69,6 +69,16 @@ const HOST_STYLE = [
   .map((rule) => `${rule}!important`)
   .join(';')
 
+/** Holds the page invisible while it decides (see `main`). */
+const HOLD_CSS = 'html{opacity:0!important}'
+
+/**
+ * On the cover while it is up: the page's own title, for a copy that takes
+ * over without a handover (see `takeLeftovers`). The page's own title only,
+ * which the page has anyway.
+ */
+const TITLE_ATTR = 'data-title'
+
 const SHADOW_CSS = `
 .cover {
   position: fixed; inset: 0; display: grid; place-items: center;
@@ -124,24 +134,61 @@ function isPrerendering(): boolean {
 /**
  * What a stopped copy leaves to the copy that replaces it (see `scripts/cover.ts`).
  * - `hidden`: it kept the page out of sight (covered, or held invisible while deciding).
- * - `title`: it was covered and left the neutral tab title in place; holds
+ * - `title`: it was covered and left its neutral tab title (`neutral`, which
+ *   another build or browser language may word differently) in place; holds
  *   the page's own title (and the `<title>` it created, if any) to restore
  *   once the page is uncovered.
  */
 export interface Handover {
   hidden: boolean
-  title?: {page: string | null; own: HTMLTitleElement | null}
+  title?: {page: string | null; own: HTMLTitleElement | null; neutral: string}
 }
 
 /**
- * Starts the page script and returns its stop. `inherit` is what the copy it
- * replaces left: a page that copy kept out of sight stays out of sight, and
- * one it covered is covered again at once, under the title it left masked.
+ * Starts the page script and returns its stop, or returns undefined (and
+ * stops nothing) where it doesn't run. `stopRunning` stops the copy already
+ * running in this page, if any, and returns what it left: a page that copy
+ * kept out of sight stays out of sight, and one it covered is covered again
+ * at once, in this same task, under the title it left masked. Without one,
+ * what a copy that can no longer run left in the page is taken over the same
+ * way. A copy that fails to stop is taken as having kept the page out of sight.
  */
-export default function main(inherit?: Handover): (() => Handover) | undefined {
+export default function main(stopRunning?: () => Handover): (() => Handover) | undefined {
   if (window.top !== window) return undefined
   const firstRoot = document.documentElement
   if (!(firstRoot instanceof HTMLElement)) return undefined
+
+  const neutralTitle = t('coverTitle')
+
+  /**
+   * What a copy that can't be stopped left: on Firefox an update destroys
+   * the old copy (its listeners are dead) but not its cover or its hold.
+   * Both go; the page's own title comes from the cover (none from 0.3.0 and
+   * before, whose neutral title then stays after "Show page").
+   */
+  function takeLeftovers(): Handover | undefined {
+    let found: Handover | undefined
+    for (const child of [...firstRoot.children]) {
+      if (child instanceof HTMLDialogElement && child.getAttribute('style') === HOST_STYLE) {
+        found = {hidden: true}
+        const page = child.getAttribute(TITLE_ATTR)
+        if (page !== null) found.title = {page, own: null, neutral: document.title}
+        child.remove()
+      } else if (child instanceof HTMLStyleElement && child.textContent === HOLD_CSS) {
+        found ??= {hidden: true}
+        child.remove()
+      }
+    }
+    return found
+  }
+
+  let inherit: Handover | undefined
+  try {
+    inherit = stopRunning?.() ?? takeLeftovers()
+  } catch (error) {
+    console.error(error)
+    inherit = takeLeftovers() ?? {hidden: true}
+  }
 
   let state: State = 'deciding'
   // Set by the returned stop: an evaluation still on its way then does nothing.
@@ -155,7 +202,7 @@ export default function main(inherit?: Handover): (() => Handover) | undefined {
   // loading), the page may have painted: hiding it would only make every open
   // page blink, unless it replaces a copy that kept the page out of sight.
   const hold = document.createElement('style')
-  hold.textContent = 'html{opacity:0!important}'
+  hold.textContent = HOLD_CSS
   if (inherit?.hidden === true || document.body === null) firstRoot.append(hold)
   const release = () => hold.remove()
 
@@ -247,14 +294,19 @@ export default function main(inherit?: Handover): (() => Handover) | undefined {
   // The tab's icon stays: Chrome would cache a stand-in, and the entry could
   // never capture the real icon again.
   // Tab title: the page's own while shown, a neutral one while covered.
-  const neutralTitle = t('coverTitle')
   let pageTitle: string | null = null
   let ownTitle: HTMLTitleElement | null = null
+
+  function setPageTitle(title: string | null): void {
+    pageTitle = title
+    if (title === null) host.removeAttribute(TITLE_ATTR)
+    else host.setAttribute(TITLE_ATTR, title)
+  }
 
   function maskTitle(): void {
     const current = document.title
     if (current === neutralTitle) return
-    pageTitle = current
+    setPageTitle(current)
     const existing = document.querySelector('title')
     document.title = neutralTitle
     // With no <title> yet, the setter creates one (once there is a <head>).
@@ -267,7 +319,7 @@ export default function main(inherit?: Handover): (() => Handover) | undefined {
     if (ownTitle && !pageTitle) ownTitle.remove()
     else if (pageTitle !== null && document.title === neutralTitle) document.title = pageTitle
     ownTitle = null
-    pageTitle = null
+    setPageTitle(null)
   }
 
   // While covered: keep the title masked and the cover attached, whatever
@@ -579,8 +631,10 @@ export default function main(inherit?: Handover): (() => Handover) | undefined {
   window.addEventListener('pagehide', onPageHide)
   window.addEventListener('pageshow', onPageShow)
 
-  const onNotice = (message: unknown) => {
+  const onNotice = (message: unknown, _sender: unknown, respond: () => void) => {
     if (!isPageNotice(message)) return
+    // An answer tells the background a page script is here (see its `notify`).
+    respond()
     if (message.type === 'cover') {
       if (state === 'shown') coverPage(false)
     } else if (message.type === 'quiet') {
@@ -610,8 +664,11 @@ export default function main(inherit?: Handover): (() => Handover) | undefined {
   // task, so neither the page nor its title shows in between. The page then
   // decides as it would have (`load` follows the background's record).
   if (inherit?.title) {
-    pageTitle = inherit.title.page
-    ownTitle = inherit.title.own
+    const {page, own, neutral} = inherit.title
+    setPageTitle(page)
+    ownTitle = own
+    // Masked with another wording: `maskTitle` would take it for the page's own.
+    if (neutral !== neutralTitle && document.title === neutral) document.title = neutralTitle
     coverPage(false)
   }
 
@@ -620,9 +677,14 @@ export default function main(inherit?: Handover): (() => Handover) | undefined {
   return () => {
     const covered = state === 'covered'
     const handover: Handover = {hidden: covered || hold.isConnected}
-    if (covered) handover.title = {page: pageTitle, own: ownTitle}
+    if (covered) handover.title = {page: pageTitle, own: ownTitle, neutral: neutralTitle}
     stopped = true
-    off(covered)
+    // Whatever fails here, the handover goes to the new copy.
+    try {
+      off(covered)
+    } catch (error) {
+      console.error(error)
+    }
     document.removeEventListener('toggle', onTopLayer, true)
     document.removeEventListener('fullscreenchange', onTopLayer, true)
     document.removeEventListener('visibilitychange', onVisibility)

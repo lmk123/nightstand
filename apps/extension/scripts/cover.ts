@@ -1,36 +1,25 @@
-// Build entry for the page script, which lives in src/content/cover.ts. It is
-// registered at run time (src/background/page-script.ts) instead of declared
-// in the manifest, so that its all-sites host permission can be optional.
+// Entry for the page script (background/page-script.ts registers this file).
+// Not listed in the manifest's `content_scripts`: the registration's matches
+// are optional host permissions, asked for when the user turns covering on.
 //
-// No default export on purpose: Extension.js would wrap a default-exported
-// entry in `scripts/` to start at `document_idle` (it only knows a run time
+// Not a default-exported function: Extension.js would load that one
+// asynchronously (its wrapper for HMR, which it adds only in development and
 // for scripts the manifest declares), too late to hide the page before it
 // paints. A plain call runs as soon as the browser injects the script, at the
 // `document_start` it is registered with.
 import main, {type Handover} from '@/content/cover'
+import {LEGACY_COPY, STOP_KEY} from '@/platform/cover-slot'
 
 /**
- * The running copy's stop, on the content scripts' own global (pages can't
- * see it). Turning covering on (or updating the extension while it is on)
- * injects the script into open tabs, some of which already run it: the new
- * copy replaces that one instead of running beside it.
- *
- * The old copy stops and the new one starts in this one task, so nothing
- * paints in between: a page the old copy kept out of sight stays so, and one
- * it covered is covered again under the title it left masked. An old copy
- * that fails to stop (its extension context gone) must not keep the new one
- * from starting: it is taken as having kept the page out of sight.
+ * Turning covering on (or updating the extension while it is on) injects the
+ * script into open tabs, some of which already run it: the new copy replaces
+ * that one instead of running beside it. `main` stops it only once it knows
+ * it can take over (see `main`).
  */
-const STOP_KEY = 'nightstandStop'
-const slot = globalThis as typeof globalThis & {[STOP_KEY]?: () => Handover}
+const slot = globalThis as typeof globalThis & {[STOP_KEY]?: (() => Handover) | typeof LEGACY_COPY}
 
-function stopRunning(): Handover | undefined {
-  try {
-    return slot[STOP_KEY]?.()
-  } catch (error) {
-    console.error(error)
-    return {hidden: true}
-  }
+const running = slot[STOP_KEY]
+if (running !== LEGACY_COPY) {
+  const stop = main(typeof running === 'function' ? running : undefined)
+  if (stop) slot[STOP_KEY] = stop
 }
-
-slot[STOP_KEY] = main(stopRunning())

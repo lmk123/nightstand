@@ -1,5 +1,7 @@
-import {parsePrefs} from '@nightstand/core'
+import {compareVersions, parsePrefs} from '@nightstand/core'
+import {isChromiumLike} from '@/lib/browser'
 import {serialQueue} from '@/lib/concurrency'
+import {LAST_LEGACY_VERSION, LEGACY_COPY, STOP_KEY} from '@/platform/cover-slot'
 import {hasPageAccess, PAGE_ORIGINS, takePageAccessRequest} from '@/platform/page-access'
 import {loadPrefs, STORAGE_KEYS, updatePrefs} from '@/platform/storage'
 
@@ -41,36 +43,58 @@ const serial = serialQueue()
  * run it now (a page showing `alert()`) would hold up every change queued
  * after this one. An injection that lands after covering is turned off again
  * finds it off and stays idle.
+ *
+ * After a Chromium update from a build whose copy can't be replaced (see
+ * `LEGACY_COPY`), open tabs are marked instead, so that no copy ever starts
+ * beside it: their pages stay as that build left them until they load again.
  */
-async function setRegistered(on: boolean, updated: boolean): Promise<void> {
+async function setRegistered(on: boolean, updatedFrom: string | undefined): Promise<void> {
   const registered = (await chrome.scripting.getRegisteredContentScripts({ids: [SCRIPT_ID]})).length > 0
   if (on) {
     await (registered ? chrome.scripting.updateContentScripts([SCRIPT]) : chrome.scripting.registerContentScripts([SCRIPT]))
-    if (updated || !registered) injectOpenTabs().catch(console.error)
+    if (updatedFrom !== undefined && isChromiumLike && compareVersions(updatedFrom, LAST_LEGACY_VERSION) <= 0) {
+      eachOpenTab(markLegacy).catch(console.error)
+    } else if (updatedFrom !== undefined || !registered) {
+      eachOpenTab(injectPageScript).catch(console.error)
+    }
   } else if (registered) {
     await chrome.scripting.unregisterContentScripts({ids: [SCRIPT_ID]})
   }
 }
 
 /**
- * The top frame of every open http(s) tab, as the registration would have
- * done had it been there when they loaded. Each page decides for itself, as
- * on load; a page that already runs the script (loaded before covering was
- * last turned off) replaces it. A discarded tab is skipped: it loads again
- * when shown, under the registration. A tab that refuses (an error page,
- * the web store) has nothing to cover.
+ * The top frame of every open http(s) tab. A discarded tab is skipped: it
+ * loads again when shown, under the registration.
  */
-async function injectOpenTabs(): Promise<void> {
+async function eachOpenTab(run: (tabId: number) => Promise<void>): Promise<void> {
   const tabs = await chrome.tabs.query({url: PAGE_ORIGINS, discarded: false})
-  await Promise.all(
-    tabs.map(({id}) =>
-      id === undefined
-        ? undefined
-        : chrome.scripting
-            .executeScript({target: {tabId: id}, files: [SCRIPT_FILE], injectImmediately: true})
-            .catch(() => undefined)
-    )
-  )
+  await Promise.all(tabs.map(({id}) => (id === undefined ? undefined : run(id))))
+}
+
+/**
+ * Runs the page script in the tab's top frame, as the registration would
+ * have done had it been there when the page loaded. The page decides for
+ * itself, as on load; one that already runs the script replaces it. A tab
+ * that refuses (an error page, the web store, a PDF) has nothing to cover.
+ */
+export async function injectPageScript(tabId: number): Promise<void> {
+  await chrome.scripting
+    .executeScript({target: {tabId}, files: [SCRIPT_FILE], injectImmediately: true})
+    .catch(() => undefined)
+}
+
+async function markLegacy(tabId: number): Promise<void> {
+  await chrome.scripting
+    .executeScript({
+      target: {tabId},
+      // Runs in the page (serialized): only its arguments reach it.
+      func: (...[key, value]: unknown[]) => {
+        Object.assign(globalThis, {[String(key)]: value})
+      },
+      args: [STOP_KEY, LEGACY_COPY],
+      injectImmediately: true
+    })
+    .catch(() => undefined)
 }
 
 /**
@@ -79,18 +103,18 @@ async function injectOpenTabs(): Promise<void> {
  * when the setting changes. Covering on without the permission is turned off.
  * The permission itself is never given back here: once granted it is kept
  * while covering is off, so turning it back on doesn't ask again.
- * `updated`: the extension was just updated (see `setRegistered`).
+ * `updatedFrom`: the version the extension was just updated from (see `setRegistered`).
  */
-export function reconcilePageScript({updated = false}: {updated?: boolean} = {}): Promise<void> {
+export function reconcilePageScript({updatedFrom}: {updatedFrom?: string} = {}): Promise<void> {
   return serial(async () => {
     const [prefs, access] = await Promise.all([loadPrefs(), hasPageAccess()])
     if (prefs.cover && !access) {
       // The change to `prefs` reconciles again; nothing is registered meanwhile.
       await updatePrefs({cover: false})
-      await setRegistered(false, updated)
+      await setRegistered(false, updatedFrom)
       return
     }
-    await setRegistered(prefs.cover && access, updated)
+    await setRegistered(prefs.cover && access, updatedFrom)
   })
 }
 

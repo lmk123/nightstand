@@ -453,7 +453,134 @@ describe.skipIf(!hasChrome)('covering is off by default (Chrome)', () => {
     await plain.close()
     await page.close()
   })
+
+  it('takes over from a copy that masked the title another way, or that can no longer run', async () => {
+    await turnCoverOn(s)
+    const url = 'http://example.com/takeover'
+    const pageTitle = serverTitle(url)
+    const page = await s.browser.newPage()
+    await page.goto(url)
+    await waitCovered(page, true)
+    // The page's own title stays on the cover (for a copy with no handover).
+    expect(await page.evaluate(() => document.querySelector(':root > dialog')?.getAttribute('data-title'))).toBe(pageTitle)
+    const inject = () =>
+      s.sw.evaluate(async (url) => {
+        const [tab] = await chrome.tabs.query({url})
+        if (tab?.id === undefined) throw new Error(`no tab at ${url}`)
+        await chrome.scripting.executeScript({target: {tabId: tab.id}, files: ['scripts/cover.js'], injectImmediately: true})
+      }, url)
+
+    // Another build (or browser language) masked it as "OLD": the new copy's wording replaces it.
+    await s.sw.evaluate(async (url) => {
+      const [tab] = await chrome.tabs.query({url})
+      await chrome.scripting.executeScript({
+        target: {tabId: tab!.id!},
+        func: () => {
+          const slot = globalThis as unknown as {nightstandStop: () => {title?: {neutral: string}}}
+          const stop = slot.nightstandStop
+          slot.nightstandStop = () => {
+            const handover = stop()
+            document.title = 'OLD'
+            if (handover.title) handover.title.neutral = 'OLD'
+            return handover
+          }
+        }
+      })
+    }, url)
+    await inject()
+    expect(await covered(page)).toBe(true)
+    expect(await page.title()).toBe('新标签页')
+    await page.bringToFront()
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await page.title()).toBe(pageTitle)
+
+    // A copy that can no longer run (Firefox destroys it on an update) left its
+    // cover and hold behind, and no stop: the new copy removes them and covers.
+    const plain = await s.browser.newPage()
+    await waitCovered(page, true)
+    await s.sw.evaluate(async (url) => {
+      const [tab] = await chrome.tabs.query({url})
+      await chrome.scripting.executeScript({
+        target: {tabId: tab!.id!},
+        func: () => {
+          const slot = globalThis as unknown as {nightstandStop?: () => unknown}
+          const host = document.querySelector(':root > dialog')
+          const style = host?.getAttribute('style') ?? ''
+          const title = host?.getAttribute('data-title') ?? ''
+          slot.nightstandStop?.()
+          delete slot.nightstandStop
+          const left = document.createElement('dialog')
+          left.setAttribute('style', style)
+          left.setAttribute('data-title', title)
+          const hold = document.createElement('style')
+          hold.textContent = 'html{opacity:0!important}'
+          document.documentElement.append(hold, left)
+          left.showModal()
+        }
+      })
+    }, url)
+    expect(await page.title()).toBe('新标签页')
+    await inject()
+    expect(await covered(page)).toBe(true)
+    expect(await page.evaluate(() => document.querySelectorAll(':root > dialog').length)).toBe(1)
+    expect(await painted(page)).toBe(true)
+    await page.bringToFront()
+    await clickShow(page)
+    await waitCovered(page, false)
+    expect(await page.title()).toBe(pageTitle)
+    expect(await page.evaluate(() => document.querySelectorAll(':root > dialog').length)).toBe(0)
+    await plain.close()
+    await page.close()
+  })
+
+  it('covers a protected page that comes back from the back/forward cache, loaded while covering was off', async () => {
+    await turnCoverOff(s)
+    const url = 'http://example.com/bfcache'
+    const page = await s.browser.newPage()
+    await page.goto(url)
+    await page.evaluate(() => Object.assign(window, {kept: true}))
+    await page.goto('http://example.org/bfcache-next')
+    await turnCoverOn(s)
+    await page.goBack()
+    // The same document, not loaded again (no registration reached it).
+    expect(await page.evaluate(() => (window as unknown as {kept?: boolean}).kept)).toBe(true)
+    await waitCovered(page, true)
+    expect(await muted(s, url)).toBe(true)
+    await page.close()
+  })
+
+  it('starts no copy beside one an older build left running (Chromium, updated from 0.3.0)', async () => {
+    await turnCoverOff(s)
+    const url = 'http://example.com/legacy'
+    const page = await s.browser.newPage()
+    await page.goto(url)
+    // What the background puts there after such an update (`LEGACY_COPY`).
+    await s.sw.evaluate(async (url) => {
+      const [tab] = await chrome.tabs.query({url})
+      await chrome.scripting.executeScript({
+        target: {tabId: tab!.id!},
+        func: () => Object.assign(globalThis, {nightstandStop: 'legacy'})
+      })
+    }, url)
+    await turnCoverOn(s)
+    await sleep(500)
+    expect(await covered(page)).toBe(false)
+    // A new document starts afresh.
+    await page.reload()
+    await waitCovered(page, true)
+    await page.close()
+  })
 })
+
+/** Turns covering off and waits for the page script to be unregistered. */
+async function turnCoverOff(s: ChromeSession): Promise<void> {
+  await s.sw.evaluate(async () => {
+    const stored = (await chrome.storage.local.get('prefs')).prefs as Record<string, unknown> | undefined
+    await chrome.storage.local.set({prefs: {...stored, cover: false}})
+  })
+  await waitPageScript(s, false)
+}
 
 describe.skipIf(!hasChrome)('covering and muting protected pages (Chrome)', () => {
   let s: ChromeSession
