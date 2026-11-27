@@ -39,7 +39,7 @@
     "message": "暫停：暫時不遮住、也不刪除這個網站的瀏覽記錄"
   },
   "resumeEntry": {
-    "message": "恢復：會再刪除一次這個網站的瀏覽記錄"
+    "message": "恢復：會再刪除一次這個網站的瀏覽記錄和書籤"
   },
   "entryPaused": {
     "message": "已暫停"

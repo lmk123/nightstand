@@ -1,7 +1,7 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
 import {historyUrls, launchChrome, openPopup, storageSnapshot, visit, waitStorage, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {addEntry, hasText, onboard, sleep, submitUnlock, waitText} from './support/popup'
+import {addEntry, clearAndType, clickText, hasText, onboard, sleep, submitUnlock, waitText} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp} from './support/temp'
 
@@ -73,10 +73,27 @@ describe.skipIf(!hasChrome)('history cleanup and panic (Chrome)', () => {
     await waitText(p, '已暂停')
     await visit(s, 'http://example.com/paused')
     expect(await historyUrls(s)).toContain('http://example.com/paused')
+    const bookmarks = () => s.sw.evaluate(async () => (await chrome.bookmarks.search({url: 'http://example.com/kept'})).length)
+    await s.sw.evaluate(() => chrome.bookmarks.create({url: 'http://example.com/kept', title: 'kept'}))
 
+    // Editing a paused entry keeps it paused and deletes nothing, so no notice and no check.
+    const edit = await p.$$('button[aria-label="编辑"]')
+    await edit[1]!.click()
+    await clearAndType(p, '#title', 'Renamed while paused')
+    await clickText(p, '保存')
+    await waitText(p, '添加当前页')
+    expect(await hasText(p, 'Renamed while paused')).toBe(true)
+    expect(await hasText(p, '已暂停')).toBe(true)
+    expect(await hasText(p, '请马上检查一下地址栏')).toBe(false)
+    expect(await historyUrls(s)).toContain('http://example.com/paused')
+    expect(await bookmarks()).toBe(1)
+
+    // Resuming wipes the history and bookmarks left meanwhile, then asks for the check.
     await p.click('button[aria-label^="恢复"]')
     await waitStorage(s, (snap) => (snap.index as {site: string[]}).site.length === index.length)
+    await waitText(p, '请马上检查一下地址栏')
     expect(await historyUrls(s)).not.toContain('http://example.com/paused')
+    expect(await bookmarks()).toBe(0)
     expect(await hasText(p, '已暂停')).toBe(false)
     await visit(s, 'http://example.com/resumed')
     expect(await historyUrls(s)).not.toContain('http://example.com/resumed')

@@ -83,6 +83,15 @@ async function protect(entries: readonly VaultEntry[]) {
   await removeBookmarksFor(entries).catch(console.error)
 }
 
+/**
+ * The vault, with the address-bar check when something newly protected
+ * (`protectsNew`) and the user hasn't opted out. Cleaning has missed
+ * suggestions before (redirect hops, other domains), so it asks right away.
+ */
+function saveCheckIf(protectsNew: boolean, session: Session): View {
+  return protectsNew && session.data.settings.skipSaveCheck !== true ? {name: 'vault', notice: 'saveCheck'} : {name: 'vault'}
+}
+
 export default function App() {
   const [boot, setBoot] = useState<Boot | null>(null)
   const [session, setSessionState] = useState<Session | null>(null)
@@ -210,8 +219,9 @@ export default function App() {
 
   /**
    * Pausing only takes the entry out of the match table. Resuming protects it
-   * again like a save: the history (and bookmarks) gathered while it was
-   * paused are wiped, after capturing an icon if it still has none.
+   * again like a save: the history and bookmarks gathered while it was paused
+   * are wiped (the button says so), after capturing an icon if it still has
+   * none, and the address-bar check follows.
    */
   async function togglePause(entry: VaultEntry) {
     if (entry.paused) {
@@ -219,7 +229,10 @@ export default function App() {
       const saved = await update((data) =>
         setEntryPaused(withCached.icon ? setEntryIcons(data, new Map([[entry.id, withCached.icon]])) : data, entry.id, false)
       )
-      if (saved) await protect([withCached])
+      if (!saved) return
+      await protect([withCached])
+      // Only if the list is still showing: don't pull the user out of another view.
+      setView((current) => (current.name === 'vault' ? saveCheckIf(true, saved) : current))
     } else {
       await update((data) => setEntryPaused(data, entry.id, true))
     }
@@ -316,12 +329,11 @@ export default function App() {
               return skipNoticeFromNow ? updateSettings(next, {skipSaveNotice: true}) : next
             })
             if (!savedSession) return
+            // An edited paused entry stays paused and protects nothing yet:
+            // resuming it cleans and asks for the check instead.
+            if (entry.paused) return setView({name: 'vault'})
             await protect([entry])
-            // Cleaning has missed address-bar suggestions before (redirect
-            // hops, other domains): ask the user to check it right away
-            // whenever this save protects something new, unless they opted out.
-            const check = widensScope(view.editing, entry) && savedSession.data.settings.skipSaveCheck !== true
-            setView(check ? {name: 'vault', notice: 'saveCheck'} : {name: 'vault'})
+            setView(saveCheckIf(widensScope(view.editing, entry), savedSession))
           }}
           onDelete={async (entry) => {
             await update((data) => removeEntry(data, entry.id))

@@ -77,8 +77,8 @@ export interface MergeResult {
   updated: number
   unchanged: number
   /**
-   * The added and updated entries, as they are in `entries`: what the import
-   * newly protects, except the paused ones (see `activeEntries`).
+   * The added and updated entries, as they are in `entries`, paused ones
+   * included. What the import newly protects is `activeEntries(changed)`.
    */
   changed: VaultEntry[]
 }

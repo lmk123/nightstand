@@ -104,7 +104,8 @@ export function EntryForm({
     }
     const duplicate = findDuplicate(entries, entry, editing?.id)
     if (duplicate) return setError(t('errDuplicate', entryTitle(duplicate)))
-    if (skipNotice) return save(entry, false)
+    // A paused entry deletes nothing when saved (see `onSave`), so there is nothing to announce.
+    if (skipNotice || entry.paused) return save(entry, false)
     setBusy(true)
     let history: number
     let bookmarks: number
