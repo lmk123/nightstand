@@ -1,7 +1,7 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
-import {historyUrls, launchChrome, openPopup, storageSnapshot, visit, type ChromeSession} from './support/chrome'
+import {historyUrls, launchChrome, openPopup, storageSnapshot, visit, waitStorage, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {addEntry, onboard, sleep} from './support/popup'
+import {addEntry, hasText, onboard, sleep, submitUnlock, waitText} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp} from './support/temp'
 
@@ -59,6 +59,28 @@ describe.skipIf(!hasChrome)('history cleanup and panic (Chrome)', () => {
       'http://example.org/y',
       'http://example.org/z'
     ])
+  })
+
+  it('a paused entry is not cleaned; resuming it cleans what it left', async () => {
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    // Newest first: the exact example.org entry, then example.com.
+    const pause = await p.$$('button[aria-label^="暂停"]')
+    expect(pause).toHaveLength(2)
+    const index = ((await storageSnapshot(s)).index as {site: string[]}).site
+    await pause[1]!.click()
+    await waitStorage(s, (snap) => (snap.index as {site: string[]}).site.length < index.length)
+    await waitText(p, '已暂停')
+    await visit(s, 'http://example.com/paused')
+    expect(await historyUrls(s)).toContain('http://example.com/paused')
+
+    await p.click('button[aria-label^="恢复"]')
+    await waitStorage(s, (snap) => (snap.index as {site: string[]}).site.length === index.length)
+    expect(await historyUrls(s)).not.toContain('http://example.com/paused')
+    expect(await hasText(p, '已暂停')).toBe(false)
+    await visit(s, 'http://example.com/resumed')
+    expect(await historyUrls(s)).not.toContain('http://example.com/resumed')
+    await p.close()
   })
 
   it("never leaves the extension's own pages in history", async () => {

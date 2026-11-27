@@ -35,6 +35,15 @@
   "edit": {
     "message": "編輯"
   },
+  "pauseEntry": {
+    "message": "暫停：暫時不遮住、也不刪除這個網站的瀏覽記錄"
+  },
+  "resumeEntry": {
+    "message": "恢復：會再刪除一次這個網站的瀏覽記錄"
+  },
+  "entryPaused": {
+    "message": "已暫停"
+  },
   "delete": {
     "message": "刪除"
   },

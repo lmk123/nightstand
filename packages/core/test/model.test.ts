@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest'
 import {
+  activeEntries,
   addEntry,
   createEntry,
   editEntry,
@@ -17,8 +18,10 @@ import {
   replaceEntry,
   searchEntries,
   setEntryIcons,
+  setEntryPaused,
   updateSettings,
-  widensScope
+  widensScope,
+  type VaultEntry
 } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
@@ -107,6 +110,34 @@ describe('editEntry', () => {
     expect(editEntry(e, {url: 'example.com', matchMode: 'exact'}).icon).toBe(ICON)
     expect(editEntry(e, {url: 'example.org'})).not.toHaveProperty('icon')
     expect(editEntry(createEntry({url: 'example.com'}, NOW), {url: 'example.com'})).not.toHaveProperty('icon')
+  })
+})
+
+describe('pausing entries', () => {
+  it('pauses and resumes one entry by id without touching the rest', () => {
+    const a = createEntry({url: 'example.com'}, NOW, 'a')
+    const b = createEntry({url: 'example.org'}, NOW, 'b')
+    const data = addEntry(addEntry(emptyVaultData(), a), b)
+    const paused = setEntryPaused(data, 'a', true)
+    expect(paused.entries.find((e) => e.id === 'a')?.paused).toBe(true)
+    expect(paused.entries.find((e) => e.id === 'b')).not.toHaveProperty('paused')
+    expect(data.entries.every((e) => e.paused === undefined)).toBe(true)
+    expect(activeEntries(paused.entries).map((e) => e.id)).toEqual(['b'])
+    const resumed = setEntryPaused(paused, 'a', false)
+    expect(resumed.entries.find((e) => e.id === 'a')).not.toHaveProperty('paused')
+  })
+  it('an edit keeps the entry paused', () => {
+    const e: VaultEntry = {...createEntry({url: 'example.com'}, NOW), paused: true}
+    expect(editEntry(e, {url: 'example.org', title: 'T'}).paused).toBe(true)
+    expect(editEntry(createEntry({url: 'example.com'}, NOW), {url: 'example.com'})).not.toHaveProperty('paused')
+  })
+  it('round-trips through the payload; any value but true reads as active', () => {
+    const current = createEntry({url: 'example.com'}, NOW, 'x')
+    const paused: VaultEntry = {...current, paused: true}
+    expect(migrateVaultData(JSON.parse(JSON.stringify({version: 4, entries: [paused], settings: {}}))).entries).toEqual([paused])
+    for (const value of [false, 'yes', 1, null]) {
+      expect(migrateVaultData({version: 4, entries: [{...current, paused: value}]}).entries).toEqual([current])
+    }
   })
 })
 

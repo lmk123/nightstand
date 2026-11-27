@@ -35,6 +35,15 @@
   "edit": {
     "message": "编辑"
   },
+  "pauseEntry": {
+    "message": "暂停：暂时不遮住、也不删除这个网站的浏览记录"
+  },
+  "resumeEntry": {
+    "message": "恢复：会再删除一次这个网站的浏览记录"
+  },
+  "entryPaused": {
+    "message": "已暂停"
+  },
   "delete": {
     "message": "删除"
   },

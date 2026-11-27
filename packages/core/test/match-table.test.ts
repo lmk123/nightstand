@@ -109,6 +109,20 @@ describe('table', () => {
     expect(JSON.stringify(table)).not.toContain('example')
     expect(table.site[0]).toMatch(/^[0-9a-f]{64}$/)
   })
+  it('leaves paused entries out', async () => {
+    const table = await buildMatchTable([
+      {url: 'https://example.com/', matchMode: 'site', extraHosts: ['cdn.example.net'], paused: true},
+      {url: 'https://example.org/a', matchMode: 'exact', paused: true},
+      {url: 'https://example.info/', matchMode: 'site'}
+    ])
+    expect(table.site).toHaveLength(1)
+    expect(table.exact).toHaveLength(0)
+    const m = createMatcher(table)
+    expect(await m.matches('https://example.com/')).toBe(false)
+    expect(await m.matches('https://cdn.example.net/x')).toBe(false)
+    expect(await m.matches('https://example.org/a')).toBe(false)
+    expect(await m.matches('https://example.info/')).toBe(true)
+  })
   it('hashes extra hosts as site hosts, for exact entries too', async () => {
     const table = await buildMatchTable([
       {url: 'https://example.com/', matchMode: 'site', extraHosts: ['twimg.com', 'example.com']},

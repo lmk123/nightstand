@@ -89,6 +89,26 @@ describe('mergeEntries', () => {
     expect(result.updated).toBe(1)
   })
 
+  it('a duplicate stays paused only when both copies are', () => {
+    const paused = {paused: true} as const
+    // Newer paused copy over an active one: stays active.
+    const activeWins = mergeEntries([base('a', 'https://example.com/')], [base('x', 'https://example.com/', {...paused, title: 'New', lastOpenedAt: 500})])
+    expect(activeWins.entries[0]).toMatchObject({title: 'New'})
+    expect(activeWins.entries[0]).not.toHaveProperty('paused')
+    // Newer active copy over a paused one: resumes.
+    const resumed = mergeEntries([base('a', 'https://example.com/', paused)], [base('x', 'https://example.com/', {lastOpenedAt: 500})])
+    expect(resumed.entries[0]).not.toHaveProperty('paused')
+    // Older active copy over a paused one: resumes too, and counts as updated.
+    const older = mergeEntries([base('a', 'https://example.com/', {...paused, lastOpenedAt: 900})], [base('x', 'https://example.com/')])
+    expect(older.entries[0]).not.toHaveProperty('paused')
+    expect(older).toMatchObject({updated: 1, unchanged: 0})
+    // Both paused: stays paused.
+    const both = mergeEntries([base('a', 'https://example.com/', paused)], [base('x', 'https://example.com/', {...paused, lastOpenedAt: 500})])
+    expect(both.entries[0]?.paused).toBe(true)
+    // A new paused entry is added paused.
+    expect(mergeEntries([], [base('y', 'https://example.org/', paused)]).entries[0]?.paused).toBe(true)
+  })
+
   it('a newer duplicate without an icon keeps the current icon', () => {
     const icon = 'data:image/png;base64,iVBORw0KGgo='
     const current = [base('a', 'https://example.com/', {icon})]

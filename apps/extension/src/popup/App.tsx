@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
 import {
+  activeEntries,
   changePassphrase,
   entrySiteHosts,
   hostOf,
@@ -9,6 +10,7 @@ import {
   replaceEntry,
   rotateRecoveryCode,
   setEntryIcons,
+  setEntryPaused,
   updateSettings,
   widensScope,
   type DecoyConfig,
@@ -206,6 +208,23 @@ export default function App() {
     return saved !== null
   }
 
+  /**
+   * Pausing only takes the entry out of the match table. Resuming protects it
+   * again like a save: the history (and bookmarks) gathered while it was
+   * paused are wiped, after capturing an icon if it still has none.
+   */
+  async function togglePause(entry: VaultEntry) {
+    if (entry.paused) {
+      const withCached = await withIcon(entry)
+      const saved = await update((data) =>
+        setEntryPaused(withCached.icon ? setEntryIcons(data, new Map([[entry.id, withCached.icon]])) : data, entry.id, false)
+      )
+      if (saved) await protect([withCached])
+    } else {
+      await update((data) => setEntryPaused(data, entry.id, true))
+    }
+  }
+
   async function addCurrentTab() {
     const tab = await getActiveTab()
     if (!tab || !hostOf(tab.url)) {
@@ -274,6 +293,7 @@ export default function App() {
           onSkipCoverNotice={(skip) => update((data) => updateSettings(data, {skipCoverNotice: skip})).then(() => undefined, console.error)}
           onOpen={openEntry}
           onEdit={(entry) => setView({name: 'entry', editing: entry})}
+          onTogglePause={(entry) => void togglePause(entry).catch(console.error)}
           onAddCurrent={addCurrentTab}
           onAddManual={() => setView({name: 'entry'})}
           onSettings={() => setView({name: 'settings'})}
@@ -360,7 +380,7 @@ export default function App() {
           onImported={async (merged) => {
             // Merged against this screen's data; nothing else changes the vault meanwhile.
             await update((data) => ({...data, entries: merged.entries}))
-            await protect(merged.changed)
+            await protect(activeEntries(merged.changed))
           }}
         />
       )

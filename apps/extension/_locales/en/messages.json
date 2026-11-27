@@ -35,6 +35,15 @@
   "edit": {
     "message": "Edit"
   },
+  "pauseEntry": {
+    "message": "Pause: stop covering this site and deleting its history"
+  },
+  "resumeEntry": {
+    "message": "Resume: its history will be deleted again"
+  },
+  "entryPaused": {
+    "message": "Paused"
+  },
   "delete": {
     "message": "Delete"
   },

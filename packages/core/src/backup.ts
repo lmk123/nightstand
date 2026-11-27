@@ -76,7 +76,10 @@ export interface MergeResult {
   added: number
   updated: number
   unchanged: number
-  /** The added and updated entries, as they are in `entries`: what the import newly protects. */
+  /**
+   * The added and updated entries, as they are in `entries`: what the import
+   * newly protects, except the paused ones (see `activeEntries`).
+   */
   changed: VaultEntry[]
 }
 
@@ -95,7 +98,8 @@ function unionHosts(existing: VaultEntry, incoming: VaultEntry): string[] {
  * `entryKey` (match mode + normalized host or URL); the more recent of the
  * two wins, keeping the current entry's id and the higher open count. Extra
  * hosts are the union of both, so an older copy can still add hosts.
- * Imported entries that are new are appended in their original order.
+ * An entry stays paused only if both copies are. Imported entries that are
+ * new are appended in their original order (paused ones stay paused).
  */
 export function mergeEntries(
   current: readonly VaultEntry[],
@@ -129,6 +133,9 @@ export function mergeEntries(
     // which copy has the newer extra hosts: keep both sides' (a merge never
     // drops protection).
     const extraHosts = unionHosts(existing, entry)
+    // Paused only when both copies are, whichever is newer: like extra
+    // hosts, a merge never drops protection.
+    const paused = existing.paused === true && entry.paused === true
     if (recency(entry) > recency(existing)) {
       entries[existingIndex] = {
         ...entry,
@@ -140,10 +147,12 @@ export function mergeEntries(
       // where no icon was cached) shouldn't wipe it.
       const icon = entry.icon ?? existing.icon
       if (icon !== undefined) entries[existingIndex].icon = icon
+      if (!paused) delete entries[existingIndex].paused
       changedAt.add(existingIndex)
       updated++
-    } else if (extraHosts.length > existing.extraHosts.length) {
+    } else if (extraHosts.length > existing.extraHosts.length || (existing.paused === true) !== paused) {
       entries[existingIndex] = {...existing, extraHosts}
+      if (!paused) delete entries[existingIndex].paused
       changedAt.add(existingIndex)
       updated++
     } else {

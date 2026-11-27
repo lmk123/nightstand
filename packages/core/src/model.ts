@@ -27,6 +27,14 @@ export interface VaultEntry {
    * the list then shows a letter. See `isEntryIcon` for what is accepted.
    */
   icon?: string
+  /**
+   * Set while the user has paused this entry: it stays in the list but
+   * protects nothing (no cover, no history cleaning) until resumed, which
+   * cleans its history again like a save. Absent means active. Optional and
+   * without a payload version bump: an older build drops it, which only
+   * resumes the entry (protection widens, never narrows).
+   */
+  paused?: true
 }
 
 /** Longest icon accepted, in characters (a 32×32 PNG is a few KB). */
@@ -71,7 +79,8 @@ export interface VaultSettings {
  * `tags`; 4 — entries gain an optional `icon`. Optional fields whose loss
  * on an older build only costs a preference (`skipSaveNotice`,
  * `skipSaveCheck`, `skipCoverNotice`) were added without a bump (see
- * packages/core/.claude/rules/storage/versioning.md). Settings once had an
+ * packages/core/.claude/rules/storage/versioning.md), and so was an entry's
+ * optional `paused`, whose loss only resumes the entry. Settings once had an
  * `openMode` (current tab / new tab / incognito); entries now always open in
  * a new tab. It was removed without a bump too, as that rule allows: older
  * builds read its absence as their default, a new tab, which is the current
@@ -185,6 +194,7 @@ export function editEntry(entry: VaultEntry, patch: EntryInput): VaultEntry {
   updated.openCount = entry.openCount
   if (entry.lastOpenedAt !== undefined) updated.lastOpenedAt = entry.lastOpenedAt
   if (entry.icon !== undefined && hostOf(updated.url) === hostOf(entry.url)) updated.icon = entry.icon
+  if (entry.paused) updated.paused = true
   return updated
 }
 
@@ -259,6 +269,25 @@ export function replaceEntry(data: VaultData, entry: VaultEntry): VaultData {
 
 export function removeEntry(data: VaultData, id: string): VaultData {
   return {...data, entries: data.entries.filter((e) => e.id !== id)}
+}
+
+/** Pauses or resumes one entry (see `VaultEntry.paused`). */
+export function setEntryPaused(data: VaultData, id: string, paused: boolean): VaultData {
+  return {
+    ...data,
+    entries: data.entries.map((e) => {
+      if (e.id !== id) return e
+      const next = {...e}
+      if (paused) next.paused = true
+      else delete next.paused
+      return next
+    })
+  }
+}
+
+/** Entries that currently protect their sites: every one that isn't paused. */
+export function activeEntries<T extends {paused?: boolean}>(entries: readonly T[]): T[] {
+  return entries.filter((e) => !e.paused)
 }
 
 /** Gives entries (by id) an icon; ids not in the vault and invalid icons are ignored. */
@@ -344,7 +373,12 @@ export function isVaultEntry(value: unknown): value is VaultEntry {
 }
 
 /** Copies only the current entry fields, so removed ones (`note`, `tags`) don't linger. */
-function pickEntry(e: Omit<VaultEntry, 'extraHosts' | 'icon'>, extraHosts: string[], icon?: unknown): VaultEntry {
+function pickEntry(
+  e: Omit<VaultEntry, 'extraHosts' | 'icon' | 'paused'>,
+  extraHosts: string[],
+  icon?: unknown,
+  paused?: unknown
+): VaultEntry {
   const entry: VaultEntry = {
     id: e.id,
     url: e.url,
@@ -356,6 +390,8 @@ function pickEntry(e: Omit<VaultEntry, 'extraHosts' | 'icon'>, extraHosts: strin
   }
   if (e.lastOpenedAt !== undefined) entry.lastOpenedAt = e.lastOpenedAt
   if (isEntryIcon(icon)) entry.icon = icon
+  // Anything but `true` reads as active: a malformed value must not stop protection.
+  if (paused === true) entry.paused = true
   return entry
 }
 
@@ -393,7 +429,7 @@ export function migrateVaultData(raw: unknown): VaultData {
       if (!Array.isArray(raw.entries) || !raw.entries.every(isVaultEntry)) {
         throw new CoreError('invalid-data', 'bad entries')
       }
-      entries = raw.entries.map((e) => pickEntry(e, [...e.extraHosts], e.icon))
+      entries = raw.entries.map((e) => pickEntry(e, [...e.extraHosts], e.icon, (e as {paused?: unknown}).paused))
       break
     default:
       throw new CoreError('unsupported-version', `payload version ${String(raw.version)}`)

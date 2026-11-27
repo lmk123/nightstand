@@ -35,6 +35,15 @@
   "edit": {
     "message": "編集"
   },
+  "pauseEntry": {
+    "message": "一時停止：このサイトを隠さず、履歴も削除しません"
+  },
+  "resumeEntry": {
+    "message": "再開：このサイトの履歴をもう一度削除します"
+  },
+  "entryPaused": {
+    "message": "一時停止中"
+  },
   "delete": {
     "message": "削除"
   },
