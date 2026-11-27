@@ -109,22 +109,42 @@ describe.skipIf(!hasChrome)('history cleanup and panic (Chrome)', () => {
     // Newest first: sub.example.com, the exact example.com/page, example.org (exact), example.com.
     let pause = await p.$$('button[aria-label^="暂停"]')
     expect(pause).toHaveLength(4)
-    // The whole site: both newer entries still cover part of it.
+    const overlap = '仍在保护这个网站'
+    const noticeText = () =>
+      p.evaluate(
+        (overlap) => [...document.querySelectorAll('[role=status]')].map((el) => el.textContent ?? '').find((t) => t.includes(overlap)) ?? null,
+        overlap
+      )
+    // The whole site: both newer entries still cover part of it. The check
+    // from the last save is still pending: it stays, and the overlap notice
+    // shows once it is dismissed.
     await pause[3]!.click()
-    await waitText(p, '仍在保护这个网站')
+    await waitStorage(s, (snap) => (snap.index as Index).site.length === 1)
+    await waitText(p, '已暂停')
+    expect(await hasText(p, '请马上检查一下地址栏')).toBe(true)
+    expect(await hasText(p, overlap)).toBe(false)
+    await clickText(p, '知道了')
+    await waitText(p, overlap)
+    const both = await noticeText()
     // The page overlaps nothing active now, but sub.example.com still covers
-    // part of example.com: that notice stays.
+    // part of example.com: that notice stays, now naming only sub.example.com.
     pause = await p.$$('button[aria-label^="暂停"]')
     await pause[1]!.click()
     await waitStorage(s, (snap) => (snap.index as Index).exact.length === 1)
-    await sleep(300)
-    expect(await hasText(p, '仍在保护这个网站')).toBe(true)
+    await p.waitForFunction(
+      (overlap, before) => {
+        const text = [...document.querySelectorAll('[role=status]')].map((el) => el.textContent ?? '').find((t) => t.includes(overlap))
+        return text !== undefined && text !== before
+      },
+      {},
+      overlap,
+      both
+    )
     // Pausing sub.example.com too: nothing active overlaps example.com any more.
     pause = await p.$$('button[aria-label^="暂停"]')
     await pause[0]!.click()
     await waitStorage(s, (snap) => (snap.index as Index).site.length === 0)
-    await sleep(300)
-    expect(await hasText(p, '仍在保护这个网站')).toBe(false)
+    await p.waitForFunction((overlap) => !document.body.textContent?.includes(overlap), {}, overlap)
     // Back as the later tests expect: example.com protected, the extra entries left paused.
     const resume = await p.$$('button[aria-label^="恢复"]')
     expect(resume).toHaveLength(3)

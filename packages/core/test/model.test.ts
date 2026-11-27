@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest'
 import {
   activeEntries,
+  activeEntriesCoverUrl,
   addEntry,
   createEntry,
   editEntry,
@@ -17,6 +18,7 @@ import {
   removeEntry,
   overlappingActiveEntries,
   replaceEntry,
+  resumeWidensScope,
   scopesOverlap,
   searchEntries,
   setEntryIcons,
@@ -164,6 +166,21 @@ describe('pausing entries', () => {
     expect(overlappingActiveEntries(data, 'whole').map((e) => e.id)).toEqual(['page'])
     expect(overlappingActiveEntries([whole, {...page, paused: true}, other], 'whole')).toEqual([])
     expect(overlappingActiveEntries(data, 'missing')).toEqual([])
+  })
+  it('resumeWidensScope: only when no other active entry already covers it all', () => {
+    const whole = createEntry({url: 'example.com'}, NOW, 'whole')
+    const page = createEntry({url: 'https://example.com/a', matchMode: 'exact'}, NOW, 'page')
+    expect(resumeWidensScope([whole, page], 'page')).toBe(false)
+    expect(resumeWidensScope([whole, page], 'whole')).toBe(true)
+    expect(resumeWidensScope([{...whole, paused: true}, page], 'page')).toBe(true)
+    expect(resumeWidensScope([whole, {...page, extraHosts: ['example.org']}], 'page')).toBe(true)
+    expect(resumeWidensScope([whole], 'missing')).toBe(false)
+  })
+  it('activeEntriesCoverUrl skips paused entries', () => {
+    const whole = createEntry({url: 'example.com'}, NOW, 'whole')
+    expect(activeEntriesCoverUrl([whole], 'https://mail.example.com/x')).toBe(true)
+    expect(activeEntriesCoverUrl([{...whole, paused: true}], 'https://example.com/x')).toBe(false)
+    expect(activeEntriesCoverUrl([whole], 'https://example.org/')).toBe(false)
   })
   it('round-trips through the payload; any value but true reads as active', () => {
     const current = createEntry({url: 'example.com'}, NOW, 'x')

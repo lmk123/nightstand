@@ -269,6 +269,22 @@ export function overlappingActiveEntries(entries: readonly VaultEntry[], id: str
   return entries.filter((e) => e.id !== id && !e.paused && scopesOverlap(e, target))
 }
 
+/**
+ * Does resuming entry `id` protect anything no other active entry already
+ * does? Checked against one entry at a time (see `widensScope`), so a scope
+ * only several entries cover together still counts as new.
+ */
+export function resumeWidensScope(entries: readonly VaultEntry[], id: string): boolean {
+  const target = entries.find((e) => e.id === id)
+  if (!target) return false
+  return !entries.some((e) => e.id !== id && !e.paused && !widensScope(e, target))
+}
+
+/** Is `url` protected by any active entry? */
+export function activeEntriesCoverUrl(entries: readonly VaultEntry[], url: string): boolean {
+  return entries.some((e) => !e.paused && entryCoversUrl(e, url))
+}
+
 export function findDuplicate(
   entries: readonly VaultEntry[],
   candidate: Pick<VaultEntry, 'url' | 'matchMode'>,

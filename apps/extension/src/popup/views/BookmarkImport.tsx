@@ -2,6 +2,7 @@ import {useEffect, useMemo, useState} from 'react'
 import {Folder} from 'lucide-react'
 import {cn} from 'cn'
 import {
+  activeEntriesCoverUrl,
   addEntry,
   createEntry,
   findDuplicate,
@@ -67,21 +68,15 @@ export function BookmarkImport({
     setFailed(false)
     try {
       const fresh: VaultEntry[] = []
-      // A bookmark for a paused entry adds nothing and stays unprotected: said
-      // in the result, and the bookmark itself is kept, as the site is meant
-      // to show normally while paused.
-      const paused = new Set<string>()
-      const keep = new Set<string>()
+      /** Bookmark id → the paused entry it duplicates. */
+      const pausedDuplicates = new Map<string, {entryId: string; url: string}>()
       const now = Date.now()
       for (const id of selected) {
         const row = byId.get(id)
         if (!row?.url) continue
         const entry = createEntry({url: row.url, title: row.title, matchMode}, now)
         const existing = findDuplicate(data.entries, entry)
-        if (existing?.paused) {
-          paused.add(existing.id)
-          keep.add(id)
-        }
+        if (existing?.paused) pausedDuplicates.set(id, {entryId: existing.id, url: row.url})
         if (existing || findDuplicate(fresh, entry)) continue
         fresh.push(entry)
       }
@@ -89,6 +84,18 @@ export function BookmarkImport({
       // Several at once: one after another, a big folder takes long enough
       // that the popup gets closed and nothing is imported.
       const added = await mapConcurrent(fresh, ICON_CONCURRENCY, withIcon)
+      // A bookmark for a paused entry adds nothing and stays unprotected: said
+      // in the result, and the bookmark itself is kept, as the site is meant
+      // to show normally while paused. Unless another active entry (already
+      // there or added now) still protects its URL: then it goes as usual.
+      const protecting = [...data.entries, ...added]
+      const paused = new Set<string>()
+      const keep = new Set<string>()
+      for (const [id, {entryId, url}] of pausedDuplicates) {
+        if (activeEntriesCoverUrl(protecting, url)) continue
+        paused.add(entryId)
+        keep.add(id)
+      }
       await onImport(
         added.reduce((next, entry) => addEntry(next, entry), data),
         added
