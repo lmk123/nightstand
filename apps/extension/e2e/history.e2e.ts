@@ -104,22 +104,32 @@ describe.skipIf(!hasChrome)('history cleanup and panic (Chrome)', () => {
     const p = await openPopup(s)
     expect(await submitUnlock(p, 'notes')).toBe(true)
     await addEntry(p, 'http://example.com/page', 'exact')
-    // Newest first: the exact example.com/page entry, then example.org, then example.com.
+    await addEntry(p, 'sub.example.com')
+    type Index = {site: string[]; exact: string[]}
+    // Newest first: sub.example.com, the exact example.com/page, example.org (exact), example.com.
     let pause = await p.$$('button[aria-label^="暂停"]')
-    expect(pause).toHaveLength(3)
-    await pause[0]!.click()
+    expect(pause).toHaveLength(4)
+    // The whole site: both newer entries still cover part of it.
+    await pause[3]!.click()
     await waitText(p, '仍在保护这个网站')
-    // Pausing the whole-site entry too: nothing active overlaps either any more.
+    // The page overlaps nothing active now, but sub.example.com still covers
+    // part of example.com: that notice stays.
     pause = await p.$$('button[aria-label^="暂停"]')
     await pause[1]!.click()
-    await waitStorage(s, (snap) => (snap.index as {site: string[]}).site.length === 0)
+    await waitStorage(s, (snap) => (snap.index as Index).exact.length === 1)
+    await sleep(300)
+    expect(await hasText(p, '仍在保护这个网站')).toBe(true)
+    // Pausing sub.example.com too: nothing active overlaps example.com any more.
+    pause = await p.$$('button[aria-label^="暂停"]')
+    await pause[0]!.click()
+    await waitStorage(s, (snap) => (snap.index as Index).site.length === 0)
     await sleep(300)
     expect(await hasText(p, '仍在保护这个网站')).toBe(false)
-    // Back as the later tests expect: example.com protected, the extra page left paused.
+    // Back as the later tests expect: example.com protected, the extra entries left paused.
     const resume = await p.$$('button[aria-label^="恢复"]')
-    expect(resume).toHaveLength(2)
-    await resume[1]!.click()
-    await waitStorage(s, (snap) => (snap.index as {site: string[]}).site.length === 1)
+    expect(resume).toHaveLength(3)
+    await resume[2]!.click()
+    await waitStorage(s, (snap) => (snap.index as Index).site.length === 1)
     await p.close()
   })
 

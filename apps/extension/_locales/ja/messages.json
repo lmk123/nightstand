@@ -53,6 +53,9 @@
       }
     }
   },
+  "listLocale": {
+    "message": "ja"
+  },
   "delete": {
     "message": "削除"
   },
@@ -284,6 +287,15 @@
   },
   "errDuplicate": {
     "message": "保存済みです：$TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "errDuplicatePaused": {
+    "message": "保存済みですが一時停止中です：$TITLE$。保護するには、リストで再開してください。",
     "placeholders": {
       "title": {
         "content": "$1",
@@ -575,7 +587,7 @@
     }
   },
   "bmImportPausedSkipped": {
-    "message": "$COUNT$ 件はリストにありますが一時停止中のため、インポートも履歴の削除もしていません。保護するには、リストで再開してください。",
+    "message": "$COUNT$ 件はリストにありますが一時停止中のため、インポートも履歴の削除もせず、ブックマークも残しました。保護するには、リストで再開してください。",
     "placeholders": {
       "count": {
         "content": "$1",

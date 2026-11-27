@@ -53,6 +53,9 @@
       }
     }
   },
+  "listLocale": {
+    "message": "zh-TW"
+  },
   "delete": {
     "message": "刪除"
   },
@@ -284,6 +287,15 @@
   },
   "errDuplicate": {
     "message": "已經收藏過：$TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "errDuplicatePaused": {
+    "message": "已經收藏過，但處於暫停狀態：$TITLE$。要保護它，請在清單中恢復。",
     "placeholders": {
       "title": {
         "content": "$1",
@@ -575,7 +587,7 @@
     }
   },
   "bmImportPausedSkipped": {
-    "message": "另有 $COUNT$ 個網站已在清單中但處於暫停狀態，沒有匯入，瀏覽記錄也沒有清除；要保護它們，請在清單中恢復。",
+    "message": "另有 $COUNT$ 個網站已在清單中但處於暫停狀態，沒有匯入，書籤保留，瀏覽記錄也沒有清除；要保護它們，請在清單中恢復。",
     "placeholders": {
       "count": {
         "content": "$1",

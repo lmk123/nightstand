@@ -67,15 +67,21 @@ export function BookmarkImport({
     setFailed(false)
     try {
       const fresh: VaultEntry[] = []
-      // A bookmark for a paused entry adds nothing and stays unprotected: said in the result.
+      // A bookmark for a paused entry adds nothing and stays unprotected: said
+      // in the result, and the bookmark itself is kept, as the site is meant
+      // to show normally while paused.
       const paused = new Set<string>()
+      const keep = new Set<string>()
       const now = Date.now()
       for (const id of selected) {
         const row = byId.get(id)
         if (!row?.url) continue
         const entry = createEntry({url: row.url, title: row.title, matchMode}, now)
         const existing = findDuplicate(data.entries, entry)
-        if (existing?.paused) paused.add(existing.id)
+        if (existing?.paused) {
+          paused.add(existing.id)
+          keep.add(id)
+        }
         if (existing || findDuplicate(fresh, entry)) continue
         fresh.push(entry)
       }
@@ -87,7 +93,7 @@ export function BookmarkImport({
         added.reduce((next, entry) => addEntry(next, entry), data),
         added
       )
-      if (removeOriginals) await removeBookmarks([...selected])
+      if (removeOriginals) await removeBookmarks([...selected].filter((id) => !keep.has(id)))
       setSelected(new Set())
       setDone({added: added.length, paused: paused.size})
     } catch (error) {

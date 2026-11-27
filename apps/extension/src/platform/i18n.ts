@@ -11,7 +11,11 @@ export function t(key: MessageKey, ...substitutions: string[]): string {
   return chrome.i18n.getMessage(key, substitutions)
 }
 
-/** Joins names as a list in the UI language ("A, B, and C", "A、B和C"). */
+/**
+ * Joins names as a list in the language the messages are in ("A, B, and C",
+ * "A、B和C"): the catalog's own `listLocale`, not the browser's UI language,
+ * which falls back to en for languages without a catalog.
+ */
 export function listText(items: readonly string[]): string {
-  return new Intl.ListFormat(chrome.i18n.getUILanguage(), {type: 'conjunction'}).format(items)
+  return new Intl.ListFormat(t('listLocale'), {type: 'conjunction'}).format(items)
 }

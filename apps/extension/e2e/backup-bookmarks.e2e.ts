@@ -193,6 +193,9 @@ describe.skipIf(!hasChrome)('backup, passphrase management, bookmarks (Chrome)',
     await clickText(p, '导入所选（1）')
     await waitText(p, '已导入 0 条')
     await waitText(p, '另有 1 个网站已在列表里但处于暂停状态')
+    // "Remove originals" is on by default, but this bookmark's site is paused: it stays.
+    const kept = await s.sw.evaluate(() => chrome.bookmarks.search({url: 'https://alpha.example/again'}).then((r) => r.length))
+    expect(kept).toBe(1)
     await p.close()
   })
 })

@@ -53,6 +53,9 @@
       }
     }
   },
+  "listLocale": {
+    "message": "zh-CN"
+  },
   "delete": {
     "message": "删除"
   },
@@ -284,6 +287,15 @@
   },
   "errDuplicate": {
     "message": "已经收藏过：$TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "errDuplicatePaused": {
+    "message": "已经收藏过，但处于暂停状态：$TITLE$。要保护它，请在列表里恢复。",
     "placeholders": {
       "title": {
         "content": "$1",
@@ -575,7 +587,7 @@
     }
   },
   "bmImportPausedSkipped": {
-    "message": "另有 $COUNT$ 个网站已在列表里但处于暂停状态，没有导入，浏览记录也没有清理；要保护它们，请在列表里恢复。",
+    "message": "另有 $COUNT$ 个网站已在列表里但处于暂停状态，没有导入，书签保留，浏览记录也没有清理；要保护它们，请在列表里恢复。",
     "placeholders": {
       "count": {
         "content": "$1",

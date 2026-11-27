@@ -48,8 +48,8 @@ type View =
   | {name: 'locked'}
   | {name: 'decoySettings'}
   | {name: 'vault'; notice?: 'unsupportedTab' | 'saveCheck'}
-  /** Just paused an entry that these other active entries still partly cover. */
-  | {name: 'vault'; notice: 'pauseOverlap'; titles: string[]}
+  /** Paused entry `id`, which these other active entries still partly cover. */
+  | {name: 'vault'; notice: 'pauseOverlap'; id: string; titles: string[]}
   | {name: 'entry'; editing?: VaultEntry; prefill?: EntryInput}
   | {name: 'settings'}
   | {name: 'resetPassphrase'}
@@ -94,6 +94,16 @@ async function protect(entries: readonly VaultEntry[]) {
  */
 function saveCheckIf(protectsNew: boolean, session: Session): View {
   return protectsNew && session.data.settings.skipSaveCheck !== true ? {name: 'vault', notice: 'saveCheck'} : {name: 'vault'}
+}
+
+/**
+ * The overlap notice for entry `id` as `data` stands now: null once it was
+ * resumed or no active entry covers any of it any more.
+ */
+function overlapNotice(data: VaultData, id: string): View | null {
+  if (data.entries.find((e) => e.id === id)?.paused !== true) return null
+  const titles = overlappingActiveEntries(data.entries, id).map(entryTitle)
+  return titles.length > 0 ? {name: 'vault', notice: 'pauseOverlap', id, titles} : null
 }
 
 export default function App() {
@@ -236,18 +246,27 @@ export default function App() {
       if (!saved) return
       await protect([withCached])
       // Only if the list is still showing: don't pull the user out of another view.
-      setView((current) => (current.name === 'vault' ? saveCheckIf(true, saved) : current))
+      setView((current) => {
+        if (current.name !== 'vault') return current
+        const check = saveCheckIf(true, saved)
+        // No address-bar check to show: an earlier overlap notice that still holds stays.
+        if (check.name === 'vault' && check.notice === undefined && current.notice === 'pauseOverlap') {
+          return overlapNotice(saved.data, current.id) ?? check
+        }
+        return check
+      })
     } else {
       const saved = await update((data) => setEntryPaused(data, entry.id, true))
       if (!saved) return
       // Other entries still covering part of it keep covering and cleaning
       // that part: say which, as the pause button promises otherwise.
-      const titles = overlappingActiveEntries(saved.data.entries, entry.id).map(entryTitle)
       setView((current) => {
         if (current.name !== 'vault') return current
-        if (titles.length > 0) return {name: 'vault', notice: 'pauseOverlap', titles}
-        // An earlier pause's notice may no longer hold.
-        return current.notice === 'pauseOverlap' ? {name: 'vault'} : current
+        const own = overlapNotice(saved.data, entry.id)
+        if (own) return own
+        // An earlier pause's notice stays only while it still holds for that entry.
+        if (current.notice !== 'pauseOverlap') return current
+        return overlapNotice(saved.data, current.id) ?? {name: 'vault'}
       })
     }
   }
