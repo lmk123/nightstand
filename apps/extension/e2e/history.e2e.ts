@@ -1,7 +1,7 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
-import {historyUrls, launchChrome, openPopup, storageSnapshot, visit, type ChromeSession} from './support/chrome'
+import {historyUrls, launchChrome, openPopup, storageSnapshot, visit, waitStorage, type ChromeSession} from './support/chrome'
 import {hasChrome} from './support/env'
-import {addEntry, onboard, sleep} from './support/popup'
+import {addEntry, clearAndType, clickText, hasText, onboard, sleep, submitUnlock, waitText} from './support/popup'
 import {startTestServer} from './support/server'
 import {cleanupTemp} from './support/temp'
 
@@ -59,6 +59,98 @@ describe.skipIf(!hasChrome)('history cleanup and panic (Chrome)', () => {
       'http://example.org/y',
       'http://example.org/z'
     ])
+  })
+
+  it('a paused entry is not cleaned; resuming it cleans what it left', async () => {
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    // Newest first: the exact example.org entry, then example.com.
+    const pause = await p.$$('button[aria-label^="暂停"]')
+    expect(pause).toHaveLength(2)
+    const index = ((await storageSnapshot(s)).index as {site: string[]}).site
+    await pause[1]!.click()
+    await waitStorage(s, (snap) => (snap.index as {site: string[]}).site.length < index.length)
+    await waitText(p, '已暂停')
+    await visit(s, 'http://example.com/paused')
+    expect(await historyUrls(s)).toContain('http://example.com/paused')
+    const bookmarks = () => s.sw.evaluate(async () => (await chrome.bookmarks.search({url: 'http://example.com/kept'})).length)
+    await s.sw.evaluate(() => chrome.bookmarks.create({url: 'http://example.com/kept', title: 'kept'}))
+
+    // Editing a paused entry keeps it paused and deletes nothing, so no notice and no check.
+    const edit = await p.$$('button[aria-label="编辑"]')
+    await edit[1]!.click()
+    await clearAndType(p, '#title', 'Renamed while paused')
+    await clickText(p, '保存')
+    await waitText(p, '添加当前页')
+    expect(await hasText(p, 'Renamed while paused')).toBe(true)
+    expect(await hasText(p, '已暂停')).toBe(true)
+    expect(await hasText(p, '请马上检查一下地址栏')).toBe(false)
+    expect(await historyUrls(s)).toContain('http://example.com/paused')
+    expect(await bookmarks()).toBe(1)
+
+    // Resuming wipes the history and bookmarks left meanwhile, then asks for the check.
+    await p.click('button[aria-label^="恢复"]')
+    await waitStorage(s, (snap) => (snap.index as {site: string[]}).site.length === index.length)
+    await waitText(p, '请马上检查一下地址栏')
+    expect(await historyUrls(s)).not.toContain('http://example.com/paused')
+    expect(await bookmarks()).toBe(0)
+    expect(await hasText(p, '已暂停')).toBe(false)
+    await visit(s, 'http://example.com/resumed')
+    expect(await historyUrls(s)).not.toContain('http://example.com/resumed')
+    await p.close()
+  })
+
+  it('says when other entries still protect a paused site, and stops once they are paused too', async () => {
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    await addEntry(p, 'http://example.com/page', 'exact')
+    await addEntry(p, 'sub.example.com')
+    type Index = {site: string[]; exact: string[]}
+    // Newest first: sub.example.com, the exact example.com/page, example.org (exact), example.com.
+    let pause = await p.$$('button[aria-label^="暂停"]')
+    expect(pause).toHaveLength(4)
+    const overlap = '仍在保护这个网站'
+    const noticeText = () =>
+      p.evaluate(
+        (overlap) => [...document.querySelectorAll('[role=status]')].map((el) => el.textContent ?? '').find((t) => t.includes(overlap)) ?? null,
+        overlap
+      )
+    // The whole site: both newer entries still cover part of it. The check
+    // from the last save is still pending: it stays, and the overlap notice
+    // shows once it is dismissed.
+    await pause[3]!.click()
+    await waitStorage(s, (snap) => (snap.index as Index).site.length === 1)
+    await waitText(p, '已暂停')
+    expect(await hasText(p, '请马上检查一下地址栏')).toBe(true)
+    expect(await hasText(p, overlap)).toBe(false)
+    await clickText(p, '知道了')
+    await waitText(p, overlap)
+    const both = await noticeText()
+    // The page overlaps nothing active now, but sub.example.com still covers
+    // part of example.com: that notice stays, now naming only sub.example.com.
+    pause = await p.$$('button[aria-label^="暂停"]')
+    await pause[1]!.click()
+    await waitStorage(s, (snap) => (snap.index as Index).exact.length === 1)
+    await p.waitForFunction(
+      (overlap, before) => {
+        const text = [...document.querySelectorAll('[role=status]')].map((el) => el.textContent ?? '').find((t) => t.includes(overlap))
+        return text !== undefined && text !== before
+      },
+      {},
+      overlap,
+      both
+    )
+    // Pausing sub.example.com too: nothing active overlaps example.com any more.
+    pause = await p.$$('button[aria-label^="暂停"]')
+    await pause[0]!.click()
+    await waitStorage(s, (snap) => (snap.index as Index).site.length === 0)
+    await p.waitForFunction((overlap) => !document.body.textContent?.includes(overlap), {}, overlap)
+    // Back as the later tests expect: example.com protected, the extra entries left paused.
+    const resume = await p.$$('button[aria-label^="恢复"]')
+    expect(resume).toHaveLength(3)
+    await resume[2]!.click()
+    await waitStorage(s, (snap) => (snap.index as Index).site.length === 1)
+    await p.close()
   })
 
   it("never leaves the extension's own pages in history", async () => {

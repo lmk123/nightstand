@@ -1,14 +1,18 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
 import {
+  activeEntries,
   changePassphrase,
   entrySiteHosts,
   hostOf,
+  overlappingActiveEntries,
   recordOpen,
   removeEntry,
   addEntry,
   replaceEntry,
+  resumeWidensScope,
   rotateRecoveryCode,
   setEntryIcons,
+  setEntryPaused,
   updateSettings,
   widensScope,
   type DecoyConfig,
@@ -19,7 +23,7 @@ import {
 } from '@nightstand/core'
 import {removeBookmarksFor} from '@/platform/bookmarks'
 import {findMissingIcons, withIcon} from '@/platform/favicon'
-import {t} from '@/platform/i18n'
+import {listText, t} from '@/platform/i18n'
 import {isPopupNotice, sendToBackground} from '@/platform/messages'
 import {loadLinks, loadShelf} from '@/platform/storage'
 import {getActiveTab, openUrl} from '@/platform/tabs'
@@ -27,6 +31,7 @@ import {SaveCheck} from './components/SaveCheck'
 import {SettingsLink, SettingsLinks} from './components/SettingsLink'
 import {useOpenHelp} from './help'
 import {commit, commitStored, openSession, syncIndex, type Session, type UnlockResult} from './session'
+import {entryTitle} from './title'
 import {Backup} from './views/Backup'
 import {BookmarkImport} from './views/BookmarkImport'
 import {Decoy} from './views/Decoy'
@@ -43,7 +48,11 @@ type View =
   | {name: 'onboarding'}
   | {name: 'locked'}
   | {name: 'decoySettings'}
-  | {name: 'vault'; notice?: 'unsupportedTab' | 'saveCheck'}
+  /**
+   * `paused`: entries paused while the list showed (newest first) that other
+   * active entries still partly cover, for the overlap notice.
+   */
+  | {name: 'vault'; notice?: 'unsupportedTab' | 'saveCheck' | 'saveFailed'; paused?: string[]}
   | {name: 'entry'; editing?: VaultEntry; prefill?: EntryInput}
   | {name: 'settings'}
   | {name: 'resetPassphrase'}
@@ -79,6 +88,28 @@ async function protect(entries: readonly VaultEntry[]) {
   if (entries.length === 0) return
   purgeFor(...entries)
   await removeBookmarksFor(entries).catch(console.error)
+}
+
+/**
+ * Show the address-bar check: something is newly protected (`protectsNew`)
+ * and the user hasn't opted out. Cleaning has missed suggestions before
+ * (redirect hops, other domains), so it asks right away.
+ */
+function wantsSaveCheck(protectsNew: boolean, data: VaultData): boolean {
+  return protectsNew && data.settings.skipSaveCheck !== true
+}
+
+/**
+ * The active entries that still cover part of the paused entries `ids`, once
+ * each. A resumed entry (or one no longer in the vault) adds none.
+ */
+function overlapping(data: VaultData, ids: readonly string[]): VaultEntry[] {
+  const found = new Map<string, VaultEntry>()
+  for (const id of ids) {
+    if (data.entries.find((e) => e.id === id)?.paused !== true) continue
+    for (const e of overlappingActiveEntries(data.entries, id)) found.set(e.id, e)
+  }
+  return [...found.values()]
 }
 
 export default function App() {
@@ -206,6 +237,41 @@ export default function App() {
     return saved !== null
   }
 
+  /**
+   * Pausing only takes the entry out of the match table. Resuming protects it
+   * again like a save: the history and bookmarks gathered while it was paused
+   * are wiped (the button says so), after capturing an icon if it still has
+   * none, and the address-bar check follows if nothing else already covered it.
+   */
+  async function togglePause(entry: VaultEntry) {
+    const resuming = entry.paused === true
+    let saved: Session | null
+    if (resuming) {
+      const withCached = await withIcon(entry)
+      saved = await update((data) =>
+        setEntryPaused(withCached.icon ? setEntryIcons(data, new Map([[entry.id, withCached.icon]])) : data, entry.id, false)
+      )
+      if (!saved) return
+      await protect([withCached])
+    } else {
+      saved = await update((data) => setEntryPaused(data, entry.id, true))
+      if (!saved) return
+    }
+    const {data} = saved
+    // Only if the list is still showing: don't pull the user out of another view.
+    setView((current) => {
+      if (current.name !== 'vault') return current
+      // Other entries still covering part of a paused one keep covering and
+      // cleaning that part: the notice says which, as the pause button
+      // promises otherwise. Each pause's notice lasts while it still holds.
+      const ids = resuming ? (current.paused ?? []) : [entry.id, ...(current.paused ?? []).filter((id) => id !== entry.id)]
+      const paused = ids.filter((id) => overlapping(data, [id]).length > 0)
+      // A pending address-bar check stays until dismissed.
+      const check = current.notice === 'saveCheck' || (resuming && wantsSaveCheck(resumeWidensScope(data.entries, entry.id), data))
+      return check ? {name: 'vault', notice: 'saveCheck', paused} : {name: 'vault', paused}
+    })
+  }
+
   async function addCurrentTab() {
     const tab = await getActiveTab()
     if (!tab || !hostOf(tab.url)) {
@@ -252,7 +318,9 @@ export default function App() {
   }
 
   switch (view.name) {
-    case 'vault':
+    case 'vault': {
+      // As the vault stands now, so renamed or resumed entries show as they are.
+      const overlapTitles = overlapping(session.data, view.paused ?? []).map(entryTitle)
       return (
         <VaultList
           entries={session.data.entries}
@@ -261,25 +329,42 @@ export default function App() {
               <p role="status" className="bg-accent text-accent-foreground mx-3 mb-2 rounded-[10px] p-3 text-xs">
                 {t('currentTabUnsupported')}
               </p>
+            ) : view.notice === 'saveFailed' ? (
+              <p role="alert" className="text-destructive mx-3 mb-2 text-xs">
+                {t('errSaveFailed')}
+              </p>
             ) : view.notice === 'saveCheck' ? (
               <SaveCheck
                 onDismiss={async (skipFromNow) => {
                   if (skipFromNow) await update((data) => updateSettings(data, {skipSaveCheck: true}))
-                  setView({name: 'vault'})
+                  // An overlap notice that still holds shows again.
+                  setView((current) => (current.name === 'vault' ? {name: 'vault', paused: current.paused} : current))
                 }}
               />
+            ) : overlapTitles.length > 0 ? (
+              <p role="status" className="bg-accent text-accent-foreground mx-3 mb-2 rounded-[10px] p-3 text-xs">
+                {t('pauseOverlap', listText(overlapTitles))}
+              </p>
             ) : undefined
           }
           skipCoverNotice={session.data.settings.skipCoverNotice === true}
           onSkipCoverNotice={(skip) => update((data) => updateSettings(data, {skipCoverNotice: skip})).then(() => undefined, console.error)}
           onOpen={openEntry}
           onEdit={(entry) => setView({name: 'entry', editing: entry})}
+          onTogglePause={(entry) =>
+            void togglePause(entry).catch((error) => {
+              console.error(error)
+              // Not written: the row still shows its old state, and this says why.
+              setView((current) => (current.name === 'vault' ? {...current, notice: 'saveFailed'} : current))
+            })
+          }
           onAddCurrent={addCurrentTab}
           onAddManual={() => setView({name: 'entry'})}
           onSettings={() => setView({name: 'settings'})}
           onLock={lock}
         />
       )
+    }
     case 'entry':
       return (
         <EntryForm
@@ -296,12 +381,13 @@ export default function App() {
               return skipNoticeFromNow ? updateSettings(next, {skipSaveNotice: true}) : next
             })
             if (!savedSession) return
-            await protect([entry])
-            // Cleaning has missed address-bar suggestions before (redirect
-            // hops, other domains): ask the user to check it right away
-            // whenever this save protects something new, unless they opted out.
-            const check = widensScope(view.editing, entry) && savedSession.data.settings.skipSaveCheck !== true
-            setView(check ? {name: 'vault', notice: 'saveCheck'} : {name: 'vault'})
+            // As saved: `replaceEntry` keeps a pause or resume that landed while the form was open.
+            const stored = savedSession.data.entries.find((e) => e.id === entry.id) ?? entry
+            // An edited paused entry stays paused and protects nothing yet:
+            // resuming it cleans and asks for the check instead.
+            if (stored.paused) return setView({name: 'vault'})
+            await protect([stored])
+            setView(wantsSaveCheck(widensScope(view.editing, stored), savedSession.data) ? {name: 'vault', notice: 'saveCheck'} : {name: 'vault'})
           }}
           onDelete={async (entry) => {
             await update((data) => removeEntry(data, entry.id))
@@ -360,7 +446,7 @@ export default function App() {
           onImported={async (merged) => {
             // Merged against this screen's data; nothing else changes the vault meanwhile.
             await update((data) => ({...data, entries: merged.entries}))
-            await protect(merged.changed)
+            await protect(activeEntries(merged.changed))
           }}
         />
       )

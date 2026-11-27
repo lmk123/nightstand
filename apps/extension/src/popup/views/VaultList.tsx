@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useRef, useState} from 'react'
-import {AppWindow, Lock, Pencil, Plus, Search, SlidersHorizontal} from 'lucide-react'
+import {AppWindow, Lock, Pause, Pencil, Play, Plus, Search, SlidersHorizontal} from 'lucide-react'
 import {searchEntries, type VaultEntry} from '@nightstand/core'
 import {cn} from 'cn'
 import {Button} from '@/components/ui/button'
@@ -19,6 +19,7 @@ export function VaultList({
   onSkipCoverNotice,
   onOpen,
   onEdit,
+  onTogglePause,
   onAddCurrent,
   onAddManual,
   onSettings,
@@ -30,6 +31,8 @@ export function VaultList({
   onSkipCoverNotice: (skip: boolean) => Promise<void>
   onOpen: (entry: VaultEntry) => void
   onEdit: (entry: VaultEntry) => void
+  /** Pauses an active entry or resumes a paused one. */
+  onTogglePause: (entry: VaultEntry) => void
   onAddCurrent: () => void
   onAddManual: () => void
   onSettings: () => void
@@ -187,9 +190,30 @@ export function VaultList({
                 >
                   {/* Title only: some domains are revealing on their own, so the
                       list never shows the URL or the extra hosts, not even in a tooltip. */}
-                  <SiteAvatar text={entryTitle(entry)} icon={entry.icon} />
-                  <span className={cn('min-w-0 flex-1 truncate text-sm', isSelected && 'font-medium')}>{entryTitle(entry)}</span>
+                  <span className={cn('contents', entry.paused && '*:opacity-50')}>
+                    <SiteAvatar text={entryTitle(entry)} icon={entry.icon} />
+                    <span className={cn('min-w-0 flex-1 truncate text-sm', isSelected && 'font-medium')}>{entryTitle(entry)}</span>
+                  </span>
+                  {entry.paused && (
+                    <span className="bg-track text-subtle-foreground shrink-0 rounded-full px-2 py-px text-[11px]">{t('entryPaused')}</span>
+                  )}
                 </button>
+                {/* Always shown on a paused row, so it is clear how to resume. */}
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className={cn(
+                    'rounded-lg',
+                    isSelected
+                      ? 'hover:bg-accent-line/60 text-accent-foreground'
+                      : !entry.paused && 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
+                  )}
+                  onClick={() => onTogglePause(entry)}
+                  aria-label={t(entry.paused ? 'resumeEntry' : 'pauseEntry')}
+                  title={t(entry.paused ? 'resumeEntry' : 'pauseEntry')}
+                >
+                  {entry.paused ? <Play /> : <Pause />}
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon-sm"

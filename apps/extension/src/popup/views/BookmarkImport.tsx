@@ -2,6 +2,7 @@ import {useEffect, useMemo, useState} from 'react'
 import {Folder} from 'lucide-react'
 import {cn} from 'cn'
 import {
+  activeEntriesCoverUrl,
   addEntry,
   createEntry,
   findDuplicate,
@@ -42,7 +43,8 @@ export function BookmarkImport({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [matchMode, setMatchMode] = useState<MatchMode>('site')
   const [removeOriginals, setRemoveOriginals] = useState(true)
-  const [done, setDone] = useState<number | null>(null)
+  /** The last import: entries added, and paused entries its bookmarks duplicated. */
+  const [done, setDone] = useState<{added: number; paused: number} | null>(null)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
 
@@ -66,25 +68,41 @@ export function BookmarkImport({
     setFailed(false)
     try {
       const fresh: VaultEntry[] = []
+      /** Bookmark id → the paused entry it duplicates. */
+      const pausedDuplicates = new Map<string, {entryId: string; url: string}>()
       const now = Date.now()
       for (const id of selected) {
         const row = byId.get(id)
         if (!row?.url) continue
         const entry = createEntry({url: row.url, title: row.title, matchMode}, now)
-        if (findDuplicate(data.entries, entry) || findDuplicate(fresh, entry)) continue
+        const existing = findDuplicate(data.entries, entry)
+        if (existing?.paused) pausedDuplicates.set(id, {entryId: existing.id, url: row.url})
+        if (existing || findDuplicate(fresh, entry)) continue
         fresh.push(entry)
       }
       // Before the caller purges history, which takes the cached icon with it.
       // Several at once: one after another, a big folder takes long enough
       // that the popup gets closed and nothing is imported.
       const added = await mapConcurrent(fresh, ICON_CONCURRENCY, withIcon)
+      // A bookmark for a paused entry adds nothing and stays unprotected: said
+      // in the result, and the bookmark itself is kept, as the site is meant
+      // to show normally while paused. Unless another active entry (already
+      // there or added now) still protects its URL: then it goes as usual.
+      const protecting = [...data.entries, ...added]
+      const paused = new Set<string>()
+      const keep = new Set<string>()
+      for (const [id, {entryId, url}] of pausedDuplicates) {
+        if (activeEntriesCoverUrl(protecting, url)) continue
+        paused.add(entryId)
+        keep.add(id)
+      }
       await onImport(
         added.reduce((next, entry) => addEntry(next, entry), data),
         added
       )
-      if (removeOriginals) await removeBookmarks([...selected])
+      if (removeOriginals) await removeBookmarks([...selected].filter((id) => !keep.has(id)))
       setSelected(new Set())
-      setDone(added.length)
+      setDone({added: added.length, paused: paused.size})
     } catch (error) {
       console.error(error)
       setFailed(true)
@@ -147,7 +165,12 @@ export function BookmarkImport({
           {t('bmRemoveOriginals')}
         </Label>
         {failed && <p className="text-destructive text-xs">{t('errSaveFailed')}</p>}
-        {done !== null && <p className="bg-accent text-accent-foreground rounded-[10px] p-2.5 text-xs">{t('bmImported', String(done))}</p>}
+        {done !== null && (
+          <p className="bg-accent text-accent-foreground rounded-[10px] p-2.5 text-xs">
+            {t('bmImported', String(done.added))}
+            {done.paused > 0 && <span className="mt-1 block">{t('bmImportPausedSkipped', String(done.paused))}</span>}
+          </p>
+        )}
         <Button className={mainButtonClass} disabled={busy || selected.size === 0} onClick={runImport}>
           {busy ? t('working') : t('bmImportButton', String(selected.size))}
         </Button>

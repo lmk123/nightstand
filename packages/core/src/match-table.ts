@@ -41,15 +41,19 @@ export async function hashMatchValue(salt: string, kind: MatchKind, value: strin
   return hashWith(base64ToBytes(salt), kind, value)
 }
 
-/** Builds the table from vault entries. Pass the existing salt to keep it stable across rebuilds. */
+/**
+ * Builds the table from vault entries; paused ones are left out. Pass the
+ * existing salt to keep it stable across rebuilds.
+ */
 export async function buildMatchTable(
-  entries: readonly EntryScope[],
+  entries: readonly (EntryScope & {paused?: boolean})[],
   salt: string = newMatchSalt()
 ): Promise<MatchTable> {
   const saltBytes = base64ToBytes(salt)
   const site = new Set<string>()
   const exact = new Set<string>()
   for (const entry of entries) {
+    if (entry.paused) continue
     for (const host of entrySiteHosts(entry)) site.add(await hashWith(saltBytes, 'site', host))
     if (entry.matchMode === 'exact') {
       const url = normalizeExactUrl(entry.url)

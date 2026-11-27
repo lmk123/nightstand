@@ -35,6 +35,27 @@
   "edit": {
     "message": "編集"
   },
+  "pauseEntry": {
+    "message": "一時停止：このサイトを隠さず、履歴も削除しません"
+  },
+  "resumeEntry": {
+    "message": "再開：このサイトの履歴とブックマークをもう一度削除します"
+  },
+  "entryPaused": {
+    "message": "一時停止中"
+  },
+  "pauseOverlap": {
+    "message": "一時停止しましたが、$TITLES$ がこのサイトの一部またはすべてを引き続き保護しているため、その範囲は引き続き隠され、履歴も削除されます。完全に止めるには、それらも一時停止してください。",
+    "placeholders": {
+      "titles": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "listLocale": {
+    "message": "ja"
+  },
   "delete": {
     "message": "削除"
   },
@@ -266,6 +287,15 @@
   },
   "errDuplicate": {
     "message": "保存済みです：$TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "errDuplicatePaused": {
+    "message": "保存済みですが一時停止中です：$TITLE$。保護するには、リストで再開してください。",
     "placeholders": {
       "title": {
         "content": "$1",
@@ -553,6 +583,15 @@
       "count": {
         "content": "$1",
         "example": "3"
+      }
+    }
+  },
+  "bmImportPausedSkipped": {
+    "message": "$COUNT$ 件はリストにありますが一時停止中のため、インポートも履歴の削除もせず、ブックマークも残しました。保護するには、リストで再開してください。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
       }
     }
   },

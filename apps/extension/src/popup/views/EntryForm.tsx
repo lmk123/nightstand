@@ -103,8 +103,12 @@ export function EntryForm({
       throw e
     }
     const duplicate = findDuplicate(entries, entry, editing?.id)
-    if (duplicate) return setError(t('errDuplicate', entryTitle(duplicate)))
-    if (skipNotice) return save(entry, false)
+    if (duplicate) return setError(t(duplicate.paused ? 'errDuplicatePaused' : 'errDuplicate', entryTitle(duplicate)))
+    // A paused entry deletes nothing when saved (see `onSave`), so there is
+    // nothing to announce. As the vault has it now, not as it was when the
+    // form opened: a pause or resume may have landed since.
+    const paused = editing !== undefined && entries.find((e) => e.id === editing.id)?.paused === true
+    if (skipNotice || paused) return save(entry, false)
     setBusy(true)
     let history: number
     let bookmarks: number

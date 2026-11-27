@@ -1,5 +1,7 @@
 import {describe, expect, it} from 'vitest'
 import {
+  activeEntries,
+  activeEntriesCoverUrl,
   addEntry,
   createEntry,
   editEntry,
@@ -14,11 +16,16 @@ import {
   parseExtraHosts,
   recordOpen,
   removeEntry,
+  overlappingActiveEntries,
   replaceEntry,
+  resumeWidensScope,
+  scopesOverlap,
   searchEntries,
   setEntryIcons,
+  setEntryPaused,
   updateSettings,
-  widensScope
+  widensScope,
+  type VaultEntry
 } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
@@ -107,6 +114,81 @@ describe('editEntry', () => {
     expect(editEntry(e, {url: 'example.com', matchMode: 'exact'}).icon).toBe(ICON)
     expect(editEntry(e, {url: 'example.org'})).not.toHaveProperty('icon')
     expect(editEntry(createEntry({url: 'example.com'}, NOW), {url: 'example.com'})).not.toHaveProperty('icon')
+  })
+})
+
+describe('pausing entries', () => {
+  it('pauses and resumes one entry by id without touching the rest', () => {
+    const a = createEntry({url: 'example.com'}, NOW, 'a')
+    const b = createEntry({url: 'example.org'}, NOW, 'b')
+    const data = addEntry(addEntry(emptyVaultData(), a), b)
+    const paused = setEntryPaused(data, 'a', true)
+    expect(paused.entries.find((e) => e.id === 'a')?.paused).toBe(true)
+    expect(paused.entries.find((e) => e.id === 'b')).not.toHaveProperty('paused')
+    expect(data.entries.every((e) => e.paused === undefined)).toBe(true)
+    expect(activeEntries(paused.entries).map((e) => e.id)).toEqual(['b'])
+    const resumed = setEntryPaused(paused, 'a', false)
+    expect(resumed.entries.find((e) => e.id === 'a')).not.toHaveProperty('paused')
+  })
+  it('an edit keeps the entry paused', () => {
+    const e: VaultEntry = {...createEntry({url: 'example.com'}, NOW), paused: true}
+    expect(editEntry(e, {url: 'example.org', title: 'T'}).paused).toBe(true)
+    expect(editEntry(createEntry({url: 'example.com'}, NOW), {url: 'example.com'})).not.toHaveProperty('paused')
+  })
+  it('replacing an entry keeps the paused state the vault has', () => {
+    const a = createEntry({url: 'example.com'}, NOW, 'a')
+    const paused = setEntryPaused(addEntry(emptyVaultData(), a), 'a', true)
+    // A form opened before the pause saves an active copy: it stays paused.
+    expect(replaceEntry(paused, {...a, title: 'T'}).entries[0]).toMatchObject({title: 'T', paused: true})
+    // A form opened before the resume saves a paused copy: it stays active.
+    const resumed = setEntryPaused(paused, 'a', false)
+    expect(replaceEntry(resumed, {...a, title: 'T', paused: true}).entries[0]).not.toHaveProperty('paused')
+  })
+  it('scopesOverlap: shared hosts, subdomains either way, and exact URLs', () => {
+    const site = (url: string, extraHosts: string[] = []) => ({url, matchMode: 'site' as const, extraHosts})
+    const exact = (url: string) => ({url, matchMode: 'exact' as const, extraHosts: []})
+    expect(scopesOverlap(site('https://example.com/'), site('https://mail.example.com/'))).toBe(true)
+    expect(scopesOverlap(site('https://mail.example.com/'), site('https://example.com/'))).toBe(true)
+    expect(scopesOverlap(site('https://example.com/'), site('https://example.org/', ['cdn.example.com']))).toBe(true)
+    expect(scopesOverlap(exact('https://example.com/a'), site('https://example.com/'))).toBe(true)
+    expect(scopesOverlap(site('https://example.com/'), exact('https://example.com/a'))).toBe(true)
+    expect(scopesOverlap(exact('https://example.com/a'), exact('https://example.com/a#x'))).toBe(true)
+    expect(scopesOverlap(exact('https://example.com/a'), exact('https://example.com/b'))).toBe(false)
+    expect(scopesOverlap(site('https://example.com/'), site('https://example.org/'))).toBe(false)
+    expect(scopesOverlap(site('https://a.example.com/'), site('https://b.example.com/'))).toBe(false)
+  })
+  it('overlappingActiveEntries lists the other active entries that still cover it', () => {
+    const whole = createEntry({url: 'example.com'}, NOW, 'whole')
+    const page = createEntry({url: 'https://example.com/a', matchMode: 'exact'}, NOW, 'page')
+    const other = createEntry({url: 'example.org'}, NOW, 'other')
+    const data = [whole, page, other]
+    expect(overlappingActiveEntries(data, 'page').map((e) => e.id)).toEqual(['whole'])
+    expect(overlappingActiveEntries(data, 'whole').map((e) => e.id)).toEqual(['page'])
+    expect(overlappingActiveEntries([whole, {...page, paused: true}, other], 'whole')).toEqual([])
+    expect(overlappingActiveEntries(data, 'missing')).toEqual([])
+  })
+  it('resumeWidensScope: only when no other active entry already covers it all', () => {
+    const whole = createEntry({url: 'example.com'}, NOW, 'whole')
+    const page = createEntry({url: 'https://example.com/a', matchMode: 'exact'}, NOW, 'page')
+    expect(resumeWidensScope([whole, page], 'page')).toBe(false)
+    expect(resumeWidensScope([whole, page], 'whole')).toBe(true)
+    expect(resumeWidensScope([{...whole, paused: true}, page], 'page')).toBe(true)
+    expect(resumeWidensScope([whole, {...page, extraHosts: ['example.org']}], 'page')).toBe(true)
+    expect(resumeWidensScope([whole], 'missing')).toBe(false)
+  })
+  it('activeEntriesCoverUrl skips paused entries', () => {
+    const whole = createEntry({url: 'example.com'}, NOW, 'whole')
+    expect(activeEntriesCoverUrl([whole], 'https://mail.example.com/x')).toBe(true)
+    expect(activeEntriesCoverUrl([{...whole, paused: true}], 'https://example.com/x')).toBe(false)
+    expect(activeEntriesCoverUrl([whole], 'https://example.org/')).toBe(false)
+  })
+  it('round-trips through the payload; any value but true reads as active', () => {
+    const current = createEntry({url: 'example.com'}, NOW, 'x')
+    const paused: VaultEntry = {...current, paused: true}
+    expect(migrateVaultData(JSON.parse(JSON.stringify({version: 4, entries: [paused], settings: {}}))).entries).toEqual([paused])
+    for (const value of [false, 'yes', 1, null]) {
+      expect(migrateVaultData({version: 4, entries: [{...current, paused: value}]}).entries).toEqual([current])
+    }
   })
 })
 

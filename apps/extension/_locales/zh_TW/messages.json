@@ -35,6 +35,27 @@
   "edit": {
     "message": "編輯"
   },
+  "pauseEntry": {
+    "message": "暫停：暫時不遮住、也不刪除這個網站的瀏覽記錄"
+  },
+  "resumeEntry": {
+    "message": "恢復：會再刪除一次這個網站的瀏覽記錄和書籤"
+  },
+  "entryPaused": {
+    "message": "已暫停"
+  },
+  "pauseOverlap": {
+    "message": "已暫停，但 $TITLES$ 仍在保護這個網站的部分或全部網址，這些網址仍會被遮住、瀏覽記錄仍會被刪除。要完全暫停，請把它們也暫停。",
+    "placeholders": {
+      "titles": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "listLocale": {
+    "message": "zh-TW"
+  },
   "delete": {
     "message": "刪除"
   },
@@ -266,6 +287,15 @@
   },
   "errDuplicate": {
     "message": "已經收藏過：$TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "errDuplicatePaused": {
+    "message": "已經收藏過，但處於暫停狀態：$TITLE$。要保護它，請在清單中恢復。",
     "placeholders": {
       "title": {
         "content": "$1",
@@ -553,6 +583,15 @@
       "count": {
         "content": "$1",
         "example": "3"
+      }
+    }
+  },
+  "bmImportPausedSkipped": {
+    "message": "另有 $COUNT$ 個網站已在清單中但處於暫停狀態，沒有匯入，書籤保留，瀏覽記錄也沒有清除；要保護它們，請在清單中恢復。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
       }
     }
   },

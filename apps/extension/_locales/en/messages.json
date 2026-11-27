@@ -35,6 +35,28 @@
   "edit": {
     "message": "Edit"
   },
+  "pauseEntry": {
+    "message": "Pause: stop covering this site and deleting its history"
+  },
+  "resumeEntry": {
+    "message": "Resume: its history and bookmarks will be deleted again"
+  },
+  "entryPaused": {
+    "message": "Paused"
+  },
+  "pauseOverlap": {
+    "message": "Paused, but $TITLES$ still protect part or all of this site: there it is still covered and its history still deleted. To pause it fully, pause those too.",
+    "placeholders": {
+      "titles": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "listLocale": {
+    "message": "en",
+    "description": "BCP 47 tag of this catalog's language, used to join names into a list. Not shown."
+  },
   "delete": {
     "message": "Delete"
   },
@@ -266,6 +288,15 @@
   },
   "errDuplicate": {
     "message": "Already saved: $TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "errDuplicatePaused": {
+    "message": "Already saved, but paused: $TITLE$. Resume it in the list to protect it.",
     "placeholders": {
       "title": {
         "content": "$1",
@@ -553,6 +584,15 @@
       "count": {
         "content": "$1",
         "example": "3"
+      }
+    }
+  },
+  "bmImportPausedSkipped": {
+    "message": "Already in the list but paused, so not imported, their bookmarks kept and their history not cleaned: $COUNT$. Resume them in the list to protect them.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
       }
     }
   },

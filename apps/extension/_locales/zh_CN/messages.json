@@ -35,6 +35,27 @@
   "edit": {
     "message": "编辑"
   },
+  "pauseEntry": {
+    "message": "暂停：暂时不遮住、也不删除这个网站的浏览记录"
+  },
+  "resumeEntry": {
+    "message": "恢复：会再删除一次这个网站的浏览记录和书签"
+  },
+  "entryPaused": {
+    "message": "已暂停"
+  },
+  "pauseOverlap": {
+    "message": "已暂停，但 $TITLES$ 仍在保护这个网站的部分或全部网址，这些网址仍会被遮住、浏览记录仍会被删除。要完全暂停，把它们也暂停。",
+    "placeholders": {
+      "titles": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "listLocale": {
+    "message": "zh-CN"
+  },
   "delete": {
     "message": "删除"
   },
@@ -266,6 +287,15 @@
   },
   "errDuplicate": {
     "message": "已经收藏过：$TITLE$",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
+  "errDuplicatePaused": {
+    "message": "已经收藏过，但处于暂停状态：$TITLE$。要保护它，请在列表里恢复。",
     "placeholders": {
       "title": {
         "content": "$1",
@@ -553,6 +583,15 @@
       "count": {
         "content": "$1",
         "example": "3"
+      }
+    }
+  },
+  "bmImportPausedSkipped": {
+    "message": "另有 $COUNT$ 个网站已在列表里但处于暂停状态，没有导入，书签保留，浏览记录也没有清理；要保护它们，请在列表里恢复。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
       }
     }
   },

@@ -174,4 +174,28 @@ describe.skipIf(!hasChrome)('backup, passphrase management, bookmarks (Chrome)',
     expect(await historyUrls(s)).not.toContain('https://alpha.example/old')
     await p.close()
   })
+
+  it('says when a bookmark duplicates a paused entry instead of silently skipping it', async () => {
+    const s = sessions[1]!
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'other')).toBe(true)
+    const rows = await p.$$('ul li')
+    const texts = await Promise.all(rows.map((r) => r.evaluate((el) => el.textContent ?? '')))
+    const alpha = rows[texts.findIndex((t) => t.includes('Alpha'))]!
+    await (await alpha.$('button[aria-label^="暂停"]'))!.click()
+    await waitText(p, '已暂停')
+    await s.sw.evaluate(() => chrome.bookmarks.create({parentId: '1', title: 'Alpha again', url: 'https://alpha.example/again'}))
+    await openSettings(p, '从浏览器书签导入')
+    await waitText(p, 'Alpha again')
+    const labels = await p.$$('ul li label')
+    const titles = await Promise.all(labels.map((r) => r.evaluate((el) => el.textContent)))
+    await labels[titles.findIndex((t) => t?.startsWith('Alpha again'))]?.click()
+    await clickText(p, '导入所选（1）')
+    await waitText(p, '已导入 0 条')
+    await waitText(p, '另有 1 个网站已在列表里但处于暂停状态')
+    // "Remove originals" is on by default, but this bookmark's site is paused: it stays.
+    const kept = await s.sw.evaluate(() => chrome.bookmarks.search({url: 'https://alpha.example/again'}).then((r) => r.length))
+    expect(kept).toBe(1)
+    await p.close()
+  })
 })
