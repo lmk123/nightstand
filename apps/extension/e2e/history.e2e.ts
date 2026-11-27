@@ -100,6 +100,29 @@ describe.skipIf(!hasChrome)('history cleanup and panic (Chrome)', () => {
     await p.close()
   })
 
+  it('says when other entries still protect a paused site, and stops once they are paused too', async () => {
+    const p = await openPopup(s)
+    expect(await submitUnlock(p, 'notes')).toBe(true)
+    await addEntry(p, 'http://example.com/page', 'exact')
+    // Newest first: the exact example.com/page entry, then example.org, then example.com.
+    let pause = await p.$$('button[aria-label^="暂停"]')
+    expect(pause).toHaveLength(3)
+    await pause[0]!.click()
+    await waitText(p, '仍在保护这个网站')
+    // Pausing the whole-site entry too: nothing active overlaps either any more.
+    pause = await p.$$('button[aria-label^="暂停"]')
+    await pause[1]!.click()
+    await waitStorage(s, (snap) => (snap.index as {site: string[]}).site.length === 0)
+    await sleep(300)
+    expect(await hasText(p, '仍在保护这个网站')).toBe(false)
+    // Back as the later tests expect: example.com protected, the extra page left paused.
+    const resume = await p.$$('button[aria-label^="恢复"]')
+    expect(resume).toHaveLength(2)
+    await resume[1]!.click()
+    await waitStorage(s, (snap) => (snap.index as {site: string[]}).site.length === 1)
+    await p.close()
+  })
+
   it("never leaves the extension's own pages in history", async () => {
     const urls = await historyUrls(s)
     expect(urls.filter((u) => u.startsWith('chrome-extension://'))).toEqual([])

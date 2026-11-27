@@ -249,6 +249,26 @@ export function entryCoversUrl(entry: EntryScope, url: string): boolean {
   return entrySiteHosts(entry).some((h) => candidates.includes(h))
 }
 
+/** Do two entries protect any URL in common? Same rules as `entryCoversUrl`. */
+export function scopesOverlap(a: EntryScope, b: EntryScope): boolean {
+  const aHosts = entrySiteHosts(a)
+  const bHosts = entrySiteHosts(b)
+  // Two hosts protected with their subdomains overlap when one is under the other.
+  const under = (host: string, hosts: string[]) => hostCandidates(host).some((h) => hosts.includes(h))
+  if (aHosts.some((h) => under(h, bHosts)) || bHosts.some((h) => under(h, aHosts))) return true
+  return (a.matchMode === 'exact' && entryCoversUrl(b, a.url)) || (b.matchMode === 'exact' && entryCoversUrl(a, b.url))
+}
+
+/**
+ * The active entries other than `id` that still protect part of what entry
+ * `id` does, so pausing it alone leaves that part covered and cleaned.
+ */
+export function overlappingActiveEntries(entries: readonly VaultEntry[], id: string): VaultEntry[] {
+  const target = entries.find((e) => e.id === id)
+  if (!target) return []
+  return entries.filter((e) => e.id !== id && !e.paused && scopesOverlap(e, target))
+}
+
 export function findDuplicate(
   entries: readonly VaultEntry[],
   candidate: Pick<VaultEntry, 'url' | 'matchMode'>,
@@ -263,8 +283,22 @@ export function addEntry(data: VaultData, entry: VaultEntry): VaultData {
   return {...data, entries: [entry, ...data.entries]}
 }
 
+/**
+ * Replaces an entry by id, keeping whether it is paused as `data` has it:
+ * only `setEntryPaused` changes that, so a form opened before a pause or
+ * resume landed can't undo it.
+ */
 export function replaceEntry(data: VaultData, entry: VaultEntry): VaultData {
-  return {...data, entries: data.entries.map((e) => (e.id === entry.id ? entry : e))}
+  return {
+    ...data,
+    entries: data.entries.map((e) => {
+      if (e.id !== entry.id) return e
+      const next = {...entry}
+      if (e.paused) next.paused = true
+      else delete next.paused
+      return next
+    })
+  }
 }
 
 export function removeEntry(data: VaultData, id: string): VaultData {

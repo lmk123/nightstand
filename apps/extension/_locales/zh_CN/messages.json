@@ -44,6 +44,15 @@
   "entryPaused": {
     "message": "已暂停"
   },
+  "pauseOverlap": {
+    "message": "已暂停，但 $TITLES$ 仍在保护这个网站的部分或全部网址，这些网址仍会被遮住、浏览记录仍会被删除。要完全暂停，把它们也暂停。",
+    "placeholders": {
+      "titles": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
   "delete": {
     "message": "删除"
   },
@@ -562,6 +571,15 @@
       "count": {
         "content": "$1",
         "example": "3"
+      }
+    }
+  },
+  "bmImportPausedSkipped": {
+    "message": "另有 $COUNT$ 个网站已在列表里但处于暂停状态，没有导入，浏览记录也没有清理；要保护它们，请在列表里恢复。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
       }
     }
   },

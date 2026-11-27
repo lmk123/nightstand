@@ -44,6 +44,15 @@
   "entryPaused": {
     "message": "Paused"
   },
+  "pauseOverlap": {
+    "message": "Paused, but $TITLES$ still protect part or all of this site: there it is still covered and its history still deleted. To pause it fully, pause those too.",
+    "placeholders": {
+      "titles": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
   "delete": {
     "message": "Delete"
   },
@@ -562,6 +571,15 @@
       "count": {
         "content": "$1",
         "example": "3"
+      }
+    }
+  },
+  "bmImportPausedSkipped": {
+    "message": "Already in the list but paused, so not imported and their history not cleaned: $COUNT$. Resume them in the list to protect them.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
       }
     }
   },

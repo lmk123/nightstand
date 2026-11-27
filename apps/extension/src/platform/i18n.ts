@@ -10,3 +10,8 @@ export type MessageKey = keyof typeof import('../../_locales/en/messages.json')
 export function t(key: MessageKey, ...substitutions: string[]): string {
   return chrome.i18n.getMessage(key, substitutions)
 }
+
+/** Joins names as a list in the UI language ("A, B, and C", "A、B和C"). */
+export function listText(items: readonly string[]): string {
+  return new Intl.ListFormat(chrome.i18n.getUILanguage(), {type: 'conjunction'}).format(items)
+}

@@ -4,6 +4,7 @@ import {
   changePassphrase,
   entrySiteHosts,
   hostOf,
+  overlappingActiveEntries,
   recordOpen,
   removeEntry,
   addEntry,
@@ -21,7 +22,7 @@ import {
 } from '@nightstand/core'
 import {removeBookmarksFor} from '@/platform/bookmarks'
 import {findMissingIcons, withIcon} from '@/platform/favicon'
-import {t} from '@/platform/i18n'
+import {listText, t} from '@/platform/i18n'
 import {isPopupNotice, sendToBackground} from '@/platform/messages'
 import {loadLinks, loadShelf} from '@/platform/storage'
 import {getActiveTab, openUrl} from '@/platform/tabs'
@@ -29,6 +30,7 @@ import {SaveCheck} from './components/SaveCheck'
 import {SettingsLink, SettingsLinks} from './components/SettingsLink'
 import {useOpenHelp} from './help'
 import {commit, commitStored, openSession, syncIndex, type Session, type UnlockResult} from './session'
+import {entryTitle} from './title'
 import {Backup} from './views/Backup'
 import {BookmarkImport} from './views/BookmarkImport'
 import {Decoy} from './views/Decoy'
@@ -46,6 +48,8 @@ type View =
   | {name: 'locked'}
   | {name: 'decoySettings'}
   | {name: 'vault'; notice?: 'unsupportedTab' | 'saveCheck'}
+  /** Just paused an entry that these other active entries still partly cover. */
+  | {name: 'vault'; notice: 'pauseOverlap'; titles: string[]}
   | {name: 'entry'; editing?: VaultEntry; prefill?: EntryInput}
   | {name: 'settings'}
   | {name: 'resetPassphrase'}
@@ -234,7 +238,17 @@ export default function App() {
       // Only if the list is still showing: don't pull the user out of another view.
       setView((current) => (current.name === 'vault' ? saveCheckIf(true, saved) : current))
     } else {
-      await update((data) => setEntryPaused(data, entry.id, true))
+      const saved = await update((data) => setEntryPaused(data, entry.id, true))
+      if (!saved) return
+      // Other entries still covering part of it keep covering and cleaning
+      // that part: say which, as the pause button promises otherwise.
+      const titles = overlappingActiveEntries(saved.data.entries, entry.id).map(entryTitle)
+      setView((current) => {
+        if (current.name !== 'vault') return current
+        if (titles.length > 0) return {name: 'vault', notice: 'pauseOverlap', titles}
+        // An earlier pause's notice may no longer hold.
+        return current.notice === 'pauseOverlap' ? {name: 'vault'} : current
+      })
     }
   }
 
@@ -293,6 +307,10 @@ export default function App() {
               <p role="status" className="bg-accent text-accent-foreground mx-3 mb-2 rounded-[10px] p-3 text-xs">
                 {t('currentTabUnsupported')}
               </p>
+            ) : view.notice === 'pauseOverlap' ? (
+              <p role="status" className="bg-accent text-accent-foreground mx-3 mb-2 rounded-[10px] p-3 text-xs">
+                {t('pauseOverlap', listText(view.titles))}
+              </p>
             ) : view.notice === 'saveCheck' ? (
               <SaveCheck
                 onDismiss={async (skipFromNow) => {
@@ -329,11 +347,13 @@ export default function App() {
               return skipNoticeFromNow ? updateSettings(next, {skipSaveNotice: true}) : next
             })
             if (!savedSession) return
+            // As saved: `replaceEntry` keeps a pause or resume that landed while the form was open.
+            const stored = savedSession.data.entries.find((e) => e.id === entry.id) ?? entry
             // An edited paused entry stays paused and protects nothing yet:
             // resuming it cleans and asks for the check instead.
-            if (entry.paused) return setView({name: 'vault'})
-            await protect([entry])
-            setView(saveCheckIf(widensScope(view.editing, entry), savedSession))
+            if (stored.paused) return setView({name: 'vault'})
+            await protect([stored])
+            setView(saveCheckIf(widensScope(view.editing, stored), savedSession))
           }}
           onDelete={async (entry) => {
             await update((data) => removeEntry(data, entry.id))

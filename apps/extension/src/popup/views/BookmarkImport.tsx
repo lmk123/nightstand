@@ -42,7 +42,8 @@ export function BookmarkImport({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [matchMode, setMatchMode] = useState<MatchMode>('site')
   const [removeOriginals, setRemoveOriginals] = useState(true)
-  const [done, setDone] = useState<number | null>(null)
+  /** The last import: entries added, and paused entries its bookmarks duplicated. */
+  const [done, setDone] = useState<{added: number; paused: number} | null>(null)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
 
@@ -66,12 +67,16 @@ export function BookmarkImport({
     setFailed(false)
     try {
       const fresh: VaultEntry[] = []
+      // A bookmark for a paused entry adds nothing and stays unprotected: said in the result.
+      const paused = new Set<string>()
       const now = Date.now()
       for (const id of selected) {
         const row = byId.get(id)
         if (!row?.url) continue
         const entry = createEntry({url: row.url, title: row.title, matchMode}, now)
-        if (findDuplicate(data.entries, entry) || findDuplicate(fresh, entry)) continue
+        const existing = findDuplicate(data.entries, entry)
+        if (existing?.paused) paused.add(existing.id)
+        if (existing || findDuplicate(fresh, entry)) continue
         fresh.push(entry)
       }
       // Before the caller purges history, which takes the cached icon with it.
@@ -84,7 +89,7 @@ export function BookmarkImport({
       )
       if (removeOriginals) await removeBookmarks([...selected])
       setSelected(new Set())
-      setDone(added.length)
+      setDone({added: added.length, paused: paused.size})
     } catch (error) {
       console.error(error)
       setFailed(true)
@@ -147,7 +152,12 @@ export function BookmarkImport({
           {t('bmRemoveOriginals')}
         </Label>
         {failed && <p className="text-destructive text-xs">{t('errSaveFailed')}</p>}
-        {done !== null && <p className="bg-accent text-accent-foreground rounded-[10px] p-2.5 text-xs">{t('bmImported', String(done))}</p>}
+        {done !== null && (
+          <p className="bg-accent text-accent-foreground rounded-[10px] p-2.5 text-xs">
+            {t('bmImported', String(done.added))}
+            {done.paused > 0 && <span className="mt-1 block">{t('bmImportPausedSkipped', String(done.paused))}</span>}
+          </p>
+        )}
         <Button className={mainButtonClass} disabled={busy || selected.size === 0} onClick={runImport}>
           {busy ? t('working') : t('bmImportButton', String(selected.size))}
         </Button>

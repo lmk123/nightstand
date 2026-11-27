@@ -15,7 +15,9 @@ import {
   parseExtraHosts,
   recordOpen,
   removeEntry,
+  overlappingActiveEntries,
   replaceEntry,
+  scopesOverlap,
   searchEntries,
   setEntryIcons,
   setEntryPaused,
@@ -130,6 +132,38 @@ describe('pausing entries', () => {
     const e: VaultEntry = {...createEntry({url: 'example.com'}, NOW), paused: true}
     expect(editEntry(e, {url: 'example.org', title: 'T'}).paused).toBe(true)
     expect(editEntry(createEntry({url: 'example.com'}, NOW), {url: 'example.com'})).not.toHaveProperty('paused')
+  })
+  it('replacing an entry keeps the paused state the vault has', () => {
+    const a = createEntry({url: 'example.com'}, NOW, 'a')
+    const paused = setEntryPaused(addEntry(emptyVaultData(), a), 'a', true)
+    // A form opened before the pause saves an active copy: it stays paused.
+    expect(replaceEntry(paused, {...a, title: 'T'}).entries[0]).toMatchObject({title: 'T', paused: true})
+    // A form opened before the resume saves a paused copy: it stays active.
+    const resumed = setEntryPaused(paused, 'a', false)
+    expect(replaceEntry(resumed, {...a, title: 'T', paused: true}).entries[0]).not.toHaveProperty('paused')
+  })
+  it('scopesOverlap: shared hosts, subdomains either way, and exact URLs', () => {
+    const site = (url: string, extraHosts: string[] = []) => ({url, matchMode: 'site' as const, extraHosts})
+    const exact = (url: string) => ({url, matchMode: 'exact' as const, extraHosts: []})
+    expect(scopesOverlap(site('https://example.com/'), site('https://mail.example.com/'))).toBe(true)
+    expect(scopesOverlap(site('https://mail.example.com/'), site('https://example.com/'))).toBe(true)
+    expect(scopesOverlap(site('https://example.com/'), site('https://example.org/', ['cdn.example.com']))).toBe(true)
+    expect(scopesOverlap(exact('https://example.com/a'), site('https://example.com/'))).toBe(true)
+    expect(scopesOverlap(site('https://example.com/'), exact('https://example.com/a'))).toBe(true)
+    expect(scopesOverlap(exact('https://example.com/a'), exact('https://example.com/a#x'))).toBe(true)
+    expect(scopesOverlap(exact('https://example.com/a'), exact('https://example.com/b'))).toBe(false)
+    expect(scopesOverlap(site('https://example.com/'), site('https://example.org/'))).toBe(false)
+    expect(scopesOverlap(site('https://a.example.com/'), site('https://b.example.com/'))).toBe(false)
+  })
+  it('overlappingActiveEntries lists the other active entries that still cover it', () => {
+    const whole = createEntry({url: 'example.com'}, NOW, 'whole')
+    const page = createEntry({url: 'https://example.com/a', matchMode: 'exact'}, NOW, 'page')
+    const other = createEntry({url: 'example.org'}, NOW, 'other')
+    const data = [whole, page, other]
+    expect(overlappingActiveEntries(data, 'page').map((e) => e.id)).toEqual(['whole'])
+    expect(overlappingActiveEntries(data, 'whole').map((e) => e.id)).toEqual(['page'])
+    expect(overlappingActiveEntries([whole, {...page, paused: true}, other], 'whole')).toEqual([])
+    expect(overlappingActiveEntries(data, 'missing')).toEqual([])
   })
   it('round-trips through the payload; any value but true reads as active', () => {
     const current = createEntry({url: 'example.com'}, NOW, 'x')

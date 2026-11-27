@@ -44,6 +44,15 @@
   "entryPaused": {
     "message": "一時停止中"
   },
+  "pauseOverlap": {
+    "message": "一時停止しましたが、$TITLES$ がこのサイトの一部またはすべてを引き続き保護しているため、その範囲は引き続き隠され、履歴も削除されます。完全に止めるには、それらも一時停止してください。",
+    "placeholders": {
+      "titles": {
+        "content": "$1",
+        "example": "Example"
+      }
+    }
+  },
   "delete": {
     "message": "削除"
   },
@@ -562,6 +571,15 @@
       "count": {
         "content": "$1",
         "example": "3"
+      }
+    }
+  },
+  "bmImportPausedSkipped": {
+    "message": "$COUNT$ 件はリストにありますが一時停止中のため、インポートも履歴の削除もしていません。保護するには、リストで再開してください。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
       }
     }
   },
